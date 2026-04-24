@@ -6,8 +6,8 @@ import { formatDate, formatKES } from "@/lib/utils";
 
 interface Invoice {
   id: string; invoiceNumber: string; clientName: string; clientPhone: string;
-  amount: number; status: string; pdfUrl: string | null; paidAt: string | null;
-  createdAt: string; workerName: string | null;
+  amount: number; status: string; pdfUrl: string | null; paidAt: Date | string | null;
+  createdAt: Date | string; workerName: string | null;
   job: { jobType: string; location: string | null; workers: { name: string }[] };
 }
 

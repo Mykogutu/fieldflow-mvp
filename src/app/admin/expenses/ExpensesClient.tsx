@@ -8,7 +8,7 @@ const CATEGORIES = ["MATERIALS", "TRANSPORT", "FUEL", "TOOLS", "LABOR", "OTHER"]
 const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
 
 interface Expense {
-  id: string; description: string; amount: number; category: string; date: string; notes: string | null;
+  id: string; description: string; amount: number; category: string; date: Date | string; notes: string | null;
 }
 
 export default function ExpensesClient({

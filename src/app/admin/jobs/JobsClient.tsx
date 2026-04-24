@@ -8,8 +8,8 @@ interface Worker { id: string; name: string; phone: string; baseZone?: string | 
 interface Job {
   id: string; jobNumber: string; clientName: string; clientPhone: string;
   jobType: string; status: string; priority: string; location: string | null;
-  scheduledDate: string | null; quotedAmount: number | null; finalAmount: number | null;
-  createdAt: string; updatedAt: string;
+  scheduledDate: Date | string | null; quotedAmount: number | null; finalAmount: number | null;
+  createdAt: Date | string; updatedAt: Date | string;
   workers: Worker[];
   invoice: { id: string; invoiceNumber: string; status: string; amount: number } | null;
 }
