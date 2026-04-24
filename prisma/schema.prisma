@@ -110,6 +110,45 @@ model Setting {
   type  String @default("string")
 }
 
+// MVP-STRATEGY §17 — Branded WhatsApp Without Forking the Codebase
+//
+// One codebase routes to many senders. Branding lives as data, not code.
+// `workspaceId` is null in single-tenant deployments today; when the full
+// Workspace model lands (§16.3), populate it with the workspace's id.
+model WhatsAppSender {
+  id               String       @id @default(cuid())
+  workspaceId      String?                                 // null = default/global tenant
+  phoneNumber      String       @unique                    // E.164, the inbound `To` lookup key
+  twilioAccountSid String                                  // subaccount per tenant (or main account)
+  twilioAuthToken  String                                  // store encrypted at rest
+  wabaId           String?                                 // null for SHARED, set for MANAGED/BYO
+  displayName      String                                  // e.g. "AquaTech Plumbing"
+  profilePhotoUrl  String?                                 // pushed to Meta WABA profile
+  brandingTier     BrandingTier @default(SHARED)
+  status           SenderStatus @default(PENDING)
+  isVerified       Boolean      @default(false)            // green-tick
+  isDefault        Boolean      @default(false)            // primary fallback for unrouted msgs
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@index([workspaceId])
+  @@index([status])
+}
+
+enum BrandingTier {
+  SHARED      // FieldFlow's number, branded message footer
+  MANAGED     // Dedicated number under FieldFlow's BSP
+  BYO_WABA    // Tenant's own WhatsApp Business Account (Embedded Signup)
+}
+
+enum SenderStatus {
+  PENDING
+  APPROVED
+  ACTIVE
+  REJECTED
+  SUSPENDED
+}
+
 enum Role {
   ADMIN
   TECHNICIAN

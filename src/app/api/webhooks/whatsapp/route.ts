@@ -10,6 +10,7 @@ import {
 } from "@/lib/twilio";
 import { createNotification, deliverJobVerifiedDocs, getCompanyName } from "@/lib/notifications";
 import { getWorkspaceConfig } from "@/lib/workspace-config";
+import { resolveSenderByNumber, type WhatsAppSender } from "@/lib/senders";
 import { generateInvoicePDF, generateJobCardPDF } from "@/lib/pdf-generator";
 import { normalizePhone, generateOTP, otpExpiresAt, generateInvoiceNumber, generateJobCardNumber, formatKES, formatDate, isWithin15Min } from "@/lib/utils";
 import { put } from "@vercel/blob";
@@ -18,9 +19,16 @@ export async function POST(req: NextRequest) {
   try {
     const form = await req.formData();
     const rawFrom = form.get("From")?.toString() ?? "";
+    const rawTo = form.get("To")?.toString() ?? "";
     const body = form.get("Body")?.toString()?.trim() ?? "";
 
     const workerPhone = normalizePhone(rawFrom.replace("whatsapp:", ""));
+
+    // MVP-STRATEGY §17 — resolve which sender (and therefore which workspace)
+    // received this message. Reply credentials and outbound API calls are all
+    // scoped to this sender, so cross-tenant leakage is impossible.
+    const inboundNumber = normalizePhone(rawTo.replace("whatsapp:", ""));
+    const sender = await resolveSenderByNumber(inboundNumber);
 
     const worker = await prisma.user.findUnique({
       where: { phone: workerPhone },
@@ -40,19 +48,19 @@ export async function POST(req: NextRequest) {
         return await handleAccept(worker, parsed.data.selectionIndex, companyName);
 
       case "DECLINE_JOB":
-        return await handleDecline(worker, companyName);
+        return await handleDecline(worker, companyName, sender);
 
       case "CHECK_IN":
         return await handleCheckIn(worker);
 
       case "REPORT_COMPLETION":
-        return await handleCompletion(worker, parsed.data.amount, parsed.data.clientName, companyName);
+        return await handleCompletion(worker, parsed.data.amount, parsed.data.clientName, companyName, sender);
 
       case "SUBMIT_OTP":
-        return await handleOTP(worker, parsed.data.otpCode!, companyName);
+        return await handleOTP(worker, parsed.data.otpCode!, companyName, sender);
 
       case "POSTPONE_JOB":
-        return await handlePostpone(worker, parsed.data.postponeReason, companyName);
+        return await handlePostpone(worker, parsed.data.postponeReason, companyName, sender);
 
       case "UNDO":
         return await handleUndo(worker);
@@ -123,7 +131,8 @@ async function handleAccept(
 
 async function handleDecline(
   worker: { id: string; name: string; phone: string },
-  companyName: string
+  companyName: string,
+  sender?: WhatsAppSender | null
 ) {
   const jobs = await prisma.job.findMany({
     where: { workers: { some: { id: worker.id } }, status: "ASSIGNED" },
@@ -172,13 +181,17 @@ async function handleDecline(
     });
 
     if (nextWorker) {
-      await sendJobAssignment(nextWorker.phone, {
-        clientName: job.clientName,
-        jobType: job.jobType,
-        location: job.location ?? "—",
-        scheduledDate: formatDate(job.scheduledDate),
-        jobId: job.id,
-      });
+      await sendJobAssignment(
+        nextWorker.phone,
+        {
+          clientName: job.clientName,
+          jobType: job.jobType,
+          location: job.location ?? "—",
+          scheduledDate: formatDate(job.scheduledDate),
+          jobId: job.id,
+        },
+        sender
+      );
     }
   }
 
@@ -212,7 +225,8 @@ async function handleCompletion(
   worker: { id: string; name: string; phone: string },
   amount: number | undefined,
   clientHint: string | undefined,
-  companyName: string
+  companyName: string,
+  sender?: WhatsAppSender | null
 ) {
   const activeJobs = await prisma.job.findMany({
     where: {
@@ -278,12 +292,16 @@ async function handleCompletion(
     },
   });
 
-  await sendOTPToClient(job.clientPhone, {
-    workerName: worker.name,
-    amount,
-    otpCode: otp,
-    companyName,
-  });
+  await sendOTPToClient(
+    job.clientPhone,
+    {
+      workerName: worker.name,
+      amount,
+      otpCode: otp,
+      companyName,
+    },
+    sender
+  );
 
   await createNotification({
     type: "JOB_COMPLETED",
@@ -301,7 +319,8 @@ async function handleCompletion(
 async function handleOTP(
   worker: { id: string; name: string; phone: string },
   otp: string,
-  companyName: string
+  companyName: string,
+  sender?: WhatsAppSender | null
 ) {
   const job = await prisma.job.findFirst({
     where: {
@@ -410,7 +429,7 @@ async function handleOTP(
       });
     }
 
-    await deliverJobVerifiedDocs(job.id, companyName);
+    await deliverJobVerifiedDocs(job.id, companyName, sender);
   } catch (err) {
     console.error("[Webhook] PDF generation error:", err);
   }
@@ -421,7 +440,8 @@ async function handleOTP(
 async function handlePostpone(
   worker: { id: string; name: string; phone: string },
   reason: string | undefined,
-  companyName: string
+  companyName: string,
+  sender?: WhatsAppSender | null
 ) {
   const job = await prisma.job.findFirst({
     where: {
@@ -455,7 +475,7 @@ async function handlePostpone(
     },
   });
 
-  await sendPostponeNotice(job.clientPhone, { reason, companyName });
+  await sendPostponeNotice(job.clientPhone, { reason, companyName }, sender);
 
   await createNotification({
     type: "JOB_POSTPONED",

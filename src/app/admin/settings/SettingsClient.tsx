@@ -119,6 +119,29 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
         </p>
       )}
 
+      {/* MVP-STRATEGY §17 — Branded WhatsApp upsell card */}
+      <a
+        href="/admin/settings/whatsapp"
+        className="block bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-5 hover:shadow-sm transition"
+      >
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="font-semibold text-green-900 flex items-center gap-2">
+              💬 WhatsApp Senders
+              <span className="text-[10px] uppercase tracking-wide bg-green-200 text-green-800 px-1.5 py-0.5 rounded">
+                Branding
+              </span>
+            </h2>
+            <p className="text-xs text-green-800/80 mt-1 leading-relaxed">
+              Use FieldFlow's number for free, or get a dedicated WhatsApp
+              Business number with your logo and verified name. Set up your
+              tier and manage senders →
+            </p>
+          </div>
+          <span className="text-green-700 text-2xl">→</span>
+        </div>
+      </a>
+
       {/* Industry Template */}
       <section className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
         <div>

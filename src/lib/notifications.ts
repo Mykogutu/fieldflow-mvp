@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 import { sendDocsToClient } from "./twilio";
 import { getWorkspaceConfig } from "./workspace-config";
+import type { WhatsAppSender } from "./senders";
 
 export async function createNotification(params: {
   type: string;
@@ -14,7 +15,8 @@ export async function createNotification(params: {
 
 export async function deliverJobVerifiedDocs(
   jobId: string,
-  companyName: string
+  companyName: string,
+  sender?: WhatsAppSender | null
 ): Promise<void> {
   const job = await prisma.job.findUnique({
     where: { id: jobId },
@@ -27,11 +29,15 @@ export async function deliverJobVerifiedDocs(
     ? `${siteUrl}/api/invoices/${job.invoice.id}/pdf`
     : undefined;
 
-  await sendDocsToClient(job.clientPhone, {
-    clientName: job.clientName,
-    invoiceUrl,
-    companyName,
-  });
+  await sendDocsToClient(
+    job.clientPhone,
+    {
+      clientName: job.clientName,
+      invoiceUrl,
+      companyName,
+    },
+    sender
+  );
 }
 
 export async function getCompanyName(): Promise<string> {
