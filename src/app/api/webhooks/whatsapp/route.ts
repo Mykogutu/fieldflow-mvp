@@ -9,6 +9,7 @@ import {
   sendPostponeNotice,
 } from "@/lib/twilio";
 import { createNotification, deliverJobVerifiedDocs, getCompanyName } from "@/lib/notifications";
+import { getWorkspaceConfig } from "@/lib/workspace-config";
 import { generateInvoicePDF, generateJobCardPDF } from "@/lib/pdf-generator";
 import { normalizePhone, generateOTP, otpExpiresAt, generateInvoiceNumber, generateJobCardNumber, formatKES, formatDate, isWithin15Min } from "@/lib/utils";
 import { put } from "@vercel/blob";
@@ -30,8 +31,9 @@ export async function POST(req: NextRequest) {
       return twilioReply("You are not registered in the FieldFlow system.");
     }
 
-    const companyName = await getCompanyName();
-    const parsed = await parseIntent(body);
+    const workspace = await getWorkspaceConfig();
+    const companyName = workspace.companyName || (await getCompanyName());
+    const parsed = await parseIntent(body, workspace);
 
     switch (parsed.intent) {
       case "ACCEPT_JOB":

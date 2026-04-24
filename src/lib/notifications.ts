@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { sendDocsToClient } from "./twilio";
+import { getWorkspaceConfig } from "./workspace-config";
 
 export async function createNotification(params: {
   type: string;
@@ -36,4 +37,12 @@ export async function deliverJobVerifiedDocs(
 export async function getCompanyName(): Promise<string> {
   const s = await prisma.setting.findUnique({ where: { key: "company_name" } });
   return s?.value ?? "FieldFlow Services";
+}
+
+/**
+ * Preferred accessor — returns the full workspace config for messaging.
+ * Use this in new code instead of getCompanyName().
+ */
+export async function getWorkspace() {
+  return getWorkspaceConfig();
 }

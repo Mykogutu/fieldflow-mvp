@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { AIResponse } from "@/types";
+import type { WorkspaceConfig } from "./workspace-config";
 
 const ACCEPT_RE = /^(accept|yes|confirm|ok|sure|taking|sawa|ndio|nchukue|nitafanya)/i;
 const DECLINE_RE = /^(decline|reject|no|cant|busy|siwezi|hapana|sitaweza)/i;
@@ -106,7 +107,10 @@ export function parseIntentRegex(text: string): AIResponse | null {
   return null;
 }
 
-export async function parseIntentAI(text: string): Promise<AIResponse> {
+export async function parseIntentAI(
+  text: string,
+  workspace?: WorkspaceConfig
+): Promise<AIResponse> {
   const apiKey = process.env.GOOGLE_API_KEY;
   if (!apiKey) return { intent: "UNKNOWN", data: { rawText: text }, confidence: 0 };
 
@@ -114,10 +118,20 @@ export async function parseIntentAI(text: string): Promise<AIResponse> {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
+    const wsBlock = workspace
+      ? `\nWORKSPACE CONTEXT (use this vocabulary in your reasoning — do not echo it back):
+{
+  "workerTitle": "${workspace.workerTitle}",
+  "jobLabel":    "${workspace.jobLabel}",
+  "currency":    "${workspace.currency}",
+  "industry":    "${workspace.industry}"
+}
+`
+      : "";
+
     const prompt = `You are the intent parser for FieldFlow, a WhatsApp-native field service platform.
 Classify this worker message into exactly one intent and extract params.
-Return ONLY valid JSON.
-
+Return ONLY valid JSON.${wsBlock}
 Message: "${text}"
 
 Valid intents: ACCEPT_JOB, DECLINE_JOB, REPORT_COMPLETION, SUBMIT_OTP, POSTPONE_JOB, CHECK_IN, REPORT_ISSUE, CHECK_SCHEDULE, CHECK_EARNINGS, UNDO, UNKNOWN
@@ -145,10 +159,13 @@ Schema:
   }
 }
 
-export async function parseIntent(text: string): Promise<AIResponse> {
+export async function parseIntent(
+  text: string,
+  workspace?: WorkspaceConfig
+): Promise<AIResponse> {
   const fast = parseIntentRegex(text);
   if (fast && fast.confidence >= 0.9) return fast;
-  const ai = await parseIntentAI(text);
+  const ai = await parseIntentAI(text, workspace);
   if (ai.confidence >= 0.6) return ai;
   return fast ?? { intent: "UNKNOWN", data: { rawText: text }, confidence: 0 };
 }
