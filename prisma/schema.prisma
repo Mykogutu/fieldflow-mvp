@@ -110,6 +110,91 @@ model Setting {
   type  String @default("string")
 }
 
+// MVP-STRATEGY v2.0 §6 — The Asset Layer
+//
+// The single biggest schema generalization. An Asset is "the thing the job
+// is being done on" — water tank, vehicle, fuel sensor, inverter, building.
+// One model, configurable labels, no per-industry tables.
+model Asset {
+  id                  String    @id @default(cuid())
+  workspaceId         String?                                 // null = default tenant during migration
+  name                String                                  // "Mrs. Wanjiku's 5000L tank"
+  assetType           String                                  // configurable per industry
+  identifier          String?                                 // free-form per industry
+  serialNumber        String?
+  registrationNumber  String?                                 // e.g. "KDA 123A" for vehicles
+  deviceNumber        String?                                 // for trackers, sensors
+  simNumber           String?                                 // for connected devices
+  clientName          String
+  clientPhone         String?
+  location            String?
+  zone                String?
+  installationDate    DateTime?
+  warrantyExpiryDate  DateTime?
+  lastServiceDate     DateTime?
+  notes               String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([workspaceId])
+  @@index([workspaceId, clientPhone])
+  @@index([assetType])
+}
+
+// MVP-STRATEGY v2.0 §11 — Documents (template-based, not industry-specific)
+//
+// Generalizes Warranty / Job Card / Installation Report / Service Report /
+// Fuel Calibration Report etc. into a single table. Invoice stays separate
+// because it carries financial state.
+model Document {
+  id           String       @id @default(cuid())
+  workspaceId  String?
+  jobId        String?
+  type         DocumentType
+  title        String?                                        // optional human-readable title
+  pdfUrl       String?
+  metadata     Json?                                          // type-specific fields
+  generatedAt  DateTime     @default(now())
+
+  @@index([workspaceId])
+  @@index([jobId])
+  @@index([type])
+}
+
+enum DocumentType {
+  INVOICE
+  JOB_CARD
+  WARRANTY_CERTIFICATE
+  INSTALLATION_REPORT
+  SERVICE_REPORT
+  FUEL_CALIBRATION_REPORT
+  DEVICE_REPLACEMENT_REPORT
+  CLIENT_CONFIRMATION_RECEIPT
+  DELIVERY_NOTE
+  COMPLIANCE_CERTIFICATE
+  OTHER
+}
+
+// MVP-STRATEGY v2.0 §10 — Partner Strategy & Product Ownership
+//
+// Resellers / pilot clients / introducers get capped commissions and zero IP.
+// Workspaces optionally carry a partnerId so revenue share can be calculated
+// at billing time.
+model Partner {
+  id              String    @id @default(cuid())
+  name            String
+  type            String    @default("RESELLER")              // RESELLER | PILOT_CLIENT | INTRODUCER
+  commissionRate  Float     @default(0.20)                    // setup-fee share, decimal (0.20 = 20%)
+  recurringRate   Float     @default(0.15)                    // monthly recurring share
+  recurringMonths Int       @default(12)                      // commission expires
+  isActive        Boolean   @default(true)
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([isActive])
+}
+
 // MVP-STRATEGY §17 — Branded WhatsApp Without Forking the Codebase
 //
 // One codebase routes to many senders. Branding lives as data, not code.

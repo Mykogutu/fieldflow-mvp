@@ -152,6 +152,9 @@ export const INDUSTRY_TEMPLATES: Record<IndustryKey, IndustryTemplate> = {
     emoji: "🧹",
   },
 
+  // MVP-STRATEGY v2.0 §8 — Restore Services origin template.
+  // Asset = Tank. This is the validated baseline that every other industry
+  // is benchmarked against.
   TANK_SERVICES: {
     key: "TANK_SERVICES",
     displayName: "Water Tank Services",
@@ -160,15 +163,15 @@ export const INDUSTRY_TEMPLATES: Record<IndustryKey, IndustryTemplate> = {
     jobLabel: "Job",
     jobLabelPlural: "Jobs",
     jobTypes: [
-      "Tank Repair",
-      "Tank Cleaning",
-      "Leak Detection",
-      "Tank Installation",
-      "UV Protection",
-      "Pipe Connection",
+      "Plastic Tank Repair",
+      "Water Tank Cleaning",
+      "Tank Disinfection",
+      "Gate Valve Installation",
+      "Underground Tank Repair",
+      "Steel Tank Cleaning",
+      "Tank Painting",
     ],
-    defaultWarranty:
-      "12-month repair warranty. Does not cover physical damage or UV exposure beyond guidance.",
+    defaultWarranty: "1 year workmanship warranty on qualifying repair jobs.",
     defaultDocuments: ["Invoice", "Warranty", "Certificate"],
     sampleWelcome:
       "Hi {firstName}, tank service jobs will come here. Reply Accept to take a job.",
@@ -397,27 +400,42 @@ export const INDUSTRY_TEMPLATES: Record<IndustryKey, IndustryTemplate> = {
     emoji: "💻",
   },
 
+  // MVP-STRATEGY v2.0 §9 — Vertical Pilot 1.
+  // Asset = Vehicle. Client = Fleet Client. Job types cover the full
+  // tracking + fuel-monitoring lifecycle so the pilot needs zero schema
+  // changes, only this template + Asset rows.
   FUEL_TRACKER: {
     key: "FUEL_TRACKER",
-    displayName: "Fuel Monitoring & Tracker Installation",
-    workerTitle: "Installer",
-    workerTitlePlural: "Installers",
-    jobLabel: "Installation",
-    jobLabelPlural: "Installations",
+    displayName: "Tracking & Fuel Monitoring",
+    workerTitle: "Technician",
+    workerTitlePlural: "Technicians",
+    jobLabel: "Job",
+    jobLabelPlural: "Jobs",
     jobTypes: [
-      "Device Installation",
-      "SIM Swap",
-      "Sensor Calibration",
-      "Annual Service",
-      "Fault Diagnosis",
+      "Tracker Installation",
+      "Fuel Sensor Installation",
+      "Fuel Sensor Calibration",
+      "Device Inspection",
+      "Device Replacement",
       "Device Removal",
+      "Device Transfer",
+      "Maintenance Visit",
+      "Troubleshooting Visit",
+      "SIM Connectivity Issue",
+      "Fleet Support Visit",
+      "Fuel Monitoring System Verification",
     ],
     defaultWarranty:
-      "12-month installation warranty. Devices carry manufacturer warranty separately.",
-    defaultDocuments: ["Invoice", "Warranty", "InstallationCertificate"],
+      "Warranty applies as per device, installation, and service terms.",
+    defaultDocuments: [
+      "Invoice",
+      "InstallationCertificate",
+      "ServiceReport",
+      "Warranty",
+    ],
     sampleWelcome:
-      "Hi {firstName}, installations will be assigned here on WhatsApp. Reply Accept to take the job.",
-    currencyHint: null,
+      "Hi {firstName}, tracking and fuel monitoring jobs will be assigned here on WhatsApp. Reply Accept to take a job.",
+    currencyHint: "KES",
     whatsappTone: "professional",
     emoji: "📡",
   },
@@ -443,15 +461,17 @@ export const INDUSTRY_TEMPLATES: Record<IndustryKey, IndustryTemplate> = {
 /**
  * List of template entries for UI pickers. Order = display order on signup.
  */
+// Display order on signup. Restore Services (TANK_SERVICES) and Pilot 1
+// (FUEL_TRACKER) lead because they're the only validated templates today.
 export const INDUSTRY_LIST: IndustryTemplate[] = [
+  INDUSTRY_TEMPLATES.TANK_SERVICES,
+  INDUSTRY_TEMPLATES.FUEL_TRACKER,
   INDUSTRY_TEMPLATES.PLUMBING,
   INDUSTRY_TEMPLATES.ELECTRICAL,
   INDUSTRY_TEMPLATES.HVAC,
-  INDUSTRY_TEMPLATES.TANK_SERVICES,
   INDUSTRY_TEMPLATES.CLEANING,
   INDUSTRY_TEMPLATES.PEST_CONTROL,
   INDUSTRY_TEMPLATES.SOLAR,
-  INDUSTRY_TEMPLATES.APPLIANCE_REPAIR,
   INDUSTRY_TEMPLATES.APPLIANCE_REPAIR,
   INDUSTRY_TEMPLATES.LOGISTICS,
   INDUSTRY_TEMPLATES.SECURITY,
@@ -459,9 +479,8 @@ export const INDUSTRY_LIST: IndustryTemplate[] = [
   INDUSTRY_TEMPLATES.LANDSCAPING,
   INDUSTRY_TEMPLATES.AUTO_REPAIR,
   INDUSTRY_TEMPLATES.IT_SUPPORT,
-  INDUSTRY_TEMPLATES.FUEL_TRACKER,
   INDUSTRY_TEMPLATES.OTHER,
-].filter((t, i, arr) => arr.findIndex((x) => x.key === t.key) === i);
+];
 
 export function getTemplate(key: string | null | undefined): IndustryTemplate {
   if (!key) return INDUSTRY_TEMPLATES.OTHER;
