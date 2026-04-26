@@ -7,6 +7,7 @@ import NotificationBell from "@/components/notifications/NotificationBell";
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: "📊" },
   { href: "/admin/jobs", label: "Jobs", icon: "🔧" },
+  { href: "/admin/assets", label: "Assets", icon: "🏷️" },
   { href: "/admin/invoices", label: "Invoices", icon: "📄" },
   { href: "/admin/workers", label: "Workers", icon: "👷" },
   { href: "/admin/expenses", label: "Expenses", icon: "💰" },

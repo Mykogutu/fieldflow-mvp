@@ -46,15 +46,15 @@ async function main() {
   }
   const wsId = workspace.id;
 
-  // Skip if a demo job from a previous run already exists. Identifying any
-  // demo job by client name is more reliable than counting — a manual test
-  // job in the workspace shouldn't block demo seeding.
+  // Skip job/worker/notification seeding if a previous demo run already created
+  // them. Asset seeding has its own idempotency guard and runs regardless.
   const demoJobMarker = await prisma.job.findFirst({
     where: { workspaceId: wsId, clientName: "Mrs. Sarah Wanjiku" },
     select: { id: true },
   });
   if (demoJobMarker) {
-    console.log(`⚠️  Demo data already seeded — skipping.`);
+    console.log(`⚠️  Demo jobs already seeded — skipping job/notification seed.`);
+    await seedAssets(wsId);
     return;
   }
 
@@ -347,7 +347,131 @@ async function main() {
   }
   console.log(`✅ ${notifications.length} notifications created`);
 
+  await seedAssets(wsId);
+
   console.log(`\n✅ Demo seed complete. Visit /admin to see the dashboard come alive.`);
+}
+
+/**
+ * Idempotent: creates demo assets and links them to existing demo jobs by
+ * client name match. Safe to run on a workspace that already has assets —
+ * skips entirely if any asset already exists.
+ */
+async function seedAssets(wsId: string): Promise<void> {
+  const existingCount = await prisma.asset.count({ where: { workspaceId: wsId } });
+  if (existingCount > 0) {
+    console.log(`⚠️  ${existingCount} assets already exist — skipping asset seed.`);
+    return;
+  }
+
+  // One asset per demo client. Asset names match the description in the job
+  // so the relationship reads naturally on the detail page.
+  const assetSpecs = [
+    {
+      name: "Mrs. Sarah Wanjiku's 5000L plastic tank",
+      assetType: "Plastic Tank",
+      identifier: "Roof-mounted, north side",
+      clientName: "Mrs. Sarah Wanjiku",
+      clientPhone: "+254712345001",
+      location: "Kilimani, Ngong Rd",
+      zone: "Nairobi West",
+      installationDate: daysAgo(720),
+      warrantyExpiryDate: daysAgo(355),
+      lastServiceDate: hoursAgo(2),
+    },
+    {
+      name: "Mr. Joseph Mwangi's 10000L tank",
+      assetType: "Plastic Tank",
+      identifier: "Ground-level reservoir",
+      clientName: "Mr. Joseph Mwangi",
+      clientPhone: "+254712345002",
+      location: "Lavington, James Gichuru Rd",
+      zone: "Nairobi West",
+      installationDate: daysAgo(540),
+      warrantyExpiryDate: daysFromNow(180),
+    },
+    {
+      name: "Mrs. Grace Achieng's rooftop tank",
+      assetType: "Plastic Tank",
+      identifier: "Rooftop, with gate valve",
+      clientName: "Mrs. Grace Achieng",
+      clientPhone: "+254712345003",
+      location: "Westlands, Mpaka Rd",
+      zone: "Westlands",
+      installationDate: daysAgo(1095),
+    },
+    {
+      name: "Mr. Kamau Njoroge's underground tank",
+      assetType: "Underground Tank",
+      identifier: "Below garage floor",
+      serialNumber: "UT-2023-0847",
+      clientName: "Mr. Kamau Njoroge",
+      clientPhone: "+254712345004",
+      location: "Karen, Bogani Rd",
+      zone: "Karen",
+      installationDate: daysAgo(800),
+      notes: "Concrete-encased, requires confined-space protocol on entry.",
+    },
+    {
+      name: "Mrs. Aisha Mohammed's steel tank",
+      assetType: "Steel Tank",
+      serialNumber: "ST-9921",
+      clientName: "Mrs. Aisha Mohammed",
+      clientPhone: "+254712345005",
+      location: "Eastleigh, 12th St",
+      zone: "Eastleigh",
+      installationDate: daysAgo(1500),
+      lastServiceDate: hoursAgo(2),
+    },
+    {
+      name: "Mr. David Otieno's 5000L tank",
+      assetType: "Plastic Tank",
+      clientName: "Mr. David Otieno",
+      clientPhone: "+254712345006",
+      location: "Kasarani, Mwiki",
+      zone: "Kasarani",
+      installationDate: daysAgo(365),
+      warrantyExpiryDate: daysFromNow(90),
+      lastServiceDate: daysAgo(2),
+      notes: "Quarterly disinfection contract.",
+    },
+    {
+      name: "Mrs. Lucy Mutua's 5000L tank",
+      assetType: "Plastic Tank",
+      clientName: "Mrs. Lucy Mutua",
+      clientPhone: "+254712345007",
+      location: "Kilimani, Wood Ave",
+      zone: "Nairobi West",
+      installationDate: daysAgo(900),
+      lastServiceDate: daysAgo(5),
+    },
+    {
+      name: "Mr. Samuel Kibet's UV-coated tank",
+      assetType: "Plastic Tank",
+      identifier: "Yellow UV-protective coat",
+      clientName: "Mr. Samuel Kibet",
+      clientPhone: "+254712345008",
+      location: "Karen, Hardy",
+      zone: "Karen",
+      installationDate: daysAgo(1200),
+      lastServiceDate: daysAgo(15),
+    },
+  ];
+
+  let assetCount = 0;
+  for (const spec of assetSpecs) {
+    const asset = await prisma.asset.create({
+      data: { workspaceId: wsId, ...spec },
+    });
+    assetCount++;
+
+    // Link every job for this client to this asset
+    await prisma.job.updateMany({
+      where: { workspaceId: wsId, clientName: spec.clientName, assetId: null },
+      data: { assetId: asset.id },
+    });
+  }
+  console.log(`✅ ${assetCount} assets created and linked to demo jobs`);
 }
 
 main()

@@ -46,6 +46,8 @@ model Job {
   id             String    @id @default(cuid())
   workspaceId    String
   jobNumber      String    @unique @default(cuid())
+  assetId        String?
+  asset          Asset?    @relation(fields: [assetId], references: [id])
   clientName     String
   clientPhone    String
   description    String?
@@ -77,6 +79,7 @@ model Job {
   @@index([workspaceId])
   @@index([workspaceId, status])
   @@index([workspaceId, scheduledDate])
+  @@index([assetId])
 }
 
 model JobEvent {
@@ -185,6 +188,8 @@ model Asset {
   notes               String?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
+
+  jobs                Job[]
 
   @@index([workspaceId])
   @@index([workspaceId, clientPhone])
