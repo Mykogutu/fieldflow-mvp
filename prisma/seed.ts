@@ -1,15 +1,9 @@
 /**
- * MVP-STRATEGY v2.0 §16.3 — Workspace Migration Sprint seed/backfill.
+ * MVP-STRATEGY v2.0 §16.3 — Default workspace + admin seed.
  *
- * Idempotent. Safe to run repeatedly against production.
- *
- * What it does:
- *   1. Creates the default "Restore Services" workspace (idempotent on slug).
- *   2. Backfills `workspaceId` on every existing row that still has NULL.
- *      All historical Restore data lands in the Restore workspace.
- *   3. Seeds the Restore admin user + default Settings — only if missing.
- *
- * Read once, write nothing if everything is already correct.
+ * Idempotent. Safe to run repeatedly. Creates the default "Restore Services"
+ * workspace, the default admin user, and the default Settings — only when
+ * each is missing. Read once, write nothing if everything is already correct.
  */
 
 import { PrismaClient } from "@prisma/client";
@@ -35,31 +29,10 @@ async function main() {
   });
   console.log(`✅ Workspace: ${workspace.name} (${workspace.id})`);
 
-  // ────────────────────────────────────────────────────────────────────────
-  // 2. Backfill workspaceId on every core model
-  // ────────────────────────────────────────────────────────────────────────
   const wsId = workspace.id;
-  const backfills: Array<[string, () => Promise<{ count: number }>]> = [
-    ["User", () => prisma.user.updateMany({ where: { workspaceId: null }, data: { workspaceId: wsId } })],
-    ["Job", () => prisma.job.updateMany({ where: { workspaceId: null }, data: { workspaceId: wsId } })],
-    ["JobEvent", () => prisma.jobEvent.updateMany({ where: { workspaceId: null }, data: { workspaceId: wsId } })],
-    ["Invoice", () => prisma.invoice.updateMany({ where: { workspaceId: null }, data: { workspaceId: wsId } })],
-    ["Expense", () => prisma.expense.updateMany({ where: { workspaceId: null }, data: { workspaceId: wsId } })],
-    ["Notification", () => prisma.notification.updateMany({ where: { workspaceId: null }, data: { workspaceId: wsId } })],
-    ["Setting", () => prisma.setting.updateMany({ where: { workspaceId: null }, data: { workspaceId: wsId } })],
-    ["Asset", () => prisma.asset.updateMany({ where: { workspaceId: null }, data: { workspaceId: wsId } })],
-    ["Document", () => prisma.document.updateMany({ where: { workspaceId: null }, data: { workspaceId: wsId } })],
-    ["WhatsAppSender", () => prisma.whatsAppSender.updateMany({ where: { workspaceId: null }, data: { workspaceId: wsId } })],
-  ];
-
-  for (const [model, op] of backfills) {
-    const { count } = await op();
-    if (count > 0) console.log(`   ↳ ${model}: backfilled ${count} row(s)`);
-    else console.log(`   ↳ ${model}: nothing to backfill`);
-  }
 
   // ────────────────────────────────────────────────────────────────────────
-  // 3. Default admin (only if missing)
+  // 2. Default admin (only if missing)
   // ────────────────────────────────────────────────────────────────────────
   const adminPhone = "+254700000000";
   const existingAdmin = await prisma.user.findUnique({ where: { phone: adminPhone } });
@@ -125,17 +98,14 @@ async function main() {
   ];
 
   for (const s of defaultSettings) {
-    const existing = await prisma.setting.findUnique({ where: { key: s.key } });
+    const existing = await prisma.setting.findUnique({
+      where: { workspaceId_key: { workspaceId: wsId, key: s.key } },
+    });
     if (!existing) {
       await prisma.setting.create({
         data: { ...s, workspaceId: wsId },
       });
       console.log(`   ↳ Setting created: ${s.key}`);
-    } else if (!existing.workspaceId) {
-      await prisma.setting.update({
-        where: { id: existing.id },
-        data: { workspaceId: wsId },
-      });
     }
   }
 

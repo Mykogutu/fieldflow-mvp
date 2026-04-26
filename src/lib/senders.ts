@@ -27,7 +27,7 @@ export type { WhatsAppSender, BrandingTier, SenderStatus };
  * the env-var-configured sender (single-tenant deployments). Shape-compatible
  * with the Prisma `WhatsAppSender` model so call sites don't have to branch.
  */
-function envFallbackSender(): WhatsAppSender | null {
+async function envFallbackSender(): Promise<WhatsAppSender | null> {
   const phone = process.env.TWILIO_WHATSAPP_NUMBER;
   const sid = process.env.TWILIO_ACCOUNT_SID;
   const token = process.env.TWILIO_AUTH_TOKEN;
@@ -35,7 +35,7 @@ function envFallbackSender(): WhatsAppSender | null {
 
   return {
     id: "env-fallback",
-    workspaceId: null,
+    workspaceId: await currentWorkspaceId(),
     phoneNumber: normalizePhone(phone),
     twilioAccountSid: sid,
     twilioAuthToken: token,
@@ -69,7 +69,7 @@ export async function resolveSenderByNumber(
   if (row && row.status === "ACTIVE") return row;
 
   // Fall back: if the env-var sender matches the inbound `To`, use it.
-  const env = envFallbackSender();
+  const env = await envFallbackSender();
   if (env && env.phoneNumber === normalized) return env;
 
   // Last resort: in dev / single-tenant, just return the env sender even if
@@ -83,24 +83,22 @@ export async function resolveSenderByNumber(
  * marked `isDefault=true`, then any ACTIVE sender, then env fallback.
  */
 export async function getDefaultSender(
-  workspaceId?: string | null
+  workspaceId?: string
 ): Promise<WhatsAppSender | null> {
-  // Resolve to the current workspace when caller doesn't supply one.
-  const wsId = workspaceId === undefined ? await currentWorkspaceId() : workspaceId;
-  const where = wsId === null ? {} : { workspaceId: wsId };
+  const wsId = workspaceId ?? (await currentWorkspaceId());
 
   const preferred = await prisma.whatsAppSender.findFirst({
-    where: { ...where, isDefault: true, status: "ACTIVE" },
+    where: { workspaceId: wsId, isDefault: true, status: "ACTIVE" },
   });
   if (preferred) return preferred;
 
   const anyActive = await prisma.whatsAppSender.findFirst({
-    where: { ...where, status: "ACTIVE" },
+    where: { workspaceId: wsId, status: "ACTIVE" },
     orderBy: { createdAt: "asc" },
   });
   if (anyActive) return anyActive;
 
-  return envFallbackSender();
+  return await envFallbackSender();
 }
 
 /**

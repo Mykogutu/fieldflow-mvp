@@ -9,9 +9,10 @@ datasource db {
 
 // MVP-STRATEGY v2.0 §16.3 — Multi-tenant Workspace
 //
-// The Workspace is the tenant container. During the migration sprint,
-// `workspaceId` on existing models is nullable; backfill populates it,
-// and a follow-up migration enforces NOT NULL.
+// The Workspace is the tenant container. `workspaceId` is required on every
+// scoped model — the data-isolation invariant. The first migration sprint
+// added it as nullable; this sprint enforces NOT NULL after verifying zero
+// null rows in production.
 model Workspace {
   id        String   @id @default(cuid())
   name      String
@@ -25,7 +26,7 @@ model Workspace {
 
 model User {
   id          String   @id @default(cuid())
-  workspaceId String?
+  workspaceId String
   email       String?  @unique
   phone       String   @unique
   password    String?
@@ -43,7 +44,7 @@ model User {
 
 model Job {
   id             String    @id @default(cuid())
-  workspaceId    String?
+  workspaceId    String
   jobNumber      String    @unique @default(cuid())
   clientName     String
   clientPhone    String
@@ -80,7 +81,7 @@ model Job {
 
 model JobEvent {
   id          String   @id @default(cuid())
-  workspaceId String?
+  workspaceId String
   jobId       String
   job         Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
   type        String
@@ -93,7 +94,7 @@ model JobEvent {
 
 model Invoice {
   id            String        @id @default(cuid())
-  workspaceId   String?
+  workspaceId   String
   invoiceNumber String        @unique
   jobId         String        @unique
   job           Job           @relation(fields: [jobId], references: [id])
@@ -114,7 +115,7 @@ model Invoice {
 
 model Expense {
   id          String          @id @default(cuid())
-  workspaceId String?
+  workspaceId String
   description String
   amount      Float
   category    ExpenseCategory
@@ -131,7 +132,7 @@ model Expense {
 
 model Notification {
   id          String   @id @default(cuid())
-  workspaceId String?
+  workspaceId String
   type        String
   title       String
   message     String
@@ -145,23 +146,18 @@ model Notification {
   @@index([workspaceId, isRead])
 }
 
-// Setting is the workspace-scoped key/value config store. During the
-// migration sprint, `workspaceId` is nullable and `key` retains its global
-// unique constraint. Once backfill is complete a follow-up sprint will:
-//   1. Make workspaceId non-null
-//   2. Drop `key @unique`
-//   3. Add `@@unique([workspaceId, key])`
-// All call sites already filter by workspaceId, so the constraint switch is
-// a no-op for application code.
+// Setting is the workspace-scoped key/value config store. `workspaceId` is
+// required and uniqueness is composite — same key can repeat across
+// workspaces. All call sites already filter by workspaceId.
 model Setting {
-  id          String  @id @default(cuid())
-  workspaceId String?
-  key         String  @unique
+  id          String @id @default(cuid())
+  workspaceId String
+  key         String
   value       String
-  type        String  @default("string")
+  type        String @default("string")
 
+  @@unique([workspaceId, key])
   @@index([workspaceId])
-  @@index([workspaceId, key])
 }
 
 // MVP-STRATEGY v2.0 §6 — The Asset Layer
@@ -171,7 +167,7 @@ model Setting {
 // One model, configurable labels, no per-industry tables.
 model Asset {
   id                  String    @id @default(cuid())
-  workspaceId         String?                                 // null = default tenant during migration
+  workspaceId         String
   name                String                                  // "Mrs. Wanjiku's 5000L tank"
   assetType           String                                  // configurable per industry
   identifier          String?                                 // free-form per industry
@@ -202,7 +198,7 @@ model Asset {
 // because it carries financial state.
 model Document {
   id           String       @id @default(cuid())
-  workspaceId  String?
+  workspaceId  String
   jobId        String?
   type         DocumentType
   title        String?                                        // optional human-readable title
@@ -252,11 +248,9 @@ model Partner {
 // MVP-STRATEGY §17 — Branded WhatsApp Without Forking the Codebase
 //
 // One codebase routes to many senders. Branding lives as data, not code.
-// `workspaceId` is null in single-tenant deployments today; when the full
-// Workspace model lands (§16.3), populate it with the workspace's id.
 model WhatsAppSender {
   id               String       @id @default(cuid())
-  workspaceId      String?                                 // null = default/global tenant
+  workspaceId      String
   phoneNumber      String       @unique                    // E.164, the inbound `To` lookup key
   twilioAccountSid String                                  // subaccount per tenant (or main account)
   twilioAuthToken  String                                  // store encrypted at rest

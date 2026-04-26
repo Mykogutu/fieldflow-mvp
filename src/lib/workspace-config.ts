@@ -129,16 +129,10 @@ export async function setWorkspaceConfig(
   );
 }
 
-/**
- * Workspace-aware setting upsert. The `key` column still carries a global
- * unique constraint during this migration sprint, so we upsert on that and
- * always stamp the current workspace on writes. Once `[workspaceId, key]`
- * becomes the unique key, this helper switches to a composite upsert.
- */
 async function upsertSetting(workspaceId: string, key: string, value: string): Promise<void> {
   await prisma.setting.upsert({
-    where: { key },
-    update: { value, workspaceId },
+    where: { workspaceId_key: { workspaceId, key } },
+    update: { value },
     create: { key, value, workspaceId },
   });
 }

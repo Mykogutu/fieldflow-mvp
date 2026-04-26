@@ -15,8 +15,8 @@ export async function POST(req: NextRequest) {
   await Promise.all(
     Object.entries(body).map(([key, value]) =>
       prisma.setting.upsert({
-        where: { key },
-        update: { value, workspaceId },
+        where: { workspaceId_key: { workspaceId, key } },
+        update: { value },
         create: { key, value, workspaceId },
       })
     )
