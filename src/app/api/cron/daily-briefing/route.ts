@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendWhatsApp } from "@/lib/twilio";
 import { formatDate } from "@/lib/utils";
+import { currentWorkspaceId } from "@/lib/workspace";
 
 export async function GET(req: NextRequest) {
   const secret = req.headers.get("authorization")?.replace("Bearer ", "");
@@ -9,13 +10,15 @@ export async function GET(req: NextRequest) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
+  const workspaceId = await currentWorkspaceId();
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate() + 1);
 
   const workers = await prisma.user.findMany({
-    where: { role: "TECHNICIAN", isActive: true },
+    where: { workspaceId, role: "TECHNICIAN", isActive: true },
     select: { id: true, name: true, phone: true },
   });
 
@@ -24,6 +27,7 @@ export async function GET(req: NextRequest) {
   for (const worker of workers) {
     const jobs = await prisma.job.findMany({
       where: {
+        workspaceId,
         workers: { some: { id: worker.id } },
         status: { in: ["ASSIGNED", "IN_PROGRESS"] },
         scheduledDate: { gte: today, lt: tomorrow },

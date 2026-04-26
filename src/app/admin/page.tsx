@@ -1,8 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { formatKES, statusColor, statusLabel, formatDate } from "@/lib/utils";
+import { currentWorkspaceId } from "@/lib/workspace";
 import Link from "next/link";
 
 async function getDashboardData() {
+  const workspaceId = await currentWorkspaceId();
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
@@ -14,19 +16,20 @@ async function getDashboardData() {
     recentNotifications,
     recentJobs,
   ] = await Promise.all([
-    prisma.job.count({ where: { status: { in: ["ASSIGNED", "IN_PROGRESS"] } } }),
-    prisma.job.count({ where: { status: "COMPLETED_PENDING_VERIFICATION" } }),
-    prisma.job.count({ where: { status: { in: ["POSTPONED", "ISSUE_REPORTED"] } } }),
+    prisma.job.count({ where: { workspaceId, status: { in: ["ASSIGNED", "IN_PROGRESS"] } } }),
+    prisma.job.count({ where: { workspaceId, status: "COMPLETED_PENDING_VERIFICATION" } }),
+    prisma.job.count({ where: { workspaceId, status: { in: ["POSTPONED", "ISSUE_REPORTED"] } } }),
     prisma.invoice.aggregate({
       _sum: { amount: true },
-      where: { status: "PAID", paidAt: { gte: startOfMonth } },
+      where: { workspaceId, status: "PAID", paidAt: { gte: startOfMonth } },
     }),
     prisma.notification.findMany({
+      where: { workspaceId, isRead: false },
       orderBy: { createdAt: "desc" },
       take: 8,
-      where: { isRead: false },
     }),
     prisma.job.findMany({
+      where: { workspaceId },
       orderBy: { updatedAt: "desc" },
       take: 6,
       include: { workers: { select: { name: true } } },

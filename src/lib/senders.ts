@@ -16,6 +16,7 @@ import twilio from "twilio";
 import type { Twilio } from "twilio";
 import { prisma } from "./prisma";
 import { normalizePhone } from "./utils";
+import { currentWorkspaceId } from "./workspace";
 import type { WhatsAppSender, BrandingTier, SenderStatus } from "@prisma/client";
 
 // Re-export so callers don't need to depend on @prisma/client directly.
@@ -84,7 +85,9 @@ export async function resolveSenderByNumber(
 export async function getDefaultSender(
   workspaceId?: string | null
 ): Promise<WhatsAppSender | null> {
-  const where = workspaceId === undefined ? {} : { workspaceId };
+  // Resolve to the current workspace when caller doesn't supply one.
+  const wsId = workspaceId === undefined ? await currentWorkspaceId() : workspaceId;
+  const where = wsId === null ? {} : { workspaceId: wsId };
 
   const preferred = await prisma.whatsAppSender.findFirst({
     where: { ...where, isDefault: true, status: "ACTIVE" },

@@ -11,6 +11,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { normalizePhone } from "@/lib/utils";
+import { currentWorkspaceId } from "@/lib/workspace";
 import type { BrandingTier } from "@prisma/client";
 
 export interface SenderInput {
@@ -25,31 +26,35 @@ export interface SenderInput {
 }
 
 export async function getSenders() {
+  const workspaceId = await currentWorkspaceId();
   return prisma.whatsAppSender.findMany({
+    where: { workspaceId },
     orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }],
   });
 }
 
 export async function createSender(input: SenderInput) {
+  const workspaceId = await currentWorkspaceId();
   const phoneNumber = normalizePhone(input.phoneNumber);
   if (!phoneNumber || !input.displayName || !input.twilioAccountSid || !input.twilioAuthToken) {
     throw new Error("phoneNumber, displayName, and Twilio credentials are required");
   }
 
-  // If this is the first sender, force it to be the default.
-  const existingCount = await prisma.whatsAppSender.count();
+  // If this is the workspace's first sender, force it to be the default.
+  const existingCount = await prisma.whatsAppSender.count({ where: { workspaceId } });
   const shouldBeDefault = input.isDefault || existingCount === 0;
 
-  // Only one default at a time.
+  // Only one default at a time per workspace.
   if (shouldBeDefault) {
     await prisma.whatsAppSender.updateMany({
-      where: { isDefault: true },
+      where: { workspaceId, isDefault: true },
       data: { isDefault: false },
     });
   }
 
   const sender = await prisma.whatsAppSender.create({
     data: {
+      workspaceId,
       phoneNumber,
       displayName: input.displayName,
       twilioAccountSid: input.twilioAccountSid,
@@ -67,18 +72,21 @@ export async function createSender(input: SenderInput) {
 }
 
 export async function setDefaultSender(id: string) {
+  const workspaceId = await currentWorkspaceId();
   await prisma.whatsAppSender.updateMany({
-    where: { isDefault: true },
+    where: { workspaceId, isDefault: true },
     data: { isDefault: false },
   });
-  await prisma.whatsAppSender.update({
-    where: { id },
+  const result = await prisma.whatsAppSender.updateMany({
+    where: { id, workspaceId },
     data: { isDefault: true },
   });
+  if (result.count === 0) throw new Error("Sender not found");
   revalidatePath("/admin/settings/whatsapp");
 }
 
 export async function deleteSender(id: string) {
-  await prisma.whatsAppSender.delete({ where: { id } });
+  const workspaceId = await currentWorkspaceId();
+  await prisma.whatsAppSender.deleteMany({ where: { id, workspaceId } });
   revalidatePath("/admin/settings/whatsapp");
 }

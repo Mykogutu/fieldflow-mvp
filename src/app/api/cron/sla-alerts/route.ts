@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notifications";
+import { currentWorkspaceId } from "@/lib/workspace";
 
 const SLA_HOURS = 8;
 
@@ -10,10 +11,12 @@ export async function GET(req: NextRequest) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
+  const workspaceId = await currentWorkspaceId();
   const cutoff = new Date(Date.now() - SLA_HOURS * 60 * 60 * 1000);
 
   const staleJobs = await prisma.job.findMany({
     where: {
+      workspaceId,
       status: { in: ["ASSIGNED", "IN_PROGRESS"] },
       updatedAt: { lt: cutoff },
     },

@@ -11,6 +11,7 @@
  */
 
 import { prisma } from "./prisma";
+import { currentWorkspaceId } from "./workspace";
 import { getTemplate, INDUSTRY_TEMPLATES, type IndustryKey } from "./industry-templates";
 
 export interface WorkspaceConfig {
@@ -56,7 +57,8 @@ const DEFAULTS: WorkspaceConfig = {
  * Falls back to industry-template defaults for any missing keys.
  */
 export async function getWorkspaceConfig(): Promise<WorkspaceConfig> {
-  const settings = await prisma.setting.findMany();
+  const workspaceId = await currentWorkspaceId();
+  const settings = await prisma.setting.findMany({ where: { workspaceId } });
   const map = Object.fromEntries(settings.map((s) => [s.key, s.value]));
 
   const industry = (map.industry as IndustryKey) || DEFAULTS.industry;
@@ -93,6 +95,7 @@ export async function getWorkspaceConfig(): Promise<WorkspaceConfig> {
  */
 export async function applyIndustryTemplate(industryKey: IndustryKey): Promise<void> {
   const template = INDUSTRY_TEMPLATES[industryKey] ?? INDUSTRY_TEMPLATES.OTHER;
+  const workspaceId = await currentWorkspaceId();
 
   const entries: Array<[string, string]> = [
     ["industry", template.key],
@@ -110,15 +113,7 @@ export async function applyIndustryTemplate(industryKey: IndustryKey): Promise<v
     entries.push(["currency_symbol", template.currencyHint]);
   }
 
-  await Promise.all(
-    entries.map(([key, value]) =>
-      prisma.setting.upsert({
-        where: { key },
-        update: { value },
-        create: { key, value },
-      })
-    )
-  );
+  await Promise.all(entries.map(([key, value]) => upsertSetting(workspaceId, key, value)));
 }
 
 /**
@@ -127,16 +122,25 @@ export async function applyIndustryTemplate(industryKey: IndustryKey): Promise<v
 export async function setWorkspaceConfig(
   updates: Partial<Record<string, string>>
 ): Promise<void> {
+  const workspaceId = await currentWorkspaceId();
   const entries = Object.entries(updates).filter(([, v]) => v !== undefined);
   await Promise.all(
-    entries.map(([key, value]) =>
-      prisma.setting.upsert({
-        where: { key },
-        update: { value: value as string },
-        create: { key, value: value as string },
-      })
-    )
+    entries.map(([key, value]) => upsertSetting(workspaceId, key, value as string))
   );
+}
+
+/**
+ * Workspace-aware setting upsert. The `key` column still carries a global
+ * unique constraint during this migration sprint, so we upsert on that and
+ * always stamp the current workspace on writes. Once `[workspaceId, key]`
+ * becomes the unique key, this helper switches to a composite upsert.
+ */
+async function upsertSetting(workspaceId: string, key: string, value: string): Promise<void> {
+  await prisma.setting.upsert({
+    where: { key },
+    update: { value, workspaceId },
+    create: { key, value, workspaceId },
+  });
 }
 
 /**

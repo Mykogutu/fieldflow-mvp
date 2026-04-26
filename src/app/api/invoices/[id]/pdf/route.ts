@@ -2,17 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { generateInvoicePDF } from "@/lib/pdf-generator";
 import { getCompanyName } from "@/lib/notifications";
+import { currentWorkspaceId } from "@/lib/workspace";
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const invoice = await prisma.invoice.findUnique({
-    where: { id: params.id },
+export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+  const workspaceId = await currentWorkspaceId();
+
+  const invoice = await prisma.invoice.findFirst({
+    where: { id: params.id, workspaceId },
     include: { job: true },
   });
 
   if (!invoice) return new NextResponse("Not found", { status: 404 });
 
   const companyName = await getCompanyName();
-  const companySetting = await prisma.setting.findUnique({ where: { key: "company_phone" } });
+  const companySetting = await prisma.setting.findFirst({
+    where: { workspaceId, key: "company_phone" },
+  });
 
   const pdfBytes = generateInvoicePDF({
     invoiceNumber: invoice.invoiceNumber,

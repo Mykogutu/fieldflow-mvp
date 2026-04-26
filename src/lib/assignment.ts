@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { currentWorkspaceId } from "./workspace";
 import type { WorkerScore } from "@/types";
 
 interface AssignmentInput {
@@ -10,8 +11,10 @@ interface AssignmentInput {
 }
 
 export async function scoreWorkers(input: AssignmentInput): Promise<WorkerScore[]> {
+  const workspaceId = await currentWorkspaceId();
   const workers = await prisma.user.findMany({
     where: {
+      workspaceId,
       role: "TECHNICIAN",
       isActive: true,
       id: input.excludeWorkerIds?.length
@@ -23,7 +26,7 @@ export async function scoreWorkers(input: AssignmentInput): Promise<WorkerScore[
       name: true,
       baseZone: true,
       jobs: {
-        where: { status: { in: ["ASSIGNED", "IN_PROGRESS"] } },
+        where: { status: { in: ["ASSIGNED", "IN_PROGRESS"] }, workspaceId },
         select: { id: true },
       },
     },

@@ -7,22 +7,43 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
+// MVP-STRATEGY v2.0 §16.3 — Multi-tenant Workspace
+//
+// The Workspace is the tenant container. During the migration sprint,
+// `workspaceId` on existing models is nullable; backfill populates it,
+// and a follow-up migration enforces NOT NULL.
+model Workspace {
   id        String   @id @default(cuid())
-  email     String?  @unique
-  phone     String   @unique
-  password  String?
   name      String
-  role      Role     @default(TECHNICIAN)
-  baseZone  String?
+  slug      String   @unique
   isActive  Boolean  @default(true)
-  jobs      Job[]    @relation("JobWorkers")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+model User {
+  id          String   @id @default(cuid())
+  workspaceId String?
+  email       String?  @unique
+  phone       String   @unique
+  password    String?
+  name        String
+  role        Role     @default(TECHNICIAN)
+  baseZone    String?
+  isActive    Boolean  @default(true)
+  jobs        Job[]    @relation("JobWorkers")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([workspaceId])
+  @@index([workspaceId, role])
 }
 
 model Job {
   id             String    @id @default(cuid())
+  workspaceId    String?
   jobNumber      String    @unique @default(cuid())
   clientName     String
   clientPhone    String
@@ -51,19 +72,28 @@ model Job {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([workspaceId])
+  @@index([workspaceId, status])
+  @@index([workspaceId, scheduledDate])
 }
 
 model JobEvent {
-  id        String   @id @default(cuid())
-  jobId     String
-  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  type      String
-  note      String?
-  createdAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  workspaceId String?
+  jobId       String
+  job         Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  type        String
+  note        String?
+  createdAt   DateTime @default(now())
+
+  @@index([workspaceId])
+  @@index([jobId])
 }
 
 model Invoice {
   id            String        @id @default(cuid())
+  workspaceId   String?
   invoiceNumber String        @unique
   jobId         String        @unique
   job           Job           @relation(fields: [jobId], references: [id])
@@ -77,10 +107,14 @@ model Invoice {
   paidAt        DateTime?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+
+  @@index([workspaceId])
+  @@index([workspaceId, status])
 }
 
 model Expense {
   id          String          @id @default(cuid())
+  workspaceId String?
   description String
   amount      Float
   category    ExpenseCategory
@@ -89,25 +123,45 @@ model Expense {
   receiptUrl  String?
   notes       String?
   createdAt   DateTime        @default(now())
+
+  @@index([workspaceId])
+  @@index([workspaceId, category])
+  @@index([workspaceId, date])
 }
 
 model Notification {
-  id        String   @id @default(cuid())
-  type      String
-  title     String
-  message   String
-  isRead    Boolean  @default(false)
-  link      String?
-  jobId     String?
-  job       Job?     @relation(fields: [jobId], references: [id])
-  createdAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  workspaceId String?
+  type        String
+  title       String
+  message     String
+  isRead      Boolean  @default(false)
+  link        String?
+  jobId       String?
+  job         Job?     @relation(fields: [jobId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@index([workspaceId])
+  @@index([workspaceId, isRead])
 }
 
+// Setting is the workspace-scoped key/value config store. During the
+// migration sprint, `workspaceId` is nullable and `key` retains its global
+// unique constraint. Once backfill is complete a follow-up sprint will:
+//   1. Make workspaceId non-null
+//   2. Drop `key @unique`
+//   3. Add `@@unique([workspaceId, key])`
+// All call sites already filter by workspaceId, so the constraint switch is
+// a no-op for application code.
 model Setting {
-  id    String @id @default(cuid())
-  key   String @unique
-  value String
-  type  String @default("string")
+  id          String  @id @default(cuid())
+  workspaceId String?
+  key         String  @unique
+  value       String
+  type        String  @default("string")
+
+  @@index([workspaceId])
+  @@index([workspaceId, key])
 }
 
 // MVP-STRATEGY v2.0 §6 — The Asset Layer

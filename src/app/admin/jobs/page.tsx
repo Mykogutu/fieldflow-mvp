@@ -2,6 +2,7 @@ import { getJobs, createJob, reassignJob, rescheduleJob, updateJobStatus } from 
 import { getUsers } from "@/app/actions/user-actions";
 import { prisma } from "@/lib/prisma";
 import { statusColor, statusLabel, formatDate, formatKES } from "@/lib/utils";
+import { currentWorkspaceId } from "@/lib/workspace";
 import JobsClient from "./JobsClient";
 
 export default async function JobsPage({
@@ -9,6 +10,7 @@ export default async function JobsPage({
 }: {
   searchParams: { status?: string; search?: string; page?: string };
 }) {
+  const workspaceId = await currentWorkspaceId();
   const [{ jobs, total, pages }, workers, jobTypes, zones] = await Promise.all([
     getJobs({
       status: searchParams.status,
@@ -16,8 +18,8 @@ export default async function JobsPage({
       page: searchParams.page ? parseInt(searchParams.page) : 1,
     }),
     getUsers("TECHNICIAN"),
-    prisma.setting.findUnique({ where: { key: "job_types" } }),
-    prisma.setting.findUnique({ where: { key: "zones" } }),
+    prisma.setting.findFirst({ where: { workspaceId, key: "job_types" } }),
+    prisma.setting.findFirst({ where: { workspaceId, key: "zones" } }),
   ]);
 
   const jobTypesList: string[] = jobTypes?.value ? JSON.parse(jobTypes.value) : [];

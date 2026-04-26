@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import { hashPassword } from "@/lib/auth";
 import { normalizePhone } from "@/lib/utils";
+import { currentWorkspaceId } from "@/lib/workspace";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -26,15 +27,18 @@ const updateSchema = z.object({
 
 export async function createUser(formData: FormData) {
   await requireAdmin();
+  const workspaceId = await currentWorkspaceId();
   const parsed = createSchema.safeParse(Object.fromEntries(formData.entries()));
   if (!parsed.success) return { error: parsed.error.message };
   const d = parsed.data;
   const phone = normalizePhone(d.phone);
+  // Phone is globally unique across workspaces (one human = one phone).
   const existing = await prisma.user.findUnique({ where: { phone } });
   if (existing) return { error: "A user with this phone number already exists." };
   const hashed = await hashPassword(d.password);
   await prisma.user.create({
     data: {
+      workspaceId,
       name: d.name,
       phone,
       email: d.email || undefined,
@@ -49,20 +53,23 @@ export async function createUser(formData: FormData) {
 
 export async function updateUser(formData: FormData) {
   await requireAdmin();
+  const workspaceId = await currentWorkspaceId();
   const parsed = updateSchema.safeParse(Object.fromEntries(formData.entries()));
   if (!parsed.success) return { error: parsed.error.message };
   const { id, password, ...rest } = parsed.data;
   const data: Record<string, unknown> = { ...rest };
   if (password) data.password = await hashPassword(password);
-  await prisma.user.update({ where: { id }, data });
+  const result = await prisma.user.updateMany({ where: { id, workspaceId }, data });
+  if (result.count === 0) return { error: "User not found" };
   revalidatePath("/admin/workers");
   return { ok: true };
 }
 
 export async function getUsers(role?: "ADMIN" | "TECHNICIAN") {
   await requireAdmin();
+  const workspaceId = await currentWorkspaceId();
   return prisma.user.findMany({
-    where: role ? { role } : {},
+    where: role ? { workspaceId, role } : { workspaceId },
     select: { id: true, name: true, phone: true, email: true, role: true, baseZone: true, isActive: true },
     orderBy: { name: "asc" },
   });
@@ -70,7 +77,12 @@ export async function getUsers(role?: "ADMIN" | "TECHNICIAN") {
 
 export async function deleteUser(id: string) {
   await requireAdmin();
-  await prisma.user.update({ where: { id }, data: { isActive: false } });
+  const workspaceId = await currentWorkspaceId();
+  const result = await prisma.user.updateMany({
+    where: { id, workspaceId },
+    data: { isActive: false },
+  });
+  if (result.count === 0) return { error: "User not found" };
   revalidatePath("/admin/workers");
   return { ok: true };
 }

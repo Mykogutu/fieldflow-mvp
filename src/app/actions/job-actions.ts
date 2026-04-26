@@ -5,6 +5,7 @@ import { sendJobAssignment } from "@/lib/twilio";
 import { createNotification } from "@/lib/notifications";
 import { pickBestWorker } from "@/lib/assignment";
 import { normalizePhone, formatDate } from "@/lib/utils";
+import { currentWorkspaceId } from "@/lib/workspace";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -30,6 +31,7 @@ export async function createJob(formData: FormData) {
 
   const d = parsed.data;
   const clientPhone = normalizePhone(d.clientPhone);
+  const workspaceId = await currentWorkspaceId();
 
   let workerId = d.workerId;
   if (!workerId) {
@@ -42,12 +44,13 @@ export async function createJob(formData: FormData) {
       })) ?? undefined;
   }
 
-  const jobCount = await prisma.job.count();
+  const jobCount = await prisma.job.count({ where: { workspaceId } });
   const year = new Date().getFullYear();
   const jobNumber = `JC-${year}-${String(jobCount + 1).padStart(4, "0")}`;
 
   const job = await prisma.job.create({
     data: {
+      workspaceId,
       jobNumber,
       clientName: d.clientName,
       clientPhone,
@@ -64,12 +67,12 @@ export async function createJob(formData: FormData) {
   });
 
   await prisma.jobEvent.create({
-    data: { jobId: job.id, type: "CREATED", note: "Job created by admin" },
+    data: { workspaceId, jobId: job.id, type: "CREATED", note: "Job created by admin" },
   });
 
   if (workerId) {
-    const worker = await prisma.user.findUnique({
-      where: { id: workerId },
+    const worker = await prisma.user.findFirst({
+      where: { id: workerId, workspaceId },
       select: { phone: true, name: true },
     });
     if (worker) {
@@ -101,12 +104,13 @@ export async function getJobs(filter?: {
   page?: number;
 }) {
   await requireAdmin();
+  const workspaceId = await currentWorkspaceId();
 
   const page = filter?.page ?? 1;
   const take = 20;
   const skip = (page - 1) * take;
 
-  const where: Record<string, unknown> = {};
+  const where: Record<string, unknown> = { workspaceId };
   if (filter?.status && filter.status !== "ALL") {
     where.status = filter.status;
   }
@@ -137,14 +141,16 @@ export async function getJobs(filter?: {
 
 export async function updateJobStatus(jobId: string, status: string, note?: string) {
   await requireAdmin();
+  const workspaceId = await currentWorkspaceId();
 
-  await prisma.job.update({
-    where: { id: jobId },
+  const result = await prisma.job.updateMany({
+    where: { id: jobId, workspaceId },
     data: { status: status as never, lastActionAt: new Date() },
   });
+  if (result.count === 0) return { error: "Job not found" };
 
   await prisma.jobEvent.create({
-    data: { jobId, type: "STATUS_CHANGE", note: note ?? `Status → ${status} (admin)` },
+    data: { workspaceId, jobId, type: "STATUS_CHANGE", note: note ?? `Status → ${status} (admin)` },
   });
 
   revalidatePath("/admin/jobs");
@@ -153,12 +159,13 @@ export async function updateJobStatus(jobId: string, status: string, note?: stri
 
 export async function reassignJob(jobId: string, workerId: string) {
   await requireAdmin();
+  const workspaceId = await currentWorkspaceId();
 
-  const job = await prisma.job.findUnique({ where: { id: jobId } });
+  const job = await prisma.job.findFirst({ where: { id: jobId, workspaceId } });
   if (!job) return { error: "Job not found" };
 
-  const worker = await prisma.user.findUnique({
-    where: { id: workerId },
+  const worker = await prisma.user.findFirst({
+    where: { id: workerId, workspaceId },
     select: { phone: true, name: true },
   });
   if (!worker) return { error: "Worker not found" };
@@ -182,7 +189,7 @@ export async function reassignJob(jobId: string, workerId: string) {
   });
 
   await prisma.jobEvent.create({
-    data: { jobId, type: "REASSIGNED", note: `Reassigned to ${worker.name}` },
+    data: { workspaceId, jobId, type: "REASSIGNED", note: `Reassigned to ${worker.name}` },
   });
 
   revalidatePath("/admin/jobs");
@@ -191,18 +198,20 @@ export async function reassignJob(jobId: string, workerId: string) {
 
 export async function rescheduleJob(jobId: string, newDate: string) {
   await requireAdmin();
+  const workspaceId = await currentWorkspaceId();
 
-  await prisma.job.update({
-    where: { id: jobId },
+  const result = await prisma.job.updateMany({
+    where: { id: jobId, workspaceId },
     data: {
       scheduledDate: new Date(newDate),
       status: "RESCHEDULED",
       lastActionAt: new Date(),
     },
   });
+  if (result.count === 0) return { error: "Job not found" };
 
   await prisma.jobEvent.create({
-    data: { jobId, type: "RESCHEDULED", note: `Rescheduled to ${newDate}` },
+    data: { workspaceId, jobId, type: "RESCHEDULED", note: `Rescheduled to ${newDate}` },
   });
 
   revalidatePath("/admin/jobs");
@@ -211,10 +220,12 @@ export async function rescheduleJob(jobId: string, newDate: string) {
 
 export async function deleteJob(jobId: string) {
   await requireAdmin();
-  await prisma.job.update({
-    where: { id: jobId },
+  const workspaceId = await currentWorkspaceId();
+  const result = await prisma.job.updateMany({
+    where: { id: jobId, workspaceId },
     data: { status: "CANCELLED" },
   });
+  if (result.count === 0) return { error: "Job not found" };
   revalidatePath("/admin/jobs");
   return { ok: true };
 }

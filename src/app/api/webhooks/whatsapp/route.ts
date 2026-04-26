@@ -10,6 +10,7 @@ import {
 } from "@/lib/twilio";
 import { createNotification, deliverJobVerifiedDocs, getCompanyName } from "@/lib/notifications";
 import { getWorkspaceConfig } from "@/lib/workspace-config";
+import { currentWorkspaceId } from "@/lib/workspace";
 import { resolveSenderByNumber, type WhatsAppSender } from "@/lib/senders";
 import { generateInvoicePDF, generateJobCardPDF } from "@/lib/pdf-generator";
 import { normalizePhone, generateOTP, otpExpiresAt, generateInvoiceNumber, generateJobCardNumber, formatKES, formatDate, isWithin15Min } from "@/lib/utils";
@@ -30,8 +31,12 @@ export async function POST(req: NextRequest) {
     const inboundNumber = normalizePhone(rawTo.replace("whatsapp:", ""));
     const sender = await resolveSenderByNumber(inboundNumber);
 
-    const worker = await prisma.user.findUnique({
-      where: { phone: workerPhone },
+    // Resolve workspace from the sender (preferred) or fall back to the
+    // process default. In single-tenant Restore, both resolve to the same id.
+    const workspaceId = sender?.workspaceId ?? (await currentWorkspaceId());
+
+    const worker = await prisma.user.findFirst({
+      where: { phone: workerPhone, workspaceId },
       select: { id: true, name: true, phone: true, role: true, isActive: true },
     });
 
@@ -45,34 +50,34 @@ export async function POST(req: NextRequest) {
 
     switch (parsed.intent) {
       case "ACCEPT_JOB":
-        return await handleAccept(worker, parsed.data.selectionIndex, companyName);
+        return await handleAccept(worker, parsed.data.selectionIndex, companyName, workspaceId);
 
       case "DECLINE_JOB":
-        return await handleDecline(worker, companyName, sender);
+        return await handleDecline(worker, companyName, workspaceId, sender);
 
       case "CHECK_IN":
-        return await handleCheckIn(worker);
+        return await handleCheckIn(worker, workspaceId);
 
       case "REPORT_COMPLETION":
-        return await handleCompletion(worker, parsed.data.amount, parsed.data.clientName, companyName, sender);
+        return await handleCompletion(worker, parsed.data.amount, parsed.data.clientName, companyName, workspaceId, sender);
 
       case "SUBMIT_OTP":
-        return await handleOTP(worker, parsed.data.otpCode!, companyName, sender);
+        return await handleOTP(worker, parsed.data.otpCode!, companyName, workspaceId, sender);
 
       case "POSTPONE_JOB":
-        return await handlePostpone(worker, parsed.data.postponeReason, companyName, sender);
+        return await handlePostpone(worker, parsed.data.postponeReason, companyName, workspaceId, sender);
 
       case "UNDO":
-        return await handleUndo(worker);
+        return await handleUndo(worker, workspaceId);
 
       case "CHECK_SCHEDULE":
-        return await handleSchedule(worker);
+        return await handleSchedule(worker, workspaceId);
 
       case "CHECK_EARNINGS":
-        return await handleEarnings(worker);
+        return await handleEarnings(worker, workspaceId);
 
       case "REPORT_ISSUE":
-        return await handleIssue(worker, parsed.data.rawText ?? body, companyName);
+        return await handleIssue(worker, parsed.data.rawText ?? body, companyName, workspaceId);
 
       default:
         return twilioReply(
@@ -92,10 +97,12 @@ export async function POST(req: NextRequest) {
 async function handleAccept(
   worker: { id: string; name: string; phone: string },
   idx: number | undefined,
-  companyName: string
+  companyName: string,
+  workspaceId: string
 ) {
   const jobs = await prisma.job.findMany({
     where: {
+      workspaceId,
       workers: { some: { id: worker.id } },
       status: "ASSIGNED",
     },
@@ -113,7 +120,7 @@ async function handleAccept(
   });
 
   await prisma.jobEvent.create({
-    data: { jobId: job.id, type: "ACCEPTED", note: `Accepted by ${worker.name}` },
+    data: { workspaceId, jobId: job.id, type: "ACCEPTED", note: `Accepted by ${worker.name}` },
   });
 
   await createNotification({
@@ -132,10 +139,11 @@ async function handleAccept(
 async function handleDecline(
   worker: { id: string; name: string; phone: string },
   companyName: string,
+  workspaceId: string,
   sender?: WhatsAppSender | null
 ) {
   const jobs = await prisma.job.findMany({
-    where: { workers: { some: { id: worker.id } }, status: "ASSIGNED" },
+    where: { workspaceId, workers: { some: { id: worker.id } }, status: "ASSIGNED" },
     orderBy: { createdAt: "asc" },
   });
 
@@ -153,7 +161,7 @@ async function handleDecline(
   });
 
   await prisma.jobEvent.create({
-    data: { jobId: job.id, type: "DECLINED", note: `Declined by ${worker.name}` },
+    data: { workspaceId, jobId: job.id, type: "DECLINED", note: `Declined by ${worker.name}` },
   });
 
   // Auto-reassign
@@ -166,8 +174,8 @@ async function handleDecline(
   });
 
   if (nextWorkerId) {
-    const nextWorker = await prisma.user.findUnique({
-      where: { id: nextWorkerId },
+    const nextWorker = await prisma.user.findFirst({
+      where: { id: nextWorkerId, workspaceId },
       select: { name: true, phone: true },
     });
 
@@ -206,16 +214,19 @@ async function handleDecline(
   return twilioReply("Noted. Job has been reassigned.");
 }
 
-async function handleCheckIn(worker: { id: string; name: string; phone: string }) {
+async function handleCheckIn(
+  worker: { id: string; name: string; phone: string },
+  workspaceId: string
+) {
   const job = await prisma.job.findFirst({
-    where: { workers: { some: { id: worker.id } }, status: "IN_PROGRESS" },
+    where: { workspaceId, workers: { some: { id: worker.id } }, status: "IN_PROGRESS" },
     orderBy: { scheduledDate: "asc" },
   });
 
   if (!job) return twilioReply("No active job to check in for.");
 
   await prisma.jobEvent.create({
-    data: { jobId: job.id, type: "ARRIVED", note: `${worker.name} arrived on site` },
+    data: { workspaceId, jobId: job.id, type: "ARRIVED", note: `${worker.name} arrived on site` },
   });
 
   return twilioReply(`✅ Checked in for ${job.clientName}. Timer started.\n\nText "Done [amount]" when complete.`);
@@ -226,10 +237,12 @@ async function handleCompletion(
   amount: number | undefined,
   clientHint: string | undefined,
   companyName: string,
+  workspaceId: string,
   sender?: WhatsAppSender | null
 ) {
   const activeJobs = await prisma.job.findMany({
     where: {
+      workspaceId,
       workers: { some: { id: worker.id } },
       status: { in: ["IN_PROGRESS", "ASSIGNED"] },
     },
@@ -255,8 +268,8 @@ async function handleCompletion(
   const otp = generateOTP();
   const expires = otpExpiresAt();
 
-  // Count invoices to generate invoice number
-  const invoiceCount = await prisma.invoice.count();
+  // Count invoices to generate invoice number (workspace-scoped sequence)
+  const invoiceCount = await prisma.invoice.count({ where: { workspaceId } });
   const invoiceNumber = generateInvoiceNumber(invoiceCount + 1);
 
   await prisma.job.update({
@@ -273,6 +286,7 @@ async function handleCompletion(
 
   await prisma.invoice.create({
     data: {
+      workspaceId,
       invoiceNumber,
       jobId: job.id,
       amount,
@@ -286,6 +300,7 @@ async function handleCompletion(
 
   await prisma.jobEvent.create({
     data: {
+      workspaceId,
       jobId: job.id,
       type: "COMPLETED",
       note: `${worker.name} marked done. Amount: ${formatKES(amount)}`,
@@ -320,10 +335,12 @@ async function handleOTP(
   worker: { id: string; name: string; phone: string },
   otp: string,
   companyName: string,
+  workspaceId: string,
   sender?: WhatsAppSender | null
 ) {
   const job = await prisma.job.findFirst({
     where: {
+      workspaceId,
       workers: { some: { id: worker.id } },
       status: "COMPLETED_PENDING_VERIFICATION",
       otpCode: otp,
@@ -359,6 +376,7 @@ async function handleOTP(
 
   await prisma.jobEvent.create({
     data: {
+      workspaceId,
       jobId: job.id,
       type: "VERIFIED",
       note: `OTP ${otp} verified by ${worker.name}`,
@@ -375,11 +393,11 @@ async function handleOTP(
 
   // Generate and send PDFs
   try {
-    const setting = await prisma.setting.findUnique({ where: { key: "company_phone" } });
+    const setting = await prisma.setting.findFirst({ where: { workspaceId, key: "company_phone" } });
     const companyPhone = setting?.value ?? "";
 
-    const invoiceCount = await prisma.invoice.count();
-    const jobCount = await prisma.job.count({ where: { status: { in: ["VERIFIED", "CLOSED"] } } });
+    const invoiceCount = await prisma.invoice.count({ where: { workspaceId } });
+    const jobCount = await prisma.job.count({ where: { workspaceId, status: { in: ["VERIFIED", "CLOSED"] } } });
 
     const invoicePdfBytes = generateInvoicePDF({
       invoiceNumber: job.invoice?.invoiceNumber ?? "INV-0000",
@@ -441,10 +459,12 @@ async function handlePostpone(
   worker: { id: string; name: string; phone: string },
   reason: string | undefined,
   companyName: string,
+  workspaceId: string,
   sender?: WhatsAppSender | null
 ) {
   const job = await prisma.job.findFirst({
     where: {
+      workspaceId,
       workers: { some: { id: worker.id } },
       status: { in: ["ASSIGNED", "IN_PROGRESS"] },
     },
@@ -469,6 +489,7 @@ async function handlePostpone(
 
   await prisma.jobEvent.create({
     data: {
+      workspaceId,
       jobId: job.id,
       type: "POSTPONED",
       note: `Postponed by ${worker.name}: ${reason}`,
@@ -490,9 +511,13 @@ async function handlePostpone(
   );
 }
 
-async function handleUndo(worker: { id: string; name: string; phone: string }) {
+async function handleUndo(
+  worker: { id: string; name: string; phone: string },
+  workspaceId: string
+) {
   const job = await prisma.job.findFirst({
     where: {
+      workspaceId,
       workers: { some: { id: worker.id } },
       status: "COMPLETED_PENDING_VERIFICATION",
     },
@@ -516,18 +541,22 @@ async function handleUndo(worker: { id: string; name: string; phone: string }) {
     },
   });
 
-  await prisma.invoice.delete({ where: { jobId: job.id } }).catch(() => {});
+  await prisma.invoice.deleteMany({ where: { jobId: job.id, workspaceId } }).catch(() => {});
 
   await prisma.jobEvent.create({
-    data: { jobId: job.id, type: "UNDO", note: `Undo by ${worker.name}` },
+    data: { workspaceId, jobId: job.id, type: "UNDO", note: `Undo by ${worker.name}` },
   });
 
   return twilioReply(`↩️ Undone. Job for ${job.clientName} is back to In Progress.`);
 }
 
-async function handleSchedule(worker: { id: string; name: string; phone: string }) {
+async function handleSchedule(
+  worker: { id: string; name: string; phone: string },
+  workspaceId: string
+) {
   const jobs = await prisma.job.findMany({
     where: {
+      workspaceId,
       workers: { some: { id: worker.id } },
       status: { in: ["ASSIGNED", "IN_PROGRESS"] },
     },
@@ -545,7 +574,10 @@ async function handleSchedule(worker: { id: string; name: string; phone: string 
   return twilioReply(`📋 Your Jobs (${jobs.length}):\n\n${lines.join("\n\n")}`);
 }
 
-async function handleEarnings(worker: { id: string; name: string; phone: string }) {
+async function handleEarnings(
+  worker: { id: string; name: string; phone: string },
+  workspaceId: string
+) {
   const now = new Date();
   const startOfWeek = new Date(now);
   startOfWeek.setDate(now.getDate() - now.getDay());
@@ -555,6 +587,7 @@ async function handleEarnings(worker: { id: string; name: string; phone: string 
 
   const weekJobs = await prisma.job.findMany({
     where: {
+      workspaceId,
       workers: { some: { id: worker.id } },
       status: "VERIFIED",
       verifiedAt: { gte: startOfWeek },
@@ -564,6 +597,7 @@ async function handleEarnings(worker: { id: string; name: string; phone: string 
 
   const monthJobs = await prisma.job.findMany({
     where: {
+      workspaceId,
       workers: { some: { id: worker.id } },
       status: "VERIFIED",
       verifiedAt: { gte: startOfMonth },
@@ -582,10 +616,12 @@ async function handleEarnings(worker: { id: string; name: string; phone: string 
 async function handleIssue(
   worker: { id: string; name: string; phone: string },
   message: string,
-  companyName: string
+  companyName: string,
+  workspaceId: string
 ) {
   const job = await prisma.job.findFirst({
     where: {
+      workspaceId,
       workers: { some: { id: worker.id } },
       status: { in: ["IN_PROGRESS", "ASSIGNED"] },
     },
@@ -606,7 +642,7 @@ async function handleIssue(
     });
 
     await prisma.jobEvent.create({
-      data: { jobId: job.id, type: "ISSUE_REPORTED", note: message },
+      data: { workspaceId, jobId: job.id, type: "ISSUE_REPORTED", note: message },
     });
   }
 

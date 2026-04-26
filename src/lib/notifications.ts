@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 import { sendDocsToClient } from "./twilio";
 import { getWorkspaceConfig } from "./workspace-config";
+import { currentWorkspaceId } from "./workspace";
 import type { WhatsAppSender } from "./senders";
 
 export async function createNotification(params: {
@@ -10,7 +11,8 @@ export async function createNotification(params: {
   jobId?: string;
   link?: string;
 }): Promise<void> {
-  await prisma.notification.create({ data: params });
+  const workspaceId = await currentWorkspaceId();
+  await prisma.notification.create({ data: { ...params, workspaceId } });
 }
 
 export async function deliverJobVerifiedDocs(
@@ -18,8 +20,9 @@ export async function deliverJobVerifiedDocs(
   companyName: string,
   sender?: WhatsAppSender | null
 ): Promise<void> {
-  const job = await prisma.job.findUnique({
-    where: { id: jobId },
+  const workspaceId = await currentWorkspaceId();
+  const job = await prisma.job.findFirst({
+    where: { id: jobId, workspaceId },
     include: { invoice: true },
   });
   if (!job) return;
@@ -41,7 +44,8 @@ export async function deliverJobVerifiedDocs(
 }
 
 export async function getCompanyName(): Promise<string> {
-  const s = await prisma.setting.findUnique({ where: { key: "company_name" } });
+  const workspaceId = await currentWorkspaceId();
+  const s = await prisma.setting.findFirst({ where: { workspaceId, key: "company_name" } });
   return s?.value ?? "FieldFlow Services";
 }
 
