@@ -5,6 +5,7 @@ import { createJob, reassignJob, rescheduleJob, updateJobStatus } from "@/app/ac
 import { statusColor, statusLabel, formatDate, formatKES } from "@/lib/utils";
 
 interface Worker { id: string; name: string; phone: string; baseZone?: string | null }
+interface AssetOption { id: string; name: string; assetType: string; clientName: string }
 interface Job {
   id: string; jobNumber: string; clientName: string; clientPhone: string;
   jobType: string; status: string; priority: string; location: string | null;
@@ -12,6 +13,7 @@ interface Job {
   createdAt: Date | string; updatedAt: Date | string;
   workers: Worker[];
   invoice: { id: string; invoiceNumber: string; status: string; amount: number } | null;
+  asset: { id: string; name: string; assetType: string } | null;
 }
 
 const STATUS_TABS = [
@@ -25,10 +27,11 @@ const STATUS_TABS = [
 ];
 
 export default function JobsClient({
-  jobs, total, pages, workers, jobTypes, zones, currentStatus, currentSearch,
+  jobs, total, pages, workers, jobTypes, zones, assets, currentStatus, currentSearch,
 }: {
   jobs: Job[]; total: number; pages: number; workers: Worker[];
-  jobTypes: string[]; zones: string[]; currentStatus?: string; currentSearch?: string;
+  jobTypes: string[]; zones: string[]; assets: AssetOption[];
+  currentStatus?: string; currentSearch?: string;
 }) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
@@ -137,7 +140,14 @@ export default function JobsClient({
                     <p className="font-medium text-gray-900">{job.clientName}</p>
                     <p className="text-xs text-gray-400">{job.clientPhone}</p>
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{job.jobType}</td>
+                  <td className="px-4 py-3">
+                    <p className="text-gray-600">{job.jobType}</p>
+                    {job.asset && (
+                      <p className="text-xs text-blue-500 truncate max-w-[140px]">
+                        🏷️ {job.asset.name}
+                      </p>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-gray-600">{job.workers.map((w) => w.name).join(", ") || <span className="text-gray-300">Unassigned</span>}</td>
                   <td className="px-4 py-3 text-gray-400 text-xs">{formatDate(job.scheduledDate)}</td>
                   <td className="px-4 py-3">
@@ -208,6 +218,19 @@ export default function JobsClient({
             </div>
             <Field label="Quoted Amount (KES)" name="quotedAmount" type="number" />
             <Field label="Description" name="description" />
+            {assets.length > 0 && (
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Linked Asset (optional)</label>
+                <select name="assetId" className={inputCls}>
+                  <option value="">No asset linked</option>
+                  {assets.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name} — {a.assetType} ({a.clientName})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Assign Worker (optional — auto-assigned if blank)</label>
               <select name="workerId" className={inputCls}>
@@ -238,6 +261,7 @@ export default function JobsClient({
               <Info label="Scheduled" value={formatDate(selectedJob.scheduledDate)} />
               {selectedJob.finalAmount && <Info label="Amount" value={formatKES(selectedJob.finalAmount)} />}
               {selectedJob.invoice && <Info label="Invoice" value={`${selectedJob.invoice.invoiceNumber} (${selectedJob.invoice.status})`} />}
+              {selectedJob.asset && <Info label="Asset" value={`${selectedJob.asset.name} (${selectedJob.asset.assetType})`} />}
             </div>
 
             {selectedJob.invoice?.id && (

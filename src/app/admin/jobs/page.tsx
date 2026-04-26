@@ -11,7 +11,7 @@ export default async function JobsPage({
   searchParams: { status?: string; search?: string; page?: string };
 }) {
   const workspaceId = await currentWorkspaceId();
-  const [{ jobs, total, pages }, workers, jobTypes, zones] = await Promise.all([
+  const [{ jobs, total, pages }, workers, jobTypes, zones, assets] = await Promise.all([
     getJobs({
       status: searchParams.status,
       search: searchParams.search,
@@ -20,6 +20,11 @@ export default async function JobsPage({
     getUsers("TECHNICIAN"),
     prisma.setting.findFirst({ where: { workspaceId, key: "job_types" } }),
     prisma.setting.findFirst({ where: { workspaceId, key: "zones" } }),
+    prisma.asset.findMany({
+      where: { workspaceId },
+      select: { id: true, name: true, assetType: true, clientName: true },
+      orderBy: { name: "asc" },
+    }),
   ]);
 
   const jobTypesList: string[] = jobTypes?.value ? JSON.parse(jobTypes.value) : [];
@@ -33,6 +38,7 @@ export default async function JobsPage({
       workers={workers}
       jobTypes={jobTypesList}
       zones={zonesList}
+      assets={assets}
       currentStatus={searchParams.status}
       currentSearch={searchParams.search}
     />

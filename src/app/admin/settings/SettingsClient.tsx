@@ -18,6 +18,34 @@ const CURRENCY_OPTIONS = [
   { code: "TZS", label: "Tanzanian Shilling (TZS)" },
 ];
 
+const DOCUMENT_OPTIONS = [
+  {
+    key: "invoice",
+    label: "Invoice",
+    description: "Auto-generated PDF sent to the client when a job is completed",
+  },
+  {
+    key: "job_card",
+    label: "Job Card",
+    description: "Full job record with timeline, worker details, and client verification",
+  },
+  {
+    key: "warranty",
+    label: "Warranty Certificate",
+    description: "Warranty document issued to the client after job verification",
+  },
+  {
+    key: "certificate",
+    label: "Completion Certificate",
+    description: "Formal service completion certificate (e.g. for installation jobs)",
+  },
+  {
+    key: "quotation",
+    label: "Quotation",
+    description: "Price estimate sent to the client before work begins",
+  },
+];
+
 export default function SettingsClient({ settings }: { settings: Record<string, string> }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -48,6 +76,17 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
 
   // Brand
   const [brandColor, setBrandColor] = useState(settings.brand_color ?? "#2563eb");
+
+  // Documents
+  const DEFAULT_DOCS = ["invoice", "job_card", "warranty"];
+  const [enabledDocs, setEnabledDocs] = useState<string[]>(
+    safeJson<string[]>(settings.enabled_documents, DEFAULT_DOCS)
+  );
+  function toggleDoc(key: string) {
+    setEnabledDocs((prev) =>
+      prev.includes(key) ? prev.filter((d) => d !== key) : [...prev, key]
+    );
+  }
 
   // Lists
   const [jobTypes, setJobTypes] = useState<string[]>(
@@ -93,6 +132,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
           emoji: currentTemplate.emoji,
           job_types: JSON.stringify(jobTypes),
           zones: JSON.stringify(zones),
+          enabled_documents: JSON.stringify(enabledDocs),
         }),
       });
       setSaved(true);
@@ -362,6 +402,47 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
           >
             Add
           </button>
+        </div>
+      </section>
+
+      {/* Documents */}
+      <section className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+        <div>
+          <h2 className="font-semibold text-gray-900">Documents</h2>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Choose which documents are generated and delivered for completed jobs.
+          </p>
+        </div>
+        <div className="space-y-3">
+          {DOCUMENT_OPTIONS.map((doc) => {
+            const on = enabledDocs.includes(doc.key);
+            return (
+              <div
+                key={doc.key}
+                className="flex items-start justify-between gap-4 py-3 px-4 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-800">{doc.label}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{doc.description}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => toggleDoc(doc.key)}
+                  className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
+                    on ? "bg-blue-600" : "bg-gray-200"
+                  }`}
+                  role="switch"
+                  aria-checked={on}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      on ? "translate-x-4" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+            );
+          })}
         </div>
       </section>
 

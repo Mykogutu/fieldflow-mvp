@@ -20,6 +20,7 @@ const createSchema = z.object({
   quotedAmount: z.coerce.number().optional(),
   priority: z.enum(["EMERGENCY", "HIGH", "NORMAL", "LOW"]).default("NORMAL"),
   workerId: z.string().optional(),
+  assetId: z.string().optional(),
 });
 
 export async function createJob(formData: FormData) {
@@ -63,6 +64,7 @@ export async function createJob(formData: FormData) {
       priority: d.priority,
       status: workerId ? "ASSIGNED" : "ASSIGNED",
       workers: workerId ? { connect: [{ id: workerId }] } : undefined,
+      assetId: d.assetId || undefined,
     },
   });
 
@@ -128,6 +130,7 @@ export async function getJobs(filter?: {
       include: {
         workers: { select: { id: true, name: true, phone: true } },
         invoice: { select: { id: true, invoiceNumber: true, status: true, amount: true } },
+        asset: { select: { id: true, name: true, assetType: true } },
       },
       orderBy: { createdAt: "desc" },
       take,
