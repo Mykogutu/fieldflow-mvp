@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyToken } from "@/lib/auth";
+import { jwtVerify } from "jose";
 
-export function middleware(req: NextRequest) {
+const secret = new TextEncoder().encode(process.env.JWT_SECRET ?? "");
+
+async function verifyEdgeToken(token: string): Promise<{ role?: string } | null> {
+  try {
+    const { payload } = await jwtVerify(token, secret);
+    return payload as { role?: string };
+  } catch {
+    return null;
+  }
+}
+
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Pass pathname to server components via header
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-pathname", pathname);
 
@@ -22,7 +32,7 @@ export function middleware(req: NextRequest) {
     if (!token) {
       return NextResponse.redirect(new URL("/login", req.url));
     }
-    const payload = verifyToken(token);
+    const payload = await verifyEdgeToken(token);
     if (!payload || payload.role !== "ADMIN") {
       return NextResponse.redirect(new URL("/login", req.url));
     }
