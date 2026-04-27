@@ -16,7 +16,7 @@ import { formatKES, formatDate, statusLabel } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
   updateJobStatus, rescheduleJob, reassignJob,
-  closeJob, markJobPaid, deleteJob,
+  closeJob, markJobPaid, deleteJob, updateJob,
 } from "@/app/actions/job-actions";
 
 // ── Event config ───────────────────────────────────────────────────────────────
@@ -211,6 +211,92 @@ function ReassignModal({ jobId, allWorkers, currentWorkerId, onClose }: {
   );
 }
 
+// ── Edit Job Modal ─────────────────────────────────────────────────────────────
+function EditJobModal({ job, onClose }: { job: JobDetailData; onClose: () => void }) {
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState("");
+  const router = useRouter();
+
+  function submit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    startTransition(async () => {
+      const res = await updateJob(job.id, {
+        jobType:       (fd.get("jobType")       as string) || undefined,
+        description:   fd.get("description")    as string,
+        location:      fd.get("location")       as string,
+        zone:          fd.get("zone")           as string,
+        scheduledDate: fd.get("scheduledDate")  as string || undefined,
+        quotedAmount:  fd.get("quotedAmount")   ? Number(fd.get("quotedAmount")) : undefined,
+        priority:      fd.get("priority")       as string || undefined,
+      });
+      if (res.error) { setError(res.error); return; }
+      onClose();
+      router.refresh();
+    });
+  }
+
+  const inp = "ff-input text-sm";
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white rounded-[16px] shadow-2xl w-full max-w-lg max-h-[90dvh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E2E8F0] shrink-0">
+          <h3 className="font-bold text-[#0F172A]">Edit Job · {job.jobNumber}</h3>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[#F8FAFC] text-[#94A3B8]">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <form onSubmit={submit} className="p-6 overflow-y-auto flex-1 space-y-4">
+          {error && (
+            <p className="text-xs text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-[8px]">{error}</p>
+          )}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-[#475569] mb-1.5">Job Type</label>
+              <input name="jobType" defaultValue={job.jobType} className={inp} required />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-[#475569] mb-1.5">Priority</label>
+              <select name="priority" defaultValue={job.priority} className={inp}>
+                <option value="NORMAL">Normal</option>
+                <option value="HIGH">High</option>
+                <option value="EMERGENCY">Emergency</option>
+                <option value="LOW">Low</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-[#475569] mb-1.5">Location</label>
+            <input name="location" defaultValue={job.location ?? ""} className={inp} placeholder="Address / location" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-[#475569] mb-1.5">Scheduled Date & Time</label>
+              <input name="scheduledDate" type="datetime-local" className={inp}
+                defaultValue={job.scheduledDate ? new Date(job.scheduledDate).toISOString().slice(0, 16) : ""} />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-[#475569] mb-1.5">Quoted Amount (KES)</label>
+              <input name="quotedAmount" type="number" defaultValue={job.quotedAmount ?? ""} className={inp} />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-[#475569] mb-1.5">Description / Notes</label>
+            <textarea name="description" rows={3} defaultValue={job.description ?? ""}
+              className={`${inp} resize-none`} placeholder="Job description, notes…" />
+          </div>
+          <div className="flex gap-2 pt-2">
+            <button type="button" onClick={onClose} className="ff-btn-secondary flex-1 text-sm">Cancel</button>
+            <button type="submit" disabled={pending} className="ff-btn-primary flex-1 text-sm disabled:opacity-50">
+              {pending ? "Saving…" : "Save Changes"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ── Cancel Job Button (header) ─────────────────────────────────────────────────
 function CancelJobButton({ job }: { job: JobDetailData }) {
   const [pending, startTransition] = useTransition();
@@ -259,6 +345,7 @@ function MoreActionsMenu({ job }: { job: JobDetailData }) {
   }
 
   const items = [
+    { label: "Message Client", icon: MessageCircle, action: () => { setOpen(false); window.open(`https://wa.me/${job.clientPhone.replace("+", "")}?text=${encodeURIComponent(`Hi ${job.clientName}, following up on your ${job.jobType}.`)}`, "_blank"); }, color: "text-green-700" },
     ...(inv && !isPaid ? [{ label: "Mark as Paid", icon: Banknote, action: () => { setModal("paid"); setOpen(false); }, color: "text-green-700" }] : []),
     ...(!isDone ? [{ label: "Reschedule Job", icon: Calendar, action: () => { setModal("reschedule"); setOpen(false); }, color: "text-blue-700" }] : []),
     ...(!isDone ? [{ label: "Reassign Worker", icon: RefreshCw, action: () => { setModal("reassign"); setOpen(false); }, color: "text-slate-700" }] : []),
@@ -279,7 +366,7 @@ function MoreActionsMenu({ job }: { job: JobDetailData }) {
       <div ref={ref} className="relative">
         <button onClick={() => setOpen(v => !v)}
           className="ff-btn-secondary inline-flex items-center gap-1.5 text-sm px-3 py-2">
-          <MoreHorizontal className="w-4 h-4" /> More
+          More actions
           <ChevronDown className="w-3.5 h-3.5 opacity-60" />
         </button>
         {open && (
@@ -553,10 +640,17 @@ function PaymentsTab({ job }: { job: JobDetailData }) {
 // ── Admin Quick Actions ────────────────────────────────────────────────────────
 function AdminQuickActions({ job, onTabChange }: { job: JobDetailData; onTabChange?: (tab: TabId) => void }) {
   const [modal, setModal] = useState<"paid" | "reschedule" | "reassign" | null>(null);
+  const [cancelPending, startCancelTransition] = useTransition();
+  const router = useRouter();
   const worker = job.workers[0];
   const inv = job.invoice;
   const isPaid = inv?.status === "PAID";
   const isDone = job.status === "CLOSED" || job.status === "CANCELLED";
+
+  function doCancel() {
+    if (!confirm("Cancel this job? This cannot be undone.")) return;
+    startCancelTransition(async () => { await deleteJob(job.id); router.refresh(); });
+  }
 
   type Action = { label: string; icon: React.ElementType; color: string; bg: string; href?: string; onClick?: () => void; disabled?: boolean };
 
@@ -611,7 +705,7 @@ function AdminQuickActions({ job, onTabChange }: { job: JobDetailData; onTabChan
     },
     {
       label: "Cancel Job", icon: XCircle, color: "text-red-600", bg: "bg-red-50",
-      ...(!isDone ? { onClick: () => {} } : { disabled: true, onClick: () => {} }),
+      ...(!isDone ? { onClick: doCancel } : { disabled: true, onClick: () => {} }),
     },
   ];
 
@@ -657,6 +751,7 @@ function AdminQuickActions({ job, onTabChange }: { job: JobDetailData; onTabChan
 // ── Main Component ─────────────────────────────────────────────────────────────
 export default function JobDetailClient({ job }: { job: JobDetailData }) {
   const [activeTab, setActiveTab] = useState<TabId>("timeline");
+  const [showEdit, setShowEdit] = useState(false);
   const worker = job.workers[0] ?? null;
   const inv = job.invoice;
   const isPaid = inv?.status === "PAID";
@@ -699,8 +794,8 @@ export default function JobDetailClient({ job }: { job: JobDetailData }) {
                 </span>
               )}
             </div>
-            <h1 className="text-2xl font-bold text-[#0F172A] leading-tight">{job.jobType}</h1>
-            <div className="flex items-center gap-4 mt-2 flex-wrap">
+            <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A] leading-tight">{job.jobType}</h1>
+            <div className="flex items-center gap-3 sm:gap-4 mt-2 flex-wrap">
               {job.scheduledDate && (
                 <p className="text-xs text-[#64748B] flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5 text-[#94A3B8]" /> {formatDate(job.scheduledDate)}
@@ -719,12 +814,12 @@ export default function JobDetailClient({ job }: { job: JobDetailData }) {
             </div>
           </div>
           {/* Action buttons */}
-          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
             <MoreActionsMenu job={job} />
-            <Link href={`/admin/jobs/${job.id}/edit`}
+            <button onClick={() => setShowEdit(true)}
               className="ff-btn-primary inline-flex items-center gap-1.5 text-sm px-3 py-2">
               <Edit3 className="w-4 h-4" /> Edit Job
-            </Link>
+            </button>
             <CancelJobButton job={job} />
           </div>
         </div>
@@ -860,7 +955,7 @@ export default function JobDetailClient({ job }: { job: JobDetailData }) {
           </div>
 
           {/* Verification */}
-          <div className="rounded-[12px] border border-[#E2E8F0] overflow-hidden bg-white">
+          <div className="rounded-[12px] border border-[#E2E8F0] overflow-hidden bg-white col-span-2 sm:col-span-1">
             <div className="p-3.5 space-y-1.5">
               <p className="text-[10px] font-semibold text-[#94A3B8] uppercase tracking-wide flex items-center gap-1.5">
                 <ShieldCheck className="w-3 h-3" /> Verification
@@ -1074,6 +1169,9 @@ export default function JobDetailClient({ job }: { job: JobDetailData }) {
 
         </div>
       </div>
+
+      {/* Edit Job Modal */}
+      {showEdit && <EditJobModal job={job} onClose={() => setShowEdit(false)} />}
     </div>
   );
 }

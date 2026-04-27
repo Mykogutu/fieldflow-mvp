@@ -8,7 +8,7 @@ import { formatKES, formatDate } from "@/lib/utils";
 import {
   Plus, X, Search, Filter, MoreHorizontal, Clock,
   AlertTriangle, Wrench, ChevronRight, Calendar,
-  MessageSquare, ArrowRight, Minus,
+  MessageSquare, ArrowRight, Minus, User,
 } from "lucide-react";
 import Link from "next/link";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -197,33 +197,35 @@ export default function JobsClient({
             { label: "Awaiting OTP",    value: otpCount,      sub: "Waiting for client", iconBg: "bg-[#EDE9FE]", iconColor: "text-[#7C3AED]", Icon: Clock        },
             { label: "Needs Attention", value: attentionCount,sub: "High priority",      iconBg: "bg-[#FEE2E2]", iconColor: "text-[#DC2626]", Icon: AlertTriangle },
           ].map((m) => (
-            <div key={m.label} className="ff-card p-5 flex items-center gap-4">
-              <div className={`w-11 h-11 rounded-[12px] flex items-center justify-center shrink-0 ${m.iconBg}`}>
-                <m.Icon className={`w-5 h-5 ${m.iconColor}`} />
+            <div key={m.label} className="ff-card p-3.5 sm:p-5 flex items-center gap-2.5 sm:gap-4">
+              <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-[12px] flex items-center justify-center shrink-0 ${m.iconBg}`}>
+                <m.Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${m.iconColor}`} />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-[#64748B] truncate">{m.label}</p>
-                <p className="text-2xl font-bold text-[#0F172A] leading-tight">{m.value}</p>
-                <p className="text-[11px] text-[#94A3B8] mt-0.5">{m.sub}</p>
+                <p className="text-[10px] sm:text-xs font-semibold text-[#64748B] leading-tight">{m.label}</p>
+                <p className="text-xl sm:text-2xl font-bold text-[#0F172A] leading-tight">{m.value}</p>
+                <p className="text-[10px] sm:text-[11px] text-[#94A3B8] mt-0.5 hidden sm:block">{m.sub}</p>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Filter tabs */}
-        <div className="flex gap-1.5 flex-wrap">
-          {STATUS_TABS.map((t) => {
-            const active = (currentStatus ?? "") === t.value;
-            return (
-              <button
-                key={t.value}
-                onClick={() => navigate({ status: t.value })}
-                className={`ff-tab ${active ? "ff-tab-active" : "ff-tab-inactive"}`}
-              >
-                {t.label}
-              </button>
-            );
-          })}
+        {/* Filter tabs — horizontally scrollable on mobile */}
+        <div className="overflow-x-auto pb-0.5 -mx-0.5 px-0.5">
+          <div className="flex gap-1.5 min-w-max">
+            {STATUS_TABS.map((t) => {
+              const active = (currentStatus ?? "") === t.value;
+              return (
+                <button
+                  key={t.value}
+                  onClick={() => navigate({ status: t.value })}
+                  className={`ff-tab whitespace-nowrap ${active ? "ff-tab-active" : "ff-tab-inactive"}`}
+                >
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Search */}
@@ -247,17 +249,80 @@ export default function JobsClient({
           </button>
         </div>
 
-        {/* Jobs table — no overflow scroll, table-fixed with proportional columns */}
-        <div className="ff-card overflow-hidden">
+        {/* ── Mobile card list (visible below sm) ─────────────────────────── */}
+        <div className="ff-card overflow-hidden sm:hidden">
+          {jobs.length === 0 ? (
+            <div className="px-4 py-16 text-center">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-12 h-12 rounded-[12px] bg-[#F1F5F9] flex items-center justify-center">
+                  <Wrench className="w-5 h-5 text-[#94A3B8]" />
+                </div>
+                <p className="text-sm font-semibold text-[#334155]">No jobs found</p>
+                <p className="text-xs text-[#94A3B8]">Create your first job to get started</p>
+                <button onClick={() => setShowCreate(true)} className={btnPrimary}>
+                  <Plus className="w-4 h-4" /> New Job
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="divide-y divide-[#F1F5F9]">
+                {jobs.map(job => {
+                  const sched = fmtScheduled(job.scheduledDate);
+                  const amount = job.finalAmount ?? job.quotedAmount;
+                  return (
+                    <Link key={job.id} href={`/admin/jobs/${job.id}`}
+                      className="flex items-center gap-3 px-4 py-3.5 hover:bg-[#F8FAFC] transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <span className="text-[11px] font-mono font-semibold text-[#2563EB] shrink-0">{job.jobNumber}</span>
+                          <StatusBadge status={job.status} size="xs" />
+                          {job.priority === "EMERGENCY" && (
+                            <span className="text-[10px] text-red-600 font-bold shrink-0">🚨</span>
+                          )}
+                        </div>
+                        <p className="text-sm font-semibold text-[#0F172A] truncate">{job.clientName}</p>
+                        <p className="text-xs text-[#64748B] truncate">{job.jobType}{job.asset ? ` · ${job.asset.name}` : ""}</p>
+                        <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                          {job.workers[0] && (
+                            <span className="text-[11px] text-[#64748B] flex items-center gap-1">
+                              <User className="w-3 h-3 shrink-0" />
+                              {job.workers[0].name.split(" ")[0]}
+                            </span>
+                          )}
+                          {sched && (
+                            <span className="text-[11px] text-[#64748B] flex items-center gap-1">
+                              <Calendar className="w-3 h-3 shrink-0" />{sched.day}
+                            </span>
+                          )}
+                          {amount && (
+                            <span className="text-[11px] font-semibold text-[#0F172A]">{formatKES(amount)}</span>
+                          )}
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-[#94A3B8] shrink-0" />
+                    </Link>
+                  );
+                })}
+              </div>
+              <div className="px-4 py-3 border-t border-[#F1F5F9]">
+                <p className="text-xs text-[#94A3B8]">Showing {jobs.length} of {total} jobs</p>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ── Desktop table (hidden on mobile) ─────────────────────────────── */}
+        <div className="ff-card overflow-hidden hidden sm:block">
           <table className="w-full table-fixed ff-table">
             <colgroup>
-              <col className="w-[22%]" />  {/* Job */}
-              <col className="w-[19%]" />  {/* Client */}
-              <col className="w-[13%]" />  {/* Worker */}
-              <col className="w-[14%]" />  {/* Scheduled */}
+              <col className="w-[20%]" />  {/* Job */}
+              <col className="w-[17%]" />  {/* Client */}
+              <col className="w-[11%]" />  {/* Worker */}
+              <col className="w-[13%]" />  {/* Scheduled */}
               <col className="w-[13%]" />  {/* Status */}
               <col className="w-[10%]" />  {/* Amount */}
-              <col className="w-[9%]"  />  {/* Actions */}
+              <col className="w-[16%]" />  {/* Actions */}
             </colgroup>
             <thead>
               <tr>
@@ -330,7 +395,7 @@ export default function JobsClient({
                     </td>
 
                     {/* Actions */}
-                    <td>
+                    <td className="whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1">
                         {/* Split "View Job" button */}
                         <div className="flex items-stretch rounded-[8px] overflow-hidden border border-[#DBEAFE]">

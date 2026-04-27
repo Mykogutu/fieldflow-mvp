@@ -283,6 +283,46 @@ export async function markJobPaid(jobId: string, method?: string, reference?: st
   return { ok: true };
 }
 
+export async function updateJob(jobId: string, data: {
+  jobType?: string;
+  description?: string;
+  location?: string;
+  zone?: string;
+  scheduledDate?: string;
+  quotedAmount?: number;
+  priority?: string;
+  clientName?: string;
+  clientPhone?: string;
+}) {
+  await requireAdmin();
+  const workspaceId = await currentWorkspaceId();
+  const job = await prisma.job.findFirst({ where: { id: jobId, workspaceId } });
+  if (!job) return { error: "Job not found" };
+
+  await prisma.job.update({
+    where: { id: jobId },
+    data: {
+      ...(data.jobType       && { jobType: data.jobType }),
+      ...(data.description   !== undefined && { description: data.description }),
+      ...(data.location      !== undefined && { location: data.location }),
+      ...(data.zone          !== undefined && { zone: data.zone }),
+      ...(data.scheduledDate !== undefined && { scheduledDate: data.scheduledDate ? new Date(data.scheduledDate) : null }),
+      ...(data.quotedAmount  !== undefined && { quotedAmount: data.quotedAmount }),
+      ...(data.priority      && { priority: data.priority as "EMERGENCY" | "HIGH" | "NORMAL" | "LOW" }),
+      ...(data.clientName    && { clientName: data.clientName }),
+      ...(data.clientPhone   && { clientPhone: normalizePhone(data.clientPhone) }),
+    },
+  });
+
+  await prisma.jobEvent.create({
+    data: { workspaceId, jobId, type: "STATUS_CHANGE", note: "Job details updated by admin" },
+  });
+
+  revalidatePath(`/admin/jobs/${jobId}`);
+  revalidatePath("/admin/jobs");
+  return { ok: true };
+}
+
 export async function getJobById(jobId: string) {
   await requireAdmin();
   const workspaceId = await currentWorkspaceId();

@@ -295,16 +295,16 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
           { label: "New This Month",      value: newThisMonth,                                    sub: "New clients this month",      Icon: UserPlus,  iconBg: "bg-purple-50", iconColor: "text-[#7C3AED]", href: "/admin/clients"                  },
         ].map(m => (
           <Link key={m.label} href={m.href}
-            className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card p-5 flex items-center gap-4 hover:border-[#2563EB]/30 hover:shadow-card-hover transition-all group">
-            <div className={`w-11 h-11 rounded-[12px] flex items-center justify-center shrink-0 ${m.iconBg}`}>
-              <m.Icon className={`w-5 h-5 ${m.iconColor}`} />
+            className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card p-3.5 sm:p-5 flex items-center gap-2.5 sm:gap-4 hover:border-[#2563EB]/30 hover:shadow-card-hover transition-all group">
+            <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-[12px] flex items-center justify-center shrink-0 ${m.iconBg}`}>
+              <m.Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${m.iconColor}`} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-[#64748B] truncate">{m.label}</p>
-              <p className="text-xl font-bold text-[#0F172A] leading-tight truncate">{m.value}</p>
-              <p className="text-[11px] text-[#94A3B8] mt-0.5 truncate">{m.sub}</p>
+              <p className="text-[10px] sm:text-xs font-semibold text-[#64748B] leading-tight">{m.label}</p>
+              <p className="text-lg sm:text-xl font-bold text-[#0F172A] leading-tight truncate">{m.value}</p>
+              <p className="text-[10px] sm:text-[11px] text-[#94A3B8] mt-0.5 hidden sm:block truncate">{m.sub}</p>
             </div>
-            <ChevronRight className="w-4 h-4 text-[#94A3B8] shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <ChevronRight className="w-4 h-4 text-[#94A3B8] shrink-0 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block" />
           </Link>
         ))}
       </div>
@@ -329,30 +329,87 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
         <div className="flex-1 min-w-0 space-y-3">
 
           {/* Search + filter row */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <form onSubmit={handleSearch} className="relative flex-1 min-w-48">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+            <form onSubmit={handleSearch} className="relative w-full sm:flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94A3B8]" />
               <input value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="Search by name, phone, company, location..."
+                placeholder="Search by name, phone, company..."
                 className="ff-input pl-9 text-sm w-full" />
             </form>
-            {/* Segment filter */}
-            <div className="flex items-center gap-1 bg-[#F1F5F9] rounded-[10px] p-1">
-              {(["all", "active", "unpaid", "company", "individual"] as const).map(f => (
-                <button key={f} onClick={() => handleFilter(f)}
-                  className={`px-3 py-1.5 rounded-[8px] text-xs font-semibold transition-all capitalize ${
-                    activeFilter === f
-                      ? "bg-white text-[#0F172A] shadow-sm"
-                      : "text-[#64748B] hover:text-[#334155]"
-                  }`}>
-                  {f === "all" ? "All" : f === "active" ? "Active" : f === "unpaid" ? "Unpaid" : f === "company" ? "Companies" : "Individuals"}
-                </button>
-              ))}
+            {/* Segment filter — horizontally scrollable on mobile */}
+            <div className="overflow-x-auto pb-0.5 -mx-0.5 px-0.5">
+              <div className="flex items-center gap-1 bg-[#F1F5F9] rounded-[10px] p-1 min-w-max">
+                {(["all", "active", "unpaid", "company", "individual"] as const).map(f => (
+                  <button key={f} onClick={() => handleFilter(f)}
+                    className={`px-3 py-1.5 rounded-[8px] text-xs font-semibold transition-all whitespace-nowrap ${
+                      activeFilter === f
+                        ? "bg-white text-[#0F172A] shadow-sm"
+                        : "text-[#64748B] hover:text-[#334155]"
+                    }`}>
+                    {f === "all" ? "All" : f === "active" ? "Active" : f === "unpaid" ? "Unpaid" : f === "company" ? "Companies" : "Individuals"}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Table card */}
-          <div className="ff-card overflow-hidden">
+          {/* ── Mobile card list (sm:hidden) ──────────────────────────────── */}
+          <div className="ff-card overflow-hidden sm:hidden">
+            <div className="px-4 py-3 border-b border-[#E2E8F0] flex items-center justify-between">
+              <p className="text-sm font-semibold text-[#0F172A]">All Clients</p>
+              <p className="text-xs text-[#94A3B8]">{filteredClients.length} client{filteredClients.length !== 1 ? "s" : ""}</p>
+            </div>
+            {filteredClients.length === 0 ? (
+              <div className="py-16 flex flex-col items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-[#F1F5F9] flex items-center justify-center">
+                  <Users className="w-5 h-5 text-[#94A3B8]" />
+                </div>
+                <p className="text-sm font-semibold text-[#475569]">No clients found</p>
+                <p className="text-xs text-[#94A3B8]">Try a different filter or add a new client</p>
+                <button onClick={() => setShowAdd(true)}
+                  className="ff-btn-primary text-sm px-4 py-2 mt-1 inline-flex items-center gap-2">
+                  <Plus className="w-4 h-4" /> Add Client
+                </button>
+              </div>
+            ) : (
+              <div className="divide-y divide-[#F1F5F9]">
+                {filteredClients.map(c => (
+                  <Link key={c.id} href={`/admin/clients/${c.id}`}
+                    className="flex items-center gap-3 px-4 py-3.5 hover:bg-[#F8FAFC] transition-colors">
+                    <ClientAvatar name={c.name} size="sm" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <p className="text-sm font-semibold text-[#0F172A] truncate">{c.name}</p>
+                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-[4px] shrink-0 ${
+                          c.type === "COMPANY"
+                            ? "bg-blue-50 text-blue-700"
+                            : "bg-[#F1F5F9] text-[#64748B]"
+                        }`}>
+                          {c.type === "COMPANY" ? "Co" : "Ind"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#64748B] truncate">{c.phone}</p>
+                      <div className="flex items-center gap-3 mt-1 flex-wrap">
+                        {c.location && (
+                          <span className="text-[11px] text-[#94A3B8] flex items-center gap-1 truncate">
+                            <MapPin className="w-3 h-3 shrink-0" />{c.location}
+                          </span>
+                        )}
+                        <span className="text-[11px] text-[#64748B]">{c.jobCount} job{c.jobCount !== 1 ? "s" : ""}</span>
+                        {c.outstanding > 0 && (
+                          <span className="text-[11px] font-bold text-[#DC2626]">{formatKES(c.outstanding)} due</span>
+                        )}
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-[#94A3B8] shrink-0" />
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ── Desktop table (hidden on mobile) ─────────────────────────── */}
+          <div className="ff-card overflow-hidden hidden sm:block">
             {/* Table header */}
             <div className="px-4 py-3 border-b border-[#E2E8F0] flex items-center justify-between">
               <p className="text-sm font-semibold text-[#0F172A]">All Clients</p>
@@ -462,7 +519,7 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
             <div className="divide-y divide-[#F1F5F9]">
               {([
                 { label: "Add Client",              Icon: UserPlus,  href: null as string | null,       onClick: () => setShowAdd(true) },
-                { label: "Create Job for Client",   Icon: Briefcase, href: "/admin/jobs/new",           onClick: null as (() => void) | null },
+                { label: "Create Job for Client",   Icon: Briefcase, href: "/admin/jobs",              onClick: null as (() => void) | null },
                 { label: "Send Payment Reminder",   Icon: Bell,      href: "/admin/invoices?status=OVERDUE", onClick: null as (() => void) | null },
                 { label: "View Unpaid Invoices",    Icon: FileText,  href: "/admin/invoices?status=PENDING", onClick: null as (() => void) | null },
               ]).map((action, i) => {
