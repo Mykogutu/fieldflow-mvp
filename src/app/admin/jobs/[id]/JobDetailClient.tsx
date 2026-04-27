@@ -7,7 +7,7 @@ import {
   AlertTriangle, FileText, Calendar, Banknote,
   X, RefreshCw, CheckCircle2, XCircle, Send, Download,
   Clipboard, ShieldCheck, Award, FileCheck,
-  Truck, MessageCircle, MoreHorizontal, Zap,
+  Truck, MessageCircle, MoreHorizontal, Zap, Plus,
   ChevronDown, Eye, Copy, Image as ImageIcon, CreditCard,
   Edit3, Flag, RotateCcw, Star, History, Hash, Building2,
   Navigation,
@@ -208,6 +208,24 @@ function ReassignModal({ jobId, allWorkers, currentWorkerId, onClose }: {
         </div>
       </div>
     </div>
+  );
+}
+
+// ── Cancel Job Button (header) ─────────────────────────────────────────────────
+function CancelJobButton({ job }: { job: JobDetailData }) {
+  const [pending, startTransition] = useTransition();
+  const router = useRouter();
+  const isDone = job.status === "CLOSED" || job.status === "CANCELLED";
+  if (isDone) return null;
+  function handle() {
+    if (!confirm("Cancel this job? This cannot be undone.")) return;
+    startTransition(async () => { await deleteJob(job.id); router.refresh(); });
+  }
+  return (
+    <button onClick={handle} disabled={pending}
+      className="inline-flex items-center gap-1.5 text-sm px-3 py-2 rounded-[10px] border border-[#FCA5A5] text-[#DC2626] hover:bg-red-50 transition-colors font-semibold disabled:opacity-50">
+      <X className="w-4 h-4" /> Cancel Job
+    </button>
   );
 }
 
@@ -533,81 +551,72 @@ function PaymentsTab({ job }: { job: JobDetailData }) {
 }
 
 // ── Admin Quick Actions ────────────────────────────────────────────────────────
-function AdminQuickActions({ job }: { job: JobDetailData }) {
+function AdminQuickActions({ job, onTabChange }: { job: JobDetailData; onTabChange?: (tab: TabId) => void }) {
   const [modal, setModal] = useState<"paid" | "reschedule" | "reassign" | null>(null);
   const worker = job.workers[0];
   const inv = job.invoice;
   const isPaid = inv?.status === "PAID";
   const isDone = job.status === "CLOSED" || job.status === "CANCELLED";
 
-  const actions: { label: string; icon: React.ElementType; color: string; bg: string; border: string; href?: string; onClick?: () => void; disabled?: boolean }[] = [
-    ...(inv ? [{
-      label: "Send Invoice",
-      icon: FileText,
-      color: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200",
-      href: `https://wa.me/${job.clientPhone.replace("+", "")}?text=${encodeURIComponent(`Hi ${job.clientName}, please find your invoice ${inv.invoiceNumber} of ${formatKES(inv.amount)} attached.`)}`,
-    }] : []),
+  type Action = { label: string; icon: React.ElementType; color: string; bg: string; href?: string; onClick?: () => void; disabled?: boolean };
+
+  const actions: Action[] = [
     {
-      label: "Send Job Card",
-      icon: Clipboard,
-      color: "text-slate-700", bg: "bg-slate-50", border: "border-slate-200",
+      label: "Send Invoice", icon: FileText, color: "text-blue-700", bg: "bg-blue-50",
+      ...(inv
+        ? { href: `https://wa.me/${job.clientPhone.replace("+", "")}?text=${encodeURIComponent(`Hi ${job.clientName}, please find your invoice ${inv.invoiceNumber} of ${formatKES(inv.amount)} attached.`)}` }
+        : { disabled: true, onClick: () => {} }),
+    },
+    {
+      label: "Send Job Card", icon: Clipboard, color: "text-slate-700", bg: "bg-slate-50",
       href: `https://wa.me/${job.clientPhone.replace("+", "")}?text=${encodeURIComponent(`Hi ${job.clientName}, your job card for ${job.jobType} is ready.`)}`,
     },
     {
-      label: "Send Warranty",
-      icon: ShieldCheck,
-      color: "text-green-700", bg: "bg-green-50", border: "border-green-200",
+      label: "Send Warranty", icon: ShieldCheck, color: "text-green-700", bg: "bg-green-50",
       href: `https://wa.me/${job.clientPhone.replace("+", "")}?text=${encodeURIComponent(`Hi ${job.clientName}, your warranty certificate is attached.`)}`,
     },
     {
-      label: "Service Report",
-      icon: Award,
-      color: "text-purple-700", bg: "bg-purple-50", border: "border-purple-200",
+      label: "Send Service Report", icon: Award, color: "text-purple-700", bg: "bg-purple-50",
       href: `https://wa.me/${job.clientPhone.replace("+", "")}?text=${encodeURIComponent(`Hi ${job.clientName}, your service report is attached.`)}`,
     },
-    ...(inv && !isPaid ? [{
-      label: "Payment Reminder",
-      icon: Banknote,
-      color: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200",
-      href: `https://wa.me/${job.clientPhone.replace("+", "")}?text=${encodeURIComponent(`Hi ${job.clientName}, reminder: your invoice of ${formatKES(inv.amount)} is still pending. Ref: ${inv.invoiceNumber}.`)}`,
-    }] : []),
-    ...(!isDone ? [{
-      label: "Reschedule",
-      icon: Calendar,
-      color: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200",
-      onClick: () => setModal("reschedule"),
-    }] : []),
-    ...(!isDone ? [{
-      label: "Reassign",
-      icon: RefreshCw,
-      color: "text-slate-700", bg: "bg-slate-50", border: "border-slate-200",
-      onClick: () => setModal("reassign"),
-    }] : []),
-    ...(worker ? [{
-      label: "Ask Worker",
-      icon: MessageCircle,
-      color: "text-indigo-700", bg: "bg-indigo-50", border: "border-indigo-200",
-      href: `https://wa.me/${worker.phone.replace("+", "")}?text=${encodeURIComponent(`Hi ${worker.name}, please send an update on the ${job.jobType} job for ${job.clientName}.`)}`,
-    }] : []),
     {
-      label: "View Client",
-      icon: Building2,
-      color: "text-slate-700", bg: "bg-slate-50", border: "border-slate-200",
+      label: "Send Payment Reminder", icon: Banknote, color: "text-amber-700", bg: "bg-amber-50",
+      ...(inv && !isPaid
+        ? { href: `https://wa.me/${job.clientPhone.replace("+", "")}?text=${encodeURIComponent(`Hi ${job.clientName}, reminder: your invoice of ${formatKES(inv.amount)} is still pending. Ref: ${inv.invoiceNumber}.`)}` }
+        : { disabled: true, onClick: () => {} }),
+    },
+    {
+      label: "Reschedule Job", icon: Calendar, color: "text-blue-700", bg: "bg-blue-50",
+      ...(!isDone ? { onClick: () => setModal("reschedule") } : { disabled: true, onClick: () => {} }),
+    },
+    {
+      label: "Reassign Worker", icon: RefreshCw, color: "text-slate-700", bg: "bg-slate-50",
+      ...(!isDone ? { onClick: () => setModal("reassign") } : { disabled: true, onClick: () => {} }),
+    },
+    {
+      label: "Add Note", icon: Edit3, color: "text-indigo-700", bg: "bg-indigo-50",
+      onClick: () => onTabChange?.("notes"),
+    },
+    {
+      label: "View Client", icon: Building2, color: "text-slate-700", bg: "bg-slate-50",
       href: `/admin/clients?search=${encodeURIComponent(job.clientPhone)}`,
     },
-    ...(job.asset ? [{
-      label: "View Asset",
-      icon: Package,
-      color: "text-slate-700", bg: "bg-slate-50", border: "border-slate-200",
-      href: `/admin/assets/${job.asset.id}`,
-    }] : []),
     {
-      label: "Duplicate Job",
-      icon: Copy,
-      color: "text-slate-700", bg: "bg-slate-50", border: "border-slate-200",
+      label: "View Asset", icon: Package, color: "text-slate-700", bg: "bg-slate-50",
+      ...(job.asset ? { href: `/admin/assets/${job.asset.id}` } : { disabled: true, onClick: () => {} }),
+    },
+    {
+      label: "Duplicate Job", icon: Copy, color: "text-slate-700", bg: "bg-slate-50",
       onClick: () => {},
     },
+    {
+      label: "Cancel Job", icon: XCircle, color: "text-red-600", bg: "bg-red-50",
+      ...(!isDone ? { onClick: () => {} } : { disabled: true, onClick: () => {} }),
+    },
   ];
+
+  const cls = (disabled?: boolean) =>
+    `flex items-center gap-2 px-3 py-2.5 rounded-[10px] border border-[#E2E8F0] hover:border-[#2563EB]/20 hover:bg-[#F8FAFC] transition-colors text-left ${disabled ? "opacity-40 cursor-not-allowed pointer-events-none" : ""}`;
 
   return (
     <>
@@ -619,24 +628,23 @@ function AdminQuickActions({ job }: { job: JobDetailData }) {
       <div className="grid grid-cols-2 gap-2 p-4">
         {actions.map((action, i) => {
           const content = (
-            <div className="flex items-center gap-2">
-              <div className={`w-7 h-7 rounded-[8px] flex items-center justify-center shrink-0 ${action.bg} ${action.border} border`}>
+            <>
+              <div className={`w-7 h-7 rounded-[8px] flex items-center justify-center shrink-0 ${action.bg}`}>
                 <action.icon className={`w-3.5 h-3.5 ${action.color}`} />
               </div>
-              <span className="text-xs font-medium text-[#334155] leading-tight">{action.label}</span>
-            </div>
+              <span className="text-xs font-medium text-[#334155] leading-tight truncate">{action.label}</span>
+            </>
           );
-          const cls = `flex items-center gap-2 px-3 py-2.5 rounded-[10px] border border-[#E2E8F0] hover:border-[#2563EB]/30 hover:bg-blue-50/30 transition-colors text-left ${action.disabled ? "opacity-40 cursor-not-allowed" : ""}`;
-
           if (action.href) {
             return (
-              <a key={i} href={action.href} target={action.href.startsWith("http") ? "_blank" : undefined}
+              <a key={i} href={action.href}
+                target={action.href.startsWith("http") ? "_blank" : undefined}
                 rel={action.href.startsWith("http") ? "noopener noreferrer" : undefined}
-                className={cls}>{content}</a>
+                className={cls(action.disabled)}>{content}</a>
             );
           }
           return (
-            <button key={i} onClick={action.onClick} disabled={action.disabled} className={cls}>
+            <button key={i} onClick={action.onClick} disabled={action.disabled} className={cls(action.disabled)}>
               {content}
             </button>
           );
@@ -712,96 +720,177 @@ export default function JobDetailClient({ job }: { job: JobDetailData }) {
           </div>
           {/* Action buttons */}
           <div className="flex items-center gap-2 shrink-0 flex-wrap">
-            <a href={`https://wa.me/${job.clientPhone.replace("+", "")}?text=${encodeURIComponent(`Hi ${job.clientName}, following up on your ${job.jobType}.`)}`}
-              target="_blank" rel="noopener noreferrer"
-              className="ff-btn-secondary inline-flex items-center gap-1.5 text-sm px-3 py-2">
-              <Phone className="w-4 h-4" /> Message Client
-            </a>
             <MoreActionsMenu job={job} />
+            <Link href={`/admin/jobs/${job.id}/edit`}
+              className="ff-btn-primary inline-flex items-center gap-1.5 text-sm px-3 py-2">
+              <Edit3 className="w-4 h-4" /> Edit Job
+            </Link>
+            <CancelJobButton job={job} />
           </div>
         </div>
 
         {/* ── 5 Info Cards Row ─────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-5 pt-5 border-t border-[#E2E8F0]">
+
           {/* Client */}
-          <div className="p-3.5 rounded-[12px] bg-[#F8FAFC] border border-[#E2E8F0] space-y-1">
-            <p className="text-[10px] font-semibold text-[#94A3B8] uppercase tracking-wide flex items-center gap-1">
-              <User className="w-3 h-3" /> Client
-            </p>
-            <p className="text-sm font-semibold text-[#0F172A] truncate">{job.clientName}</p>
-            <p className="text-[11px] text-[#64748B] truncate">{job.clientPhone}</p>
+          <div className="rounded-[12px] border border-[#E2E8F0] overflow-hidden bg-white">
+            <div className="p-3.5 space-y-1.5">
+              <p className="text-[10px] font-semibold text-[#94A3B8] uppercase tracking-wide flex items-center gap-1.5">
+                <User className="w-3 h-3" /> Client
+              </p>
+              <p className="text-sm font-semibold text-[#0F172A] truncate">{job.clientName}</p>
+              <p className="text-[11px] text-[#64748B] truncate">{job.clientPhone}</p>
+              {job.location && (
+                <p className="text-[11px] text-[#94A3B8] flex items-center gap-1 truncate">
+                  <MapPin className="w-2.5 h-2.5 shrink-0" />{job.location}
+                </p>
+              )}
+            </div>
+            <div className="border-t border-[#E2E8F0] px-3.5 py-2.5">
+              <a href={`https://wa.me/${job.clientPhone.replace("+", "")}?text=${encodeURIComponent(`Hi ${job.clientName}, following up on your ${job.jobType}.`)}`}
+                target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-xs font-medium text-[#334155] hover:text-[#16A34A] transition-colors">
+                <MessageCircle className="w-3.5 h-3.5 text-[#25D366]" /> Send WhatsApp
+              </a>
+            </div>
           </div>
 
           {/* Worker */}
-          <div className="p-3.5 rounded-[12px] bg-[#F8FAFC] border border-[#E2E8F0] space-y-1">
-            <p className="text-[10px] font-semibold text-[#94A3B8] uppercase tracking-wide flex items-center gap-1">
-              <User className="w-3 h-3" /> Worker
-            </p>
-            {worker ? (
-              <>
-                <p className="text-sm font-semibold text-[#0F172A] truncate">{worker.name}</p>
-                <p className="text-[11px] text-[#64748B] truncate">{worker.phone}</p>
-              </>
-            ) : (
-              <p className="text-xs text-[#94A3B8]">Not assigned</p>
-            )}
+          <div className="rounded-[12px] border border-[#E2E8F0] overflow-hidden bg-white">
+            <div className="p-3.5 space-y-1.5">
+              <p className="text-[10px] font-semibold text-[#94A3B8] uppercase tracking-wide flex items-center gap-1.5">
+                <User className="w-3 h-3" /> Worker
+              </p>
+              {worker ? (
+                <>
+                  <p className="text-sm font-semibold text-[#0F172A] truncate">{worker.name}</p>
+                  <p className="text-[11px] text-[#64748B] truncate">{worker.phone}</p>
+                  <StatusBadge status={job.status} size="xs" />
+                </>
+              ) : (
+                <p className="text-xs text-[#94A3B8]">Not assigned</p>
+              )}
+            </div>
+            <div className="border-t border-[#E2E8F0] px-3.5 py-2.5 flex items-center gap-3">
+              {worker ? (
+                <>
+                  <a href={`tel:${worker.phone}`}
+                    className="flex items-center gap-1.5 text-xs font-medium text-[#334155] hover:text-[#2563EB] transition-colors">
+                    <Phone className="w-3 h-3" /> Call
+                  </a>
+                  <span className="text-[#E2E8F0]">|</span>
+                  <a href={`https://wa.me/${worker.phone.replace("+", "")}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-xs font-medium text-[#334155] hover:text-[#16A34A] transition-colors">
+                    <MessageCircle className="w-3 h-3 text-[#25D366]" /> WhatsApp
+                  </a>
+                </>
+              ) : (
+                <span className="text-xs text-[#94A3B8]">No worker yet</span>
+              )}
+            </div>
           </div>
 
           {/* Asset */}
-          <div className="p-3.5 rounded-[12px] bg-[#F8FAFC] border border-[#E2E8F0] space-y-1">
-            <p className="text-[10px] font-semibold text-[#94A3B8] uppercase tracking-wide flex items-center gap-1">
-              <Package className="w-3 h-3" /> Asset
-            </p>
-            {job.asset ? (
-              <>
-                <p className="text-sm font-semibold text-[#0F172A] truncate">{job.asset.name}</p>
-                <p className="text-[11px] text-[#64748B] truncate">{job.asset.assetType}</p>
-              </>
-            ) : (
-              <p className="text-xs text-[#94A3B8]">No asset linked</p>
-            )}
+          <div className="rounded-[12px] border border-[#E2E8F0] overflow-hidden bg-white">
+            <div className="p-3.5 space-y-1.5">
+              <p className="text-[10px] font-semibold text-[#94A3B8] uppercase tracking-wide flex items-center gap-1.5">
+                <Package className="w-3 h-3" /> Asset
+              </p>
+              {job.asset ? (
+                <>
+                  <p className="text-sm font-semibold text-[#0F172A] truncate">{job.asset.name}</p>
+                  <p className="text-[11px] text-[#64748B] truncate">
+                    {job.asset.assetType}{job.asset.identifier ? ` · ${job.asset.identifier}` : ""}
+                  </p>
+                  {(job.asset.serialNumber ?? job.asset.registrationNumber) && (
+                    <p className="text-[11px] text-[#94A3B8] font-mono truncate">
+                      ID: {job.asset.serialNumber ?? job.asset.registrationNumber}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p className="text-xs text-[#94A3B8]">No asset linked</p>
+              )}
+            </div>
+            <div className="border-t border-[#E2E8F0] px-3.5 py-2.5">
+              {job.asset ? (
+                <Link href={`/admin/assets/${job.asset.id}`}
+                  className="flex items-center gap-1.5 text-xs font-medium text-[#334155] hover:text-[#2563EB] transition-colors">
+                  <Package className="w-3 h-3" /> View Asset
+                </Link>
+              ) : (
+                <span className="text-xs text-[#94A3B8]">—</span>
+              )}
+            </div>
           </div>
 
           {/* Payment */}
-          <div className="p-3.5 rounded-[12px] bg-[#F8FAFC] border border-[#E2E8F0] space-y-1">
-            <p className="text-[10px] font-semibold text-[#94A3B8] uppercase tracking-wide flex items-center gap-1">
-              <Banknote className="w-3 h-3" /> Payment
-            </p>
-            {inv ? (
-              <>
-                <p className="text-sm font-bold text-[#0F172A]">{formatKES(inv.amount)}</p>
-                <StatusBadge status={inv.status} size="xs" />
-              </>
-            ) : (
-              <>
-                <p className="text-sm font-bold text-[#0F172A]">{job.quotedAmount ? formatKES(job.quotedAmount) : "—"}</p>
-                <p className="text-[11px] text-[#94A3B8]">No invoice yet</p>
-              </>
-            )}
+          <div className="rounded-[12px] border border-[#E2E8F0] overflow-hidden bg-white">
+            <div className="p-3.5 space-y-1.5">
+              <p className="text-[10px] font-semibold text-[#94A3B8] uppercase tracking-wide flex items-center gap-1.5">
+                <Banknote className="w-3 h-3" /> Payment
+              </p>
+              {inv ? (
+                <>
+                  <p className="text-xl font-bold text-[#0F172A]">{formatKES(inv.amount)}</p>
+                  <StatusBadge status={inv.status} size="xs" />
+                  <p className="text-[11px] text-[#64748B]">Invoiced: {formatKES(inv.amount)}</p>
+                  {inv.paidAt && (
+                    <p className="text-[11px] text-[#64748B]">Paid: {formatDate(inv.paidAt)}</p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="text-xl font-bold text-[#0F172A]">{job.quotedAmount ? formatKES(job.quotedAmount) : "—"}</p>
+                  <p className="text-[11px] text-[#94A3B8]">No invoice yet</p>
+                </>
+              )}
+            </div>
+            <div className="border-t border-[#E2E8F0] px-3.5 py-2.5">
+              {inv ? (
+                <button onClick={() => setActiveTab("payments")}
+                  className="flex items-center gap-1.5 text-xs font-medium text-[#334155] hover:text-[#2563EB] transition-colors">
+                  <CreditCard className="w-3 h-3" /> View Invoice
+                </button>
+              ) : (
+                <span className="text-xs text-[#94A3B8]">Pending</span>
+              )}
+            </div>
           </div>
 
           {/* Verification */}
-          <div className="p-3.5 rounded-[12px] bg-[#F8FAFC] border border-[#E2E8F0] space-y-1">
-            <p className="text-[10px] font-semibold text-[#94A3B8] uppercase tracking-wide flex items-center gap-1">
-              <ShieldCheck className="w-3 h-3" /> Verification
-            </p>
-            {isVerified ? (
-              <>
-                <p className="text-sm font-semibold text-[#16A34A]">Verified ✓</p>
-                {job.verifiedAt && <p className="text-[11px] text-[#64748B]">{formatDate(job.verifiedAt)}</p>}
-              </>
-            ) : job.otpCode ? (
-              <>
-                <p className="text-sm font-semibold text-[#D97706]">OTP Sent</p>
-                <p className="text-[11px] text-[#64748B]">Awaiting client</p>
-              </>
-            ) : (
-              <>
-                <p className="text-sm font-semibold text-[#94A3B8]">Not started</p>
-                <p className="text-[11px] text-[#94A3B8]">No OTP yet</p>
-              </>
-            )}
+          <div className="rounded-[12px] border border-[#E2E8F0] overflow-hidden bg-white">
+            <div className="p-3.5 space-y-1.5">
+              <p className="text-[10px] font-semibold text-[#94A3B8] uppercase tracking-wide flex items-center gap-1.5">
+                <ShieldCheck className="w-3 h-3" /> Verification
+              </p>
+              {isVerified ? (
+                <>
+                  <p className="text-sm font-semibold text-[#16A34A]">OTP Verified</p>
+                  {job.verifiedAt && <p className="text-[11px] text-[#64748B]">{formatDate(job.verifiedAt)}</p>}
+                  <p className="text-[11px] text-[#64748B]">Verified by client</p>
+                </>
+              ) : job.otpCode ? (
+                <>
+                  <p className="text-sm font-semibold text-[#D97706]">OTP Sent</p>
+                  <p className="text-[11px] text-[#64748B]">Awaiting client</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-semibold text-[#94A3B8]">Not started</p>
+                  <p className="text-[11px] text-[#94A3B8]">No OTP yet</p>
+                </>
+              )}
+            </div>
+            <div className="border-t border-[#E2E8F0] px-3.5 py-2.5">
+              <button onClick={() => setActiveTab("timeline")}
+                className="flex items-center gap-1.5 text-xs font-medium text-[#334155] hover:text-[#2563EB] transition-colors">
+                <Eye className="w-3 h-3" /> View details
+              </button>
+            </div>
           </div>
+
         </div>
       </div>
 
@@ -840,73 +929,149 @@ export default function JobDetailClient({ job }: { job: JobDetailData }) {
         </div>
 
         {/* Right Panel */}
-        <div className="hidden xl:flex flex-col gap-4 w-72 shrink-0">
+        <div className="hidden xl:flex flex-col gap-4 w-80 shrink-0">
+
+          {/* Documents */}
+          <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card overflow-hidden">
+            <div className="px-4 py-3.5 border-b border-[#E2E8F0] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-[#64748B]" />
+                <h3 className="text-sm font-semibold text-[#0F172A]">Documents</h3>
+                {job.documents.length > 0 && (
+                  <span className="text-[10px] bg-[#F1F5F9] text-[#64748B] px-1.5 py-0.5 rounded-full font-semibold">
+                    {job.documents.length}
+                  </span>
+                )}
+              </div>
+              <button onClick={() => setActiveTab("documents")}
+                className="text-xs text-[#2563EB] font-medium hover:text-[#1D4ED8] transition-colors">
+                View all
+              </button>
+            </div>
+            {job.documents.length === 0 ? (
+              <div className="px-4 py-5 text-center">
+                <p className="text-xs text-[#94A3B8]">Auto-generated when job is verified</p>
+              </div>
+            ) : (
+              <div className="p-3">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-[#F1F5F9]">
+                      <th className="text-left text-[10px] font-semibold text-[#94A3B8] uppercase pb-2 pr-2">Document</th>
+                      <th className="text-left text-[10px] font-semibold text-[#94A3B8] uppercase pb-2 pr-2">Type</th>
+                      <th className="text-left text-[10px] font-semibold text-[#94A3B8] uppercase pb-2 pr-2">Status</th>
+                      <th className="text-right text-[10px] font-semibold text-[#94A3B8] uppercase pb-2">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {job.documents.map(doc => {
+                      const cfg = DOC_CONFIG[doc.type] ?? DOC_CONFIG.OTHER;
+                      return (
+                        <tr key={doc.id} className="border-b border-[#F1F5F9] last:border-0">
+                          <td className="py-2 pr-2">
+                            <div className="flex items-center gap-1.5">
+                              <div className={`w-6 h-6 rounded-[5px] flex items-center justify-center shrink-0 ${cfg.bg}`}>
+                                <cfg.Icon className={`w-3 h-3 ${cfg.color}`} />
+                              </div>
+                              <span className="font-medium text-[#0F172A] truncate" style={{maxWidth: "60px"}}>
+                                {doc.title ?? cfg.label}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-2 pr-2">
+                            <span className="text-[10px] text-[#64748B] truncate block" style={{maxWidth: "50px"}}>
+                              {cfg.label}
+                            </span>
+                          </td>
+                          <td className="py-2 pr-2">
+                            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                              doc.sentAt ? "bg-green-50 text-green-700" : "bg-[#F1F5F9] text-[#64748B]"
+                            }`}>
+                              {doc.sentAt ? "Sent" : "Pending"}
+                            </span>
+                          </td>
+                          <td className="py-2">
+                            <div className="flex items-center gap-0.5 justify-end">
+                              {doc.pdfUrl && (
+                                <>
+                                  <a href={doc.pdfUrl} target="_blank" rel="noopener noreferrer"
+                                    className="p-1 rounded hover:bg-[#F1F5F9] text-[#94A3B8] hover:text-[#64748B] transition-colors" title="View">
+                                    <Eye className="w-3 h-3" />
+                                  </a>
+                                  <a href={doc.pdfUrl} download
+                                    className="p-1 rounded hover:bg-[#F1F5F9] text-[#94A3B8] hover:text-[#64748B] transition-colors" title="Download">
+                                    <Download className="w-3 h-3" />
+                                  </a>
+                                </>
+                              )}
+                              <a href={`https://wa.me/${job.clientPhone.replace("+", "")}?text=${encodeURIComponent(`Hi ${job.clientName}, here is your ${cfg.label}.`)}`}
+                                target="_blank" rel="noopener noreferrer"
+                                className="p-1 rounded hover:bg-green-50 text-[#94A3B8] hover:text-[#16A34A] transition-colors" title="Send via WhatsApp">
+                                <MessageCircle className="w-3 h-3" />
+                              </a>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                <button className="mt-2 flex items-center gap-1.5 text-xs text-[#2563EB] font-medium hover:text-[#1D4ED8] transition-colors">
+                  <Plus className="w-3 h-3" /> Generate Document
+                </button>
+              </div>
+            )}
+          </div>
+
           {/* Admin Actions */}
           <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card overflow-hidden">
             <div className="px-4 py-3.5 border-b border-[#E2E8F0] flex items-center gap-2">
               <div className="w-7 h-7 rounded-[8px] bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-center">
                 <Zap className="w-3.5 h-3.5 text-[#64748B]" />
               </div>
-              <h3 className="text-sm font-semibold text-[#0F172A]">Quick Actions</h3>
+              <h3 className="text-sm font-semibold text-[#0F172A]">Admin Actions</h3>
             </div>
-            <AdminQuickActions job={job} />
+            <AdminQuickActions job={job} onTabChange={setActiveTab} />
           </div>
 
-          {/* OTP Verification Status */}
-          <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card p-4">
-            <h3 className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wide mb-3">Client Verification</h3>
-            {isVerified ? (
-              <div className="flex items-start gap-3 p-3 rounded-[10px] bg-green-50 border border-green-200">
-                <CheckCircle className="w-4.5 h-4.5 text-[#16A34A] shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs font-semibold text-green-800">Service confirmed</p>
-                  {job.verifiedAt && (
-                    <p className="text-[10px] text-green-600 mt-0.5">{formatDate(job.verifiedAt)}</p>
-                  )}
-                  {job.otpCode && (
-                    <p className="text-[10px] text-green-600 mt-0.5 font-mono">Code: {job.otpCode}</p>
-                  )}
+          {/* Job Notes */}
+          <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card overflow-hidden">
+            <div className="px-4 py-3.5 border-b border-[#E2E8F0] flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-[#0F172A]">
+                Job Notes{noteCount > 0 ? ` (${noteCount})` : ""}
+              </h3>
+              <button onClick={() => setActiveTab("notes")}
+                className="text-xs text-[#2563EB] font-medium hover:text-[#1D4ED8] transition-colors">
+                Add Note
+              </button>
+            </div>
+            <div className="p-4">
+              {job.description ? (
+                <div className="flex items-start gap-3">
+                  <div className="w-7 h-7 rounded-full bg-[#2563EB] flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5">
+                    A
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-[#334155] leading-relaxed">{job.description}</p>
+                    <p className="text-[10px] text-[#94A3B8] mt-1.5">
+                      Added by Admin · {job.scheduledDate ? formatDate(job.scheduledDate) : "—"}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ) : job.otpCode ? (
-              <div className="flex items-start gap-3 p-3 rounded-[10px] bg-amber-50 border border-amber-200">
-                <Clock className="w-4.5 h-4.5 text-[#D97706] shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs font-semibold text-amber-800">OTP sent to client</p>
-                  <p className="text-[10px] text-amber-600 mt-0.5">Waiting for confirmation</p>
+              ) : (
+                <p className="text-xs text-[#94A3B8] text-center py-2">No notes yet</p>
+              )}
+              {job.postponeReason && (
+                <div className="mt-3 pt-3 border-t border-[#F1F5F9]">
+                  <p className="text-[10px] font-semibold text-amber-600 uppercase tracking-wide mb-1.5">
+                    Postponement Reason
+                  </p>
+                  <p className="text-xs text-amber-800 leading-relaxed">{job.postponeReason}</p>
                 </div>
-              </div>
-            ) : (
-              <div className="flex items-start gap-3 p-3 rounded-[10px] bg-[#F8FAFC] border border-[#E2E8F0]">
-                <AlertTriangle className="w-4.5 h-4.5 text-[#94A3B8] shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs font-medium text-[#64748B]">No OTP generated yet</p>
-                  <p className="text-[10px] text-[#94A3B8] mt-0.5">Worker needs to report completion first</p>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
-          {/* Worker Card */}
-          {worker && (
-            <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card p-4">
-              <h3 className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wide mb-3">Assigned Worker</h3>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-full bg-[#2563EB] flex items-center justify-center text-white text-sm font-bold shrink-0">
-                  {worker.name.charAt(0).toUpperCase()}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-[#0F172A] truncate">{worker.name}</p>
-                  <p className="text-xs text-[#64748B] truncate">{worker.phone}</p>
-                </div>
-              </div>
-              <a href={`https://wa.me/${worker.phone.replace("+", "")}`}
-                target="_blank" rel="noopener noreferrer"
-                className="w-full ff-btn-secondary inline-flex items-center justify-center gap-1.5 text-xs py-2">
-                <MessageCircle className="w-3.5 h-3.5" /> WhatsApp Worker
-              </a>
-            </div>
-          )}
         </div>
       </div>
     </div>

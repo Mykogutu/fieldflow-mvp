@@ -5,7 +5,8 @@ import Link from "next/link";
 import {
   Search, Plus, MapPin, Phone, Building2, User, X,
   ChevronRight, AlertCircle, MoreHorizontal, Mail,
-  Briefcase, TrendingUp, Users, DollarSign,
+  Briefcase, Users, UserCheck, UserPlus, FileText, Bell,
+  DollarSign,
 } from "lucide-react";
 import { createClient, updateClient, deactivateClient } from "@/app/actions/client-actions";
 import { formatKES, formatDate } from "@/lib/utils";
@@ -25,7 +26,9 @@ function Field({ label, name, type = "text", placeholder, required, defaultValue
 }) {
   return (
     <div>
-      <label className="block text-xs font-semibold text-[#475569] mb-1.5">{label}{required && <span className="text-red-400 ml-0.5">*</span>}</label>
+      <label className="block text-xs font-semibold text-[#475569] mb-1.5">
+        {label}{required && <span className="text-red-400 ml-0.5">*</span>}
+      </label>
       <input type={type} name={name} placeholder={placeholder} required={required} defaultValue={defaultValue}
         className="ff-input text-sm" />
     </div>
@@ -70,8 +73,7 @@ function ClientForm({ isPending, onSubmit, onCancel, defaultValues }: {
       {!defaultValues && <Field label="Notes" name="address" placeholder="Optional notes…" />}
       <div>
         <label className="block text-xs font-semibold text-[#475569] mb-1.5">Client Type</label>
-        <select name="type" defaultValue={defaultValues?.type ?? "INDIVIDUAL"}
-          className="ff-input text-sm">
+        <select name="type" defaultValue={defaultValues?.type ?? "INDIVIDUAL"} className="ff-input text-sm">
           <option value="INDIVIDUAL">Individual</option>
           <option value="COMPANY">Company</option>
         </select>
@@ -103,49 +105,86 @@ function ClientAvatar({ name, size = "md" }: { name: string; size?: "sm" | "md" 
   );
 }
 
-// ── Client Card ───────────────────────────────────────────────────────────────
-function ClientCard({ c, onEdit }: { c: Client; onEdit: () => void }) {
+// ── Client Row (table) ────────────────────────────────────────────────────────
+function ClientRow({ c, onEdit }: { c: Client; onEdit: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   return (
-    <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card hover:shadow-card-hover hover:border-[#2563EB]/20 transition-all group">
-      <div className="p-5">
-        {/* Top row */}
-        <div className="flex items-start gap-3 mb-4">
-          <ClientAvatar name={c.name} />
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 mb-0.5">
-              <Link href={`/admin/clients/${c.id}`}
-                className="font-semibold text-[#0F172A] hover:text-[#2563EB] truncate text-sm transition-colors">
-                {c.name}
-              </Link>
-              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-[4px] shrink-0
-                ${c.type === "COMPANY" ? "bg-blue-50 text-blue-700 border border-blue-100" : "bg-[#F1F5F9] text-[#64748B] border border-[#E2E8F0]"}`}>
-                {c.type === "COMPANY" ? "Co." : "Ind."}
-              </span>
-            </div>
-            {c.company && (
-              <p className="text-[11px] text-[#94A3B8] flex items-center gap-1 truncate">
-                <Building2 className="w-3 h-3 shrink-0" />{c.company}
-              </p>
-            )}
+    <tr className="group hover:bg-[#FAFBFD] transition-colors">
+      {/* Client */}
+      <td className="py-3 px-4">
+        <div className="flex items-center gap-3">
+          <ClientAvatar name={c.name} size="sm" />
+          <div className="min-w-0">
+            <Link href={`/admin/clients/${c.id}`}
+              className="text-[13px] font-semibold text-[#0F172A] hover:text-[#2563EB] truncate block transition-colors">
+              {c.name}
+            </Link>
+            <p className="text-xs text-[#94A3B8] truncate">{c.phone}</p>
           </div>
-          {/* More menu */}
-          <div className="relative shrink-0">
+        </div>
+      </td>
+      {/* Type */}
+      <td className="py-3 px-4">
+        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-[4px] ${
+          c.type === "COMPANY"
+            ? "bg-blue-50 text-blue-700 border border-blue-100"
+            : "bg-[#F1F5F9] text-[#64748B] border border-[#E2E8F0]"
+        }`}>
+          {c.type === "COMPANY" ? "Company" : "Individual"}
+        </span>
+      </td>
+      {/* Location */}
+      <td className="py-3 px-4">
+        <p className="text-[13px] text-[#334155] truncate">{c.location ?? <span className="text-[#94A3B8]">—</span>}</p>
+      </td>
+      {/* Jobs */}
+      <td className="py-3 px-4">
+        <p className="text-[13px] font-semibold text-[#0F172A]">{c.jobCount}</p>
+      </td>
+      {/* Outstanding Balance */}
+      <td className="py-3 px-4">
+        {c.outstanding > 0 ? (
+          <div>
+            <p className="text-[13px] font-bold text-[#DC2626]">{formatKES(c.outstanding)}</p>
+            <p className="text-[11px] text-[#DC2626]/80">Unpaid</p>
+          </div>
+        ) : (
+          <div>
+            <p className="text-[13px] font-semibold text-[#16A34A]">Clear</p>
+            <p className="text-[11px] text-[#94A3B8]">KES 0</p>
+          </div>
+        )}
+      </td>
+      {/* Last Job */}
+      <td className="py-3 px-4">
+        <p className="text-[13px] text-[#334155] truncate">
+          {c.lastJobDate ? formatDate(c.lastJobDate) : <span className="text-[#94A3B8]">—</span>}
+        </p>
+      </td>
+      {/* Actions */}
+      <td className="py-3 px-4">
+        <div className="flex items-center gap-1.5 justify-end">
+          <Link href={`/admin/clients/${c.id}`}
+            className="ff-btn-secondary text-xs px-2.5 py-1.5 whitespace-nowrap">
+            View Profile
+          </Link>
+          <div className="relative">
             <button onClick={() => setMenuOpen(v => !v)}
-              className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-[#F8FAFC] text-[#94A3B8] hover:text-[#475569] transition-all">
-              <MoreHorizontal className="w-4 h-4" />
+              className="p-1.5 rounded-[8px] border border-[#E2E8F0] hover:bg-[#F8FAFC] text-[#94A3B8] hover:text-[#475569] transition-colors">
+              <MoreHorizontal className="w-3.5 h-3.5" />
             </button>
             {menuOpen && (
-              <div className="absolute right-0 top-full mt-1 bg-white rounded-[10px] border border-[#E2E8F0] shadow-card py-1 z-20 w-36">
-                <Link href={`/admin/clients/${c.id}`}
-                  onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-2 px-3 py-1.5 text-xs text-[#334155] hover:bg-[#F8FAFC]">
-                  <User className="w-3.5 h-3.5" /> View Profile
-                </Link>
+              <div className="absolute right-0 top-full mt-1 bg-white rounded-[10px] border border-[#E2E8F0] shadow-card py-1 z-20 w-40">
                 <button onClick={() => { setMenuOpen(false); onEdit(); }}
                   className="flex items-center gap-2 px-3 py-1.5 text-xs text-[#334155] hover:bg-[#F8FAFC] w-full text-left">
-                  <Briefcase className="w-3.5 h-3.5" /> Edit
+                  <Briefcase className="w-3.5 h-3.5" /> Edit Client
                 </button>
+                {c.email && (
+                  <a href={`mailto:${c.email}`} onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-1.5 text-xs text-[#334155] hover:bg-[#F8FAFC]">
+                    <Mail className="w-3.5 h-3.5" /> Send Email
+                  </a>
+                )}
                 <a href={`https://wa.me/${c.phone.replace("+", "")}`}
                   target="_blank" rel="noopener noreferrer"
                   onClick={() => setMenuOpen(false)}
@@ -156,62 +195,8 @@ function ClientCard({ c, onEdit }: { c: Client; onEdit: () => void }) {
             )}
           </div>
         </div>
-
-        {/* Contact info */}
-        <div className="space-y-1.5">
-          <p className="text-xs text-[#64748B] flex items-center gap-2">
-            <Phone className="w-3 h-3 text-[#94A3B8] shrink-0" />{c.phone}
-          </p>
-          {c.email && (
-            <p className="text-xs text-[#64748B] flex items-center gap-2 truncate">
-              <Mail className="w-3 h-3 text-[#94A3B8] shrink-0" />{c.email}
-            </p>
-          )}
-          {c.location && (
-            <p className="text-xs text-[#64748B] flex items-center gap-2 truncate">
-              <MapPin className="w-3 h-3 text-[#94A3B8] shrink-0" />{c.location}
-            </p>
-          )}
-        </div>
-
-        {/* Stats row */}
-        <div className="grid grid-cols-3 gap-0 mt-4 pt-4 border-t border-[#F1F5F9]">
-          <div className="text-center border-r border-[#F1F5F9]">
-            <p className="text-[10px] text-[#94A3B8] mb-0.5">Jobs</p>
-            <p className="text-sm font-bold text-[#0F172A]">{c.jobCount}</p>
-          </div>
-          <div className="text-center border-r border-[#F1F5F9]">
-            <p className="text-[10px] text-[#94A3B8] mb-0.5">Balance</p>
-            <p className={`text-sm font-bold ${c.outstanding > 0 ? "text-[#DC2626]" : "text-[#16A34A]"}`}>
-              {c.outstanding > 0 ? formatKES(c.outstanding) : "Clear"}
-            </p>
-          </div>
-          <div className="text-center">
-            <p className="text-[10px] text-[#94A3B8] mb-0.5">Last Job</p>
-            <p className="text-xs font-medium text-[#334155]">
-              {c.lastJobDate ? formatDate(c.lastJobDate) : "—"}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Footer action */}
-      <div className="border-t border-[#F1F5F9] px-5 py-3 flex items-center justify-between bg-[#FAFBFC] rounded-b-[16px]">
-        {c.outstanding > 0 && (
-          <span className="flex items-center gap-1 text-[10px] text-[#DC2626] font-medium">
-            <AlertCircle className="w-3 h-3" /> Unpaid balance
-          </span>
-        )}
-        {!c.isActive && (
-          <span className="text-[10px] text-[#94A3B8]">Inactive</span>
-        )}
-        {c.outstanding === 0 && c.isActive && <span />}
-        <Link href={`/admin/clients/${c.id}`}
-          className="inline-flex items-center gap-1 text-xs text-[#2563EB] font-semibold hover:text-[#1D4ED8] transition-colors">
-          View <ChevronRight className="w-3.5 h-3.5" />
-        </Link>
-      </div>
-    </div>
+      </td>
+    </tr>
   );
 }
 
@@ -219,17 +204,26 @@ function ClientCard({ c, onEdit }: { c: Client; onEdit: () => void }) {
 export default function ClientsClient({ clients, total }: { clients: Client[]; total: number }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
-  const [activeFilter, setActiveFilter] = useState<"all" | "company" | "individual" | "unpaid">("all");
+  const [activeFilter, setActiveFilter] = useState<"all" | "active" | "unpaid" | "company" | "individual">("all");
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<Client | null>(null);
   const [feedback, setFeedback] = useState<{ type: "ok" | "error"; msg: string } | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const companyCount    = clients.filter(c => c.type === "COMPANY").length;
-  const individualCount = clients.filter(c => c.type === "INDIVIDUAL").length;
-  const unpaidCount     = clients.filter(c => c.outstanding > 0).length;
-  const totalRevenue    = clients.reduce((s, c) => s + (c.jobCount > 0 ? c.jobCount * 5000 : 0), 0); // rough proxy
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const activeCount      = clients.filter(c => c.isActive).length;
+  const newThisMonth     = clients.filter(c => new Date(c.createdAt) >= startOfMonth).length;
   const totalOutstanding = clients.reduce((s, c) => s + c.outstanding, 0);
+  const unpaidClients    = clients.filter(c => c.outstanding > 0);
+
+  const filteredClients = clients.filter(c => {
+    if (activeFilter === "active")     return c.isActive;
+    if (activeFilter === "unpaid")     return c.outstanding > 0;
+    if (activeFilter === "company")    return c.type === "COMPANY";
+    if (activeFilter === "individual") return c.type === "INDIVIDUAL";
+    return true;
+  });
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -277,78 +271,42 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
     startTransition(async () => { await deactivateClient(id); router.refresh(); });
   }
 
-  const tabs: { key: typeof activeFilter; label: string; count?: number }[] = [
-    { key: "all", label: "All Clients", count: total },
-    { key: "company", label: "Companies", count: companyCount },
-    { key: "individual", label: "Individuals", count: individualCount },
-    { key: "unpaid", label: "Unpaid", count: unpaidCount },
-  ];
-
   return (
     <div className="space-y-5">
-      {/* ── Page header ─────────────────────────────────────────────────── */}
+
+      {/* ── Page header ──────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="ff-page-title">Clients</h1>
-          <p className="ff-page-desc">{total} total · {unpaidCount} with outstanding balance</p>
+          <p className="ff-page-desc">Manage client profiles, balances, and service history.</p>
         </div>
-        <button onClick={() => setShowAdd(true)} className="ff-btn-primary inline-flex items-center gap-2 text-sm px-4 py-2.5">
+        <button onClick={() => setShowAdd(true)}
+          className="ff-btn-primary inline-flex items-center gap-2 text-sm px-4 py-2.5">
           <Plus className="w-4 h-4" /> Add Client
         </button>
       </div>
 
-      {/* ── Summary metrics ──────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* ── 4 Metric cards ───────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
         {[
-          { label: "Total Clients", value: total.toString(), icon: Users, color: "text-[#2563EB]", bg: "bg-blue-50" },
-          { label: "Companies", value: companyCount.toString(), icon: Building2, color: "text-[#7C3AED]", bg: "bg-purple-50" },
-          { label: "Individuals", value: individualCount.toString(), icon: User, color: "text-[#0891B2]", bg: "bg-cyan-50" },
-          { label: "Outstanding", value: totalOutstanding > 0 ? formatKES(totalOutstanding) : "Clear", icon: AlertCircle, color: totalOutstanding > 0 ? "text-[#DC2626]" : "text-[#16A34A]", bg: totalOutstanding > 0 ? "bg-red-50" : "bg-green-50" },
-        ].map(({ label, value, icon: Icon, color, bg }) => (
-          <div key={label} className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card p-4 flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-[10px] ${bg} flex items-center justify-center shrink-0`}>
-              <Icon className={`w-5 h-5 ${color}`} />
+          { label: "Total Clients",       value: total,                                           sub: "All time registered clients", Icon: Users,     iconBg: "bg-blue-50",   iconColor: "text-[#2563EB]", href: "/admin/clients"                  },
+          { label: "Active Clients",      value: activeCount,                                     sub: "Currently active clients",    Icon: UserCheck, iconBg: "bg-green-50",  iconColor: "text-[#16A34A]", href: "/admin/clients?filter=active"    },
+          { label: "Outstanding Balance", value: totalOutstanding > 0 ? formatKES(totalOutstanding) : "Clear", sub: `Across ${unpaidClients.length} client${unpaidClients.length !== 1 ? "s" : ""}`, Icon: DollarSign, iconBg: totalOutstanding > 0 ? "bg-red-50" : "bg-green-50", iconColor: totalOutstanding > 0 ? "text-[#DC2626]" : "text-[#16A34A]", href: "/admin/clients?filter=unpaid" },
+          { label: "New This Month",      value: newThisMonth,                                    sub: "New clients this month",      Icon: UserPlus,  iconBg: "bg-purple-50", iconColor: "text-[#7C3AED]", href: "/admin/clients"                  },
+        ].map(m => (
+          <Link key={m.label} href={m.href}
+            className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card p-5 flex items-center gap-4 hover:border-[#2563EB]/30 hover:shadow-card-hover transition-all group">
+            <div className={`w-11 h-11 rounded-[12px] flex items-center justify-center shrink-0 ${m.iconBg}`}>
+              <m.Icon className={`w-5 h-5 ${m.iconColor}`} />
             </div>
-            <div>
-              <p className="text-xs text-[#94A3B8] font-medium">{label}</p>
-              <p className="text-lg font-bold text-[#0F172A] leading-tight">{value}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-[#64748B] truncate">{m.label}</p>
+              <p className="text-xl font-bold text-[#0F172A] leading-tight truncate">{m.value}</p>
+              <p className="text-[11px] text-[#94A3B8] mt-0.5 truncate">{m.sub}</p>
             </div>
-          </div>
+            <ChevronRight className="w-4 h-4 text-[#94A3B8] shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </Link>
         ))}
-      </div>
-
-      {/* ── Search + Filter ──────────────────────────────────────────────── */}
-      <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card">
-        {/* Tab bar */}
-        <div className="border-b border-[#E2E8F0] px-4 overflow-x-auto scrollbar-none">
-          <div className="flex gap-0 min-w-max">
-            {tabs.map(tab => (
-              <button key={tab.key} onClick={() => handleFilter(tab.key)}
-                className={`ff-tab ${activeFilter === tab.key ? "ff-tab-active" : "ff-tab-inactive"}`}>
-                {tab.label}
-                {tab.count !== undefined && (
-                  <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-semibold
-                    ${activeFilter === tab.key ? "bg-[#2563EB]/15 text-[#2563EB]" : "bg-[#F1F5F9] text-[#64748B]"}`}>
-                    {tab.count}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Search bar */}
-        <div className="p-4">
-          <form onSubmit={handleSearch} className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94A3B8]" />
-              <input value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="Search by name, phone, company, location…"
-                className="ff-input pl-9 text-sm" />
-            </div>
-            <button type="submit" className="ff-btn-secondary text-sm px-4">Search</button>
-          </form>
-        </div>
       </div>
 
       {/* Feedback */}
@@ -364,34 +322,179 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
         </div>
       )}
 
-      {/* ── Client Grid ──────────────────────────────────────────────────── */}
-      {clients.length === 0 ? (
-        <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card py-20 flex flex-col items-center gap-3">
-          <div className="w-14 h-14 rounded-2xl bg-[#F1F5F9] flex items-center justify-center">
-            <Users className="w-6 h-6 text-[#94A3B8]" />
-          </div>
-          <p className="text-sm font-semibold text-[#475569]">No clients found</p>
-          <p className="text-xs text-[#94A3B8]">Add your first client to get started</p>
-          <button onClick={() => setShowAdd(true)} className="ff-btn-primary text-sm px-4 py-2 mt-1 inline-flex items-center gap-2">
-            <Plus className="w-4 h-4" /> Add Client
-          </button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {clients.map(c => (
-            <ClientCard key={c.id} c={c} onEdit={() => setEditing(c)} />
-          ))}
-        </div>
-      )}
+      {/* ── Main body: table + right panel ──────────────────────────────── */}
+      <div className="flex gap-5 items-start">
 
-      {/* ── Add Modal ────────────────────────────────────────────────────── */}
+        {/* ── Left: Search + Table ─────────────────────────────────────── */}
+        <div className="flex-1 min-w-0 space-y-3">
+
+          {/* Search + filter row */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <form onSubmit={handleSearch} className="relative flex-1 min-w-48">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94A3B8]" />
+              <input value={search} onChange={e => setSearch(e.target.value)}
+                placeholder="Search by name, phone, company, location..."
+                className="ff-input pl-9 text-sm w-full" />
+            </form>
+            {/* Segment filter */}
+            <div className="flex items-center gap-1 bg-[#F1F5F9] rounded-[10px] p-1">
+              {(["all", "active", "unpaid", "company", "individual"] as const).map(f => (
+                <button key={f} onClick={() => handleFilter(f)}
+                  className={`px-3 py-1.5 rounded-[8px] text-xs font-semibold transition-all capitalize ${
+                    activeFilter === f
+                      ? "bg-white text-[#0F172A] shadow-sm"
+                      : "text-[#64748B] hover:text-[#334155]"
+                  }`}>
+                  {f === "all" ? "All" : f === "active" ? "Active" : f === "unpaid" ? "Unpaid" : f === "company" ? "Companies" : "Individuals"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Table card */}
+          <div className="ff-card overflow-hidden">
+            {/* Table header */}
+            <div className="px-4 py-3 border-b border-[#E2E8F0] flex items-center justify-between">
+              <p className="text-sm font-semibold text-[#0F172A]">All Clients</p>
+              <p className="text-xs text-[#94A3B8]">
+                {filteredClients.length} client{filteredClients.length !== 1 ? "s" : ""} · Sorted by last activity
+              </p>
+            </div>
+
+            {filteredClients.length === 0 ? (
+              <div className="py-16 flex flex-col items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-[#F1F5F9] flex items-center justify-center">
+                  <Users className="w-5 h-5 text-[#94A3B8]" />
+                </div>
+                <p className="text-sm font-semibold text-[#475569]">No clients found</p>
+                <p className="text-xs text-[#94A3B8]">Try a different filter or add a new client</p>
+                <button onClick={() => setShowAdd(true)}
+                  className="ff-btn-primary text-sm px-4 py-2 mt-1 inline-flex items-center gap-2">
+                  <Plus className="w-4 h-4" /> Add Client
+                </button>
+              </div>
+            ) : (
+              <table className="w-full table-fixed ff-table">
+                <colgroup>
+                  <col className="w-[24%]" />
+                  <col className="w-[13%]" />
+                  <col className="w-[17%]" />
+                  <col className="w-[7%]" />
+                  <col className="w-[18%]" />
+                  <col className="w-[13%]" />
+                  <col className="w-[8%]" />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>Client</th>
+                    <th>Type</th>
+                    <th>Location</th>
+                    <th>Jobs</th>
+                    <th>Outstanding Balance</th>
+                    <th>Last Job</th>
+                    <th className="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredClients.map(c => (
+                    <ClientRow key={c.id} c={c} onEdit={() => setEditing(c)} />
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+
+        {/* ── Right panel ─────────────────────────────────────────────── */}
+        <div className="hidden xl:flex flex-col gap-4 w-72 shrink-0">
+
+          {/* Clients needing follow up */}
+          <div className="ff-card overflow-hidden">
+            <div className="px-4 py-3.5 border-b border-[#E2E8F0] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-[#0F172A]">Clients needing follow up</h3>
+                {unpaidClients.length > 0 && (
+                  <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-bold">
+                    {unpaidClients.length}
+                  </span>
+                )}
+              </div>
+              <Link href="/admin/clients?filter=unpaid"
+                className="text-xs text-[#2563EB] font-medium hover:text-[#1D4ED8] transition-colors">
+                View all
+              </Link>
+            </div>
+            <div className="divide-y divide-[#F1F5F9]">
+              {unpaidClients.length === 0 ? (
+                <div className="px-4 py-6 text-center">
+                  <p className="text-xs text-[#94A3B8]">All clients are up to date 🎉</p>
+                </div>
+              ) : (
+                unpaidClients.slice(0, 3).map(c => (
+                  <div key={c.id} className="px-4 py-3 flex items-start gap-3">
+                    <ClientAvatar name={c.name} size="sm" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-1">
+                        <p className="text-xs font-semibold text-[#0F172A] truncate leading-tight">{c.name}</p>
+                        <span className="text-[10px] font-bold text-[#DC2626] bg-red-50 px-1.5 py-0.5 rounded shrink-0 leading-tight">
+                          UNPAID
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#64748B] mt-0.5 truncate">
+                        Payment overdue · {formatKES(c.outstanding)}
+                      </p>
+                    </div>
+                    <Link href={`/admin/clients/${c.id}`}
+                      className="text-xs text-[#2563EB] font-semibold shrink-0 hover:text-[#1D4ED8] transition-colors mt-0.5">
+                      View
+                    </Link>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Quick actions */}
+          <div className="ff-card overflow-hidden">
+            <div className="px-4 py-3.5 border-b border-[#E2E8F0]">
+              <h3 className="text-sm font-semibold text-[#0F172A]">Quick actions</h3>
+            </div>
+            <div className="divide-y divide-[#F1F5F9]">
+              {([
+                { label: "Add Client",              Icon: UserPlus,  href: null as string | null,       onClick: () => setShowAdd(true) },
+                { label: "Create Job for Client",   Icon: Briefcase, href: "/admin/jobs/new",           onClick: null as (() => void) | null },
+                { label: "Send Payment Reminder",   Icon: Bell,      href: "/admin/invoices?status=OVERDUE", onClick: null as (() => void) | null },
+                { label: "View Unpaid Invoices",    Icon: FileText,  href: "/admin/invoices?status=PENDING", onClick: null as (() => void) | null },
+              ]).map((action, i) => {
+                const inner = (
+                  <>
+                    <div className="w-7 h-7 rounded-[8px] bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-center shrink-0">
+                      <action.Icon className="w-3.5 h-3.5 text-[#64748B]" />
+                    </div>
+                    <span className="text-xs font-medium text-[#334155] group-hover:text-[#2563EB] transition-colors flex-1 text-left">
+                      {action.label}
+                    </span>
+                    <ChevronRight className="w-3.5 h-3.5 text-[#94A3B8] shrink-0" />
+                  </>
+                );
+                const cls = "w-full flex items-center gap-3 px-4 py-3 hover:bg-[#F8FAFC] transition-colors group";
+                return action.href
+                  ? <Link key={i} href={action.href} className={cls}>{inner}</Link>
+                  : <button key={i} onClick={action.onClick ?? undefined} className={cls}>{inner}</button>;
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Add Modal ───────────────────────────────────────────────────── */}
       {showAdd && (
         <Modal title="Add Client" onClose={() => setShowAdd(false)}>
           <ClientForm isPending={isPending} onSubmit={handleCreate} onCancel={() => setShowAdd(false)} />
         </Modal>
       )}
 
-      {/* ── Edit Modal ───────────────────────────────────────────────────── */}
+      {/* ── Edit Modal ──────────────────────────────────────────────────── */}
       {editing && (
         <Modal title="Edit Client" onClose={() => setEditing(null)}>
           <ClientForm

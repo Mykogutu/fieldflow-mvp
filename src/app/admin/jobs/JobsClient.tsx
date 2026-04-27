@@ -192,22 +192,20 @@ export default function JobsClient({
         {/* Metric cards */}
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
           {[
-            { label: "Total Jobs",      value: total,         sub: "All time",          iconBg: "bg-[#DBEAFE]", iconColor: "text-[#2563EB]", Icon: Wrench    },
-            { label: "Active",          value: activeCount,   sub: "In progress",        iconBg: "bg-[#DCFCE7]", iconColor: "text-[#16A34A]", Icon: Wrench    },
-            { label: "Awaiting OTP",    value: otpCount,      sub: "Waiting for client", iconBg: "bg-[#EDE9FE]", iconColor: "text-[#7C3AED]", Icon: Clock     },
+            { label: "Total Jobs",      value: total,         sub: "All time",          iconBg: "bg-[#DBEAFE]", iconColor: "text-[#2563EB]", Icon: Wrench       },
+            { label: "Active",          value: activeCount,   sub: "In progress",        iconBg: "bg-[#DCFCE7]", iconColor: "text-[#16A34A]", Icon: Wrench       },
+            { label: "Awaiting OTP",    value: otpCount,      sub: "Waiting for client", iconBg: "bg-[#EDE9FE]", iconColor: "text-[#7C3AED]", Icon: Clock        },
             { label: "Needs Attention", value: attentionCount,sub: "High priority",      iconBg: "bg-[#FEE2E2]", iconColor: "text-[#DC2626]", Icon: AlertTriangle },
           ].map((m) => (
-            <div key={m.label} className="ff-card p-4">
-              <div className="flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0 ${m.iconBg}`}>
-                  <m.Icon className={`w-4.5 h-4.5 w-[18px] h-[18px] ${m.iconColor}`} />
-                </div>
-                <div>
-                  <p className="text-xl font-bold text-[#0F172A] leading-none">{m.value}</p>
-                  <p className="text-[11px] text-[#64748B] mt-0.5">{m.label}</p>
-                </div>
+            <div key={m.label} className="ff-card p-5 flex items-center gap-4">
+              <div className={`w-11 h-11 rounded-[12px] flex items-center justify-center shrink-0 ${m.iconBg}`}>
+                <m.Icon className={`w-5 h-5 ${m.iconColor}`} />
               </div>
-              <p className="text-[11px] text-[#94A3B8] mt-2">{m.sub}</p>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-[#64748B] truncate">{m.label}</p>
+                <p className="text-2xl font-bold text-[#0F172A] leading-tight">{m.value}</p>
+                <p className="text-[11px] text-[#94A3B8] mt-0.5">{m.sub}</p>
+              </div>
             </div>
           ))}
         </div>
@@ -249,133 +247,150 @@ export default function JobsClient({
           </button>
         </div>
 
-        {/* Jobs table */}
+        {/* Jobs table — no overflow scroll, table-fixed with proportional columns */}
         <div className="ff-card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full ff-table">
-              <thead>
-                <tr>
-                  <th>Job</th>
-                  <th>Client</th>
-                  <th>Worker</th>
-                  <th>Scheduled</th>
-                  <th>Status</th>
-                  <th>Amount</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {jobs.map((job) => {
-                  const sched = fmtScheduled(job.scheduledDate);
-                  const amount = job.finalAmount ?? job.quotedAmount;
-                  return (
-                    <tr key={job.id} className="group">
-                      <td>
-                        <div>
-                          <p className="font-semibold text-[#2563EB] text-[13px] font-mono">
-                            {job.jobNumber.length > 14
-                              ? job.jobNumber.slice(0, 12) + "…"
-                              : job.jobNumber}
-                          </p>
-                          <p className="text-xs text-[#94A3B8] mt-0.5 truncate max-w-[140px]">
-                            {job.jobType}
-                            {job.asset && ` · ${job.asset.name}`}
-                          </p>
-                        </div>
-                      </td>
-                      <td>
-                        <p className="font-medium text-[#0F172A] text-[13px]">{job.clientName}</p>
-                        <p className="text-xs text-[#94A3B8] mt-0.5">{job.clientPhone}</p>
-                      </td>
-                      <td>
-                        {job.workers.length > 0 ? (
-                          <span className="text-[13px] text-[#334155]">
-                            {job.workers.map((w) => w.name).join(", ")}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-[#94A3B8] flex items-center gap-1">
-                            <Minus className="w-3 h-3" />Unassigned
-                          </span>
-                        )}
-                      </td>
-                      <td>
-                        {sched ? (
-                          <div>
-                            <p className="text-[13px] text-[#334155]">{sched.day}</p>
-                            <p className="text-xs text-[#94A3B8] mt-0.5">{sched.time}</p>
-                          </div>
-                        ) : (
-                          <span className="text-[#94A3B8] text-sm">—</span>
-                        )}
-                      </td>
-                      <td>
-                        <StatusBadge status={job.status} />
-                      </td>
-                      <td>
-                        <span className="font-semibold text-[13px] text-[#0F172A]">
-                          {amount ? formatKES(amount) : <span className="text-[#94A3B8] font-normal">—</span>}
+          <table className="w-full table-fixed ff-table">
+            <colgroup>
+              <col className="w-[22%]" />  {/* Job */}
+              <col className="w-[19%]" />  {/* Client */}
+              <col className="w-[13%]" />  {/* Worker */}
+              <col className="w-[14%]" />  {/* Scheduled */}
+              <col className="w-[13%]" />  {/* Status */}
+              <col className="w-[10%]" />  {/* Amount */}
+              <col className="w-[9%]"  />  {/* Actions */}
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Job</th>
+                <th>Client</th>
+                <th>Worker</th>
+                <th>Scheduled</th>
+                <th>Status</th>
+                <th>Amount</th>
+                <th className="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {jobs.map((job) => {
+                const sched = fmtScheduled(job.scheduledDate);
+                const amount = job.finalAmount ?? job.quotedAmount;
+                const workerFirstName = job.workers[0]?.name?.split(" ")[0];
+                return (
+                  <tr key={job.id} className="group">
+                    {/* Job */}
+                    <td>
+                      <p className="font-semibold text-[#2563EB] text-[13px] font-mono truncate">
+                        {job.jobNumber}
+                      </p>
+                      <p className="text-xs text-[#94A3B8] mt-0.5 truncate">
+                        {job.jobType}{job.asset ? ` · ${job.asset.name}` : ""}
+                      </p>
+                    </td>
+
+                    {/* Client */}
+                    <td>
+                      <p className="font-medium text-[#0F172A] text-[13px] truncate">{job.clientName}</p>
+                      <p className="text-xs text-[#94A3B8] mt-0.5 truncate">{job.clientPhone}</p>
+                    </td>
+
+                    {/* Worker */}
+                    <td>
+                      {job.workers.length > 0 ? (
+                        <span className="text-[13px] text-[#334155] truncate block">
+                          {workerFirstName}
                         </span>
-                      </td>
-                      <td>
-                        <div className="flex items-center gap-1.5">
-                          <Link
-                            href={`/admin/jobs/${job.id}`}
-                            className="inline-flex items-center gap-1 text-xs text-[#2563EB] hover:text-[#1D4ED8] font-semibold bg-[#DBEAFE] hover:bg-[#BFDBFE] px-2.5 py-1.5 rounded-[8px] transition-colors"
-                          >
-                            View Job <ChevronRight className="w-3 h-3" />
+                      ) : (
+                        <span className="text-xs text-[#94A3B8] flex items-center gap-1">
+                          <Minus className="w-3 h-3 shrink-0" />
+                          <span className="truncate">Unassigned</span>
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Scheduled */}
+                    <td>
+                      {sched ? (
+                        <div>
+                          <p className="text-[13px] text-[#334155]">{sched.day}</p>
+                          <p className="text-xs text-[#94A3B8] mt-0.5">{sched.time}</p>
+                        </div>
+                      ) : (
+                        <span className="text-[#94A3B8] text-sm">—</span>
+                      )}
+                    </td>
+
+                    {/* Status */}
+                    <td><StatusBadge status={job.status} /></td>
+
+                    {/* Amount */}
+                    <td>
+                      <span className="font-semibold text-[13px] text-[#0F172A] truncate block">
+                        {amount ? formatKES(amount) : <span className="text-[#94A3B8] font-normal">—</span>}
+                      </span>
+                    </td>
+
+                    {/* Actions */}
+                    <td>
+                      <div className="flex items-center justify-end gap-1">
+                        {/* Split "View Job" button */}
+                        <div className="flex items-stretch rounded-[8px] overflow-hidden border border-[#DBEAFE]">
+                          <Link href={`/admin/jobs/${job.id}`}
+                            className="text-xs text-[#2563EB] hover:text-[#1D4ED8] font-semibold bg-[#DBEAFE] hover:bg-[#BFDBFE] px-2.5 py-1.5 transition-colors whitespace-nowrap">
+                            View Job
                           </Link>
-                          {/* More menu */}
-                          <div className="relative">
-                            <button
-                              onClick={() => setOpenMenuId(openMenuId === job.id ? null : job.id)}
-                              className="p-1.5 rounded-[6px] text-[#94A3B8] hover:text-[#334155] hover:bg-[#F1F5F9] transition-colors"
-                            >
-                              <MoreHorizontal className="w-4 h-4" />
-                            </button>
-                            {openMenuId === job.id && (
-                              <div className="absolute right-0 top-8 w-40 bg-white border border-[#E2E8F0] rounded-[10px] shadow-xl z-20 py-1 overflow-hidden">
-                                {!["VERIFIED","CLOSED","CANCELLED"].includes(job.status) && (
-                                  <button
-                                    onClick={() => handleStatusChange(job.id, "CANCELLED")}
-                                    className="w-full text-left px-3.5 py-2 text-sm text-[#DC2626] hover:bg-[#FEE2E2] transition-colors"
-                                  >
-                                    Cancel Job
-                                  </button>
-                                )}
-                                <Link
-                                  href={`/admin/jobs/${job.id}`}
-                                  className="block px-3.5 py-2 text-sm text-[#334155] hover:bg-[#F8FAFC] transition-colors"
-                                  onClick={() => setOpenMenuId(null)}
-                                >
-                                  View Details
-                                </Link>
-                              </div>
-                            )}
-                          </div>
+                          <button
+                            onClick={() => setOpenMenuId(openMenuId === job.id ? null : job.id)}
+                            className="text-[#2563EB] bg-[#DBEAFE] hover:bg-[#BFDBFE] border-l border-[#BFDBFE] px-1.5 transition-colors">
+                            <ChevronRight className="w-3 h-3 rotate-90" />
+                          </button>
                         </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {jobs.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="px-4 py-16 text-center">
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="w-12 h-12 rounded-[12px] bg-[#F1F5F9] flex items-center justify-center">
-                          <Wrench className="w-5 h-5 text-[#94A3B8]" />
+                        {/* More menu */}
+                        <div className="relative">
+                          <button
+                            onClick={() => setOpenMenuId(openMenuId === `m-${job.id}` ? null : `m-${job.id}`)}
+                            className="p-1.5 rounded-[6px] text-[#94A3B8] hover:text-[#334155] hover:bg-[#F1F5F9] transition-colors">
+                            <MoreHorizontal className="w-3.5 h-3.5" />
+                          </button>
+                          {openMenuId === `m-${job.id}` && (
+                            <div className="absolute right-0 top-8 w-40 bg-white border border-[#E2E8F0] rounded-[10px] shadow-xl z-20 py-1">
+                              <Link href={`/admin/jobs/${job.id}`}
+                                className="block px-3.5 py-2 text-sm text-[#334155] hover:bg-[#F8FAFC] transition-colors"
+                                onClick={() => setOpenMenuId(null)}>
+                                View Details
+                              </Link>
+                              {!["VERIFIED","CLOSED","CANCELLED"].includes(job.status) && (
+                                <button
+                                  onClick={() => handleStatusChange(job.id, "CANCELLED")}
+                                  className="w-full text-left px-3.5 py-2 text-sm text-[#DC2626] hover:bg-[#FEE2E2] transition-colors">
+                                  Cancel Job
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        <p className="text-sm font-semibold text-[#334155]">No jobs found</p>
-                        <p className="text-xs text-[#94A3B8]">Create your first job to get started</p>
-                        <button onClick={() => setShowCreate(true)} className={btnPrimary}>
-                          <Plus className="w-4 h-4" /> New Job
-                        </button>
                       </div>
                     </td>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                );
+              })}
+              {jobs.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-4 py-16 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-12 h-12 rounded-[12px] bg-[#F1F5F9] flex items-center justify-center">
+                        <Wrench className="w-5 h-5 text-[#94A3B8]" />
+                      </div>
+                      <p className="text-sm font-semibold text-[#334155]">No jobs found</p>
+                      <p className="text-xs text-[#94A3B8]">Create your first job to get started</p>
+                      <button onClick={() => setShowCreate(true)} className={btnPrimary}>
+                        <Plus className="w-4 h-4" /> New Job
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
 
           {jobs.length > 0 && (
             <div className="px-5 py-3 border-t border-[#F1F5F9] flex items-center justify-between">
