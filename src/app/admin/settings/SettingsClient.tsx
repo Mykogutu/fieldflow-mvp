@@ -5,7 +5,8 @@ import { INDUSTRY_LIST, INDUSTRY_TEMPLATES, type IndustryKey } from "@/lib/indus
 import {
   Settings, Layers, FileText, Zap, Palette, X, Plus, RotateCcw, Save, MessageCircle,
   Droplets, Gauge, Wrench, Wind, Sparkles, Bug, Sun, Plug, Truck, Shield,
-  Hammer, Leaf, Car, Monitor, HelpCircle, type LucideIcon,
+  Hammer, Leaf, Car, Monitor, HelpCircle, Clipboard, ShieldCheck, Award, FileEdit,
+  type LucideIcon,
 } from "lucide-react";
 
 // ── Industry → lucide icon map ────────────────────────────────────────────────
@@ -50,12 +51,12 @@ const TIMEZONE_OPTIONS = [
   "Africa/Johannesburg", "Europe/London", "America/New_York", "America/Los_Angeles",
 ];
 
-const DOCUMENT_OPTIONS = [
-  { key: "invoice",     label: "Invoice",                icon: "📄", description: "Auto-generated PDF sent to the client when a job is completed" },
-  { key: "job_card",    label: "Job Card",               icon: "📋", description: "Full job record with timeline, worker details, and client verification" },
-  { key: "warranty",    label: "Warranty Certificate",   icon: "🛡️", description: "Warranty document issued to the client after job verification" },
-  { key: "certificate", label: "Completion Certificate", icon: "✅", description: "Formal service completion certificate (e.g. for installation jobs)" },
-  { key: "quotation",   label: "Quotation",              icon: "📝", description: "Price estimate sent to the client before work begins" },
+const DOCUMENT_OPTIONS: { key: string; label: string; Icon: LucideIcon; iconBg: string; iconColor: string; description: string }[] = [
+  { key: "invoice",     label: "Invoice",                Icon: FileText,    iconBg: "bg-blue-50",   iconColor: "text-blue-600",   description: "Auto-generated PDF sent to the client when a job is completed" },
+  { key: "job_card",    label: "Job Card",               Icon: Clipboard,   iconBg: "bg-slate-100", iconColor: "text-slate-600",  description: "Full job record with timeline, worker details, and client verification" },
+  { key: "warranty",    label: "Warranty Certificate",   Icon: ShieldCheck, iconBg: "bg-blue-50",   iconColor: "text-blue-500",   description: "Warranty document issued to the client after job verification" },
+  { key: "certificate", label: "Completion Certificate", Icon: Award,       iconBg: "bg-green-50",  iconColor: "text-green-600",  description: "Formal service completion certificate (e.g. for installation jobs)" },
+  { key: "quotation",   label: "Quotation",              Icon: FileEdit,    iconBg: "bg-amber-50",  iconColor: "text-amber-600",  description: "Price estimate sent to the client before work begins" },
 ];
 
 type Tab = "general" | "operations" | "documents" | "automations" | "branding";
@@ -410,7 +411,9 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                     return (
                       <div key={doc.key} className="flex items-center justify-between gap-3 py-2.5 px-3 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors">
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <span className="text-base">{doc.icon}</span>
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${doc.iconBg}`}>
+                            <doc.Icon className={`w-3.5 h-3.5 ${doc.iconColor}`} />
+                          </div>
                           <div className="min-w-0">
                             <p className="text-sm font-medium text-slate-800">{doc.label}</p>
                             <p className="text-[10px] text-slate-400 truncate">{doc.description}</p>
@@ -556,9 +559,11 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
               {DOCUMENT_OPTIONS.map((doc) => {
                 const on = enabledDocs.includes(doc.key);
                 return (
-                  <div key={doc.key} className="flex items-center justify-between gap-3 py-3 px-4 rounded-lg border border-gray-100">
+                  <div key={doc.key} className="flex items-center justify-between gap-3 py-3 px-4 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors">
                     <div className="flex items-center gap-3 min-w-0">
-                      <span className="text-lg">{doc.icon}</span>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${doc.iconBg}`}>
+                        <doc.Icon className={`w-4 h-4 ${doc.iconColor}`} />
+                      </div>
                       <div>
                         <p className="text-sm font-medium text-slate-800">{doc.label}</p>
                         <p className="text-xs text-slate-400 mt-0.5">{doc.description}</p>
