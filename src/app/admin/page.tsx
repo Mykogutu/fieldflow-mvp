@@ -6,7 +6,7 @@ import WorkCalendar, { type CalendarJob, type CalendarWorker } from "./WorkCalen
 import { detectJobRisks, type JobRisk } from "@/lib/risk-detection";
 import {
   Wrench, Clock, AlertTriangle, TrendingUp,
-  CheckCircle, Calendar, FileText, UserCheck,
+  CheckCircle, Calendar, FileText, UserCheck, Sparkles,
 } from "lucide-react";
 
 // ── Sparkline SVGs (decorative) ───────────────────────────────────────────────
@@ -99,7 +99,8 @@ function PriorityAlert({ risks }: { risks: JobRisk[] }) {
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
       <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h2 className="font-semibold text-slate-900">Priority Alert</h2>
+          <Sparkles className="w-4 h-4 text-blue-500 shrink-0" />
+          <h2 className="font-semibold text-slate-900">Operation Intelligence</h2>
           {risks.length > 0 && (
             <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${highCount > 0 ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
               {risks.length}

@@ -5,6 +5,13 @@ import { createJob, reassignJob, rescheduleJob, updateJobStatus } from "@/app/ac
 import { formatKES, formatDate } from "@/lib/utils";
 import { Plus, X, ExternalLink, Minus, Download, Search } from "lucide-react";
 
+// Shorten raw CUID job numbers; keep proper JC-YYYY-NNNN format intact
+function shortJobNum(num: string) {
+  if (!num) return "—";
+  if (/^[A-Z]+-\d{4}-\d+$/.test(num) || num.length <= 14) return num;
+  return num.slice(0, 8) + "…";
+}
+
 function formatScheduled(date: Date | string | null) {
   if (!date) return "—";
   const d = new Date(date);
@@ -249,8 +256,13 @@ export default function JobsClient({
                   key={job.id}
                   className="hover:bg-slate-50 transition-colors"
                 >
-                  <td className="px-4 py-4 text-slate-500 font-mono text-xs">
-                    {job.jobNumber}
+                  <td className="px-4 py-4">
+                    <span
+                      title={job.jobNumber}
+                      className="font-mono text-[11px] text-slate-400 bg-slate-50 px-2 py-1 rounded-md border border-gray-100"
+                    >
+                      {shortJobNum(job.jobNumber)}
+                    </span>
                   </td>
                   <td className="px-4 py-4">
                     <p className="font-medium text-slate-900">

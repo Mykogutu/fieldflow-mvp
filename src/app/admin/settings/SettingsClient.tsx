@@ -2,7 +2,31 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { INDUSTRY_LIST, INDUSTRY_TEMPLATES, type IndustryKey } from "@/lib/industry-templates";
-import { Settings, Layers, FileText, Zap, Palette, X, Plus, RotateCcw, Save, MessageCircle } from "lucide-react";
+import {
+  Settings, Layers, FileText, Zap, Palette, X, Plus, RotateCcw, Save, MessageCircle,
+  Droplets, Gauge, Wrench, Wind, Sparkles, Bug, Sun, Plug, Truck, Shield,
+  Hammer, Leaf, Car, Monitor, HelpCircle, type LucideIcon,
+} from "lucide-react";
+
+// ── Industry → lucide icon map ────────────────────────────────────────────────
+const INDUSTRY_ICONS: Record<string, LucideIcon> = {
+  TANK_SERVICES:   Droplets,
+  FUEL_TRACKER:    Gauge,
+  PLUMBING:        Wrench,
+  ELECTRICAL:      Zap,
+  HVAC:            Wind,
+  CLEANING:        Sparkles,
+  PEST_CONTROL:    Bug,
+  SOLAR:           Sun,
+  APPLIANCE_REPAIR:Plug,
+  LOGISTICS:       Truck,
+  SECURITY:        Shield,
+  HANDYMAN:        Hammer,
+  LANDSCAPING:     Leaf,
+  AUTO_REPAIR:     Car,
+  IT_SUPPORT:      Monitor,
+  OTHER:           HelpCircle,
+};
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const inputCls =
@@ -407,24 +431,26 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
             <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
               <Section title="Industry Preset" subtitle="Presets help us auto-fill labels, defaults, and recommendations.">
                 <div className="grid grid-cols-3 gap-2">
-                  {INDUSTRY_LIST.map((t) => (
-                    <button
-                      key={t.key}
-                      type="button"
-                      onClick={() => applyTemplate(t.key)}
-                      className={`flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs border transition-all text-left ${
-                        industry === t.key
-                          ? "border-blue-500 bg-blue-50 text-blue-700 font-semibold"
-                          : "border-gray-200 bg-white text-slate-600 hover:border-blue-200 hover:bg-blue-50/50"
-                      }`}
-                    >
-                      <span className="text-sm shrink-0">{t.emoji}</span>
-                      <span className="truncate">{t.displayName}</span>
-                      {industry === t.key && (
-                        <span className="ml-auto w-2 h-2 rounded-full bg-blue-500 shrink-0" />
-                      )}
-                    </button>
-                  ))}
+                  {INDUSTRY_LIST.map((t) => {
+                    const Icon = INDUSTRY_ICONS[t.key] ?? HelpCircle;
+                    const active = industry === t.key;
+                    return (
+                      <button
+                        key={t.key}
+                        type="button"
+                        onClick={() => applyTemplate(t.key)}
+                        className={`flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs border transition-all text-left ${
+                          active
+                            ? "border-blue-500 bg-blue-50 text-blue-700 font-semibold"
+                            : "border-gray-200 bg-white text-slate-600 hover:border-blue-200 hover:bg-blue-50/50"
+                        }`}
+                      >
+                        <Icon className={`w-3.5 h-3.5 shrink-0 ${active ? "text-blue-600" : "text-slate-400"}`} />
+                        <span className="truncate">{t.displayName}</span>
+                        {active && <span className="ml-auto w-2 h-2 rounded-full bg-blue-500 shrink-0" />}
+                      </button>
+                    );
+                  })}
                 </div>
               </Section>
             </div>
