@@ -1,62 +1,48 @@
 import { prisma } from "@/lib/prisma";
-import { formatKES, statusColor, statusLabel, formatDate } from "@/lib/utils";
+import { formatKES, formatDate } from "@/lib/utils";
 import { currentWorkspaceId } from "@/lib/workspace";
 import Link from "next/link";
 import WorkCalendar, { type CalendarJob, type CalendarWorker } from "./WorkCalendar";
 import { detectJobRisks, type JobRisk } from "@/lib/risk-detection";
+import { Wrench, Clock, AlertTriangle, TrendingUp, Bell, CheckCircle } from "lucide-react";
 
-// ── Flat SVG icons ────────────────────────────────────────────────────────────
-function IconWrench() {
+// ── Status badge ──────────────────────────────────────────────────────────────
+const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
+  ASSIGNED:   { label: "Assigned",    cls: "bg-blue-50 text-blue-700 border border-blue-200" },
+  IN_PROGRESS:{ label: "In Progress", cls: "bg-indigo-50 text-indigo-700 border border-indigo-200" },
+  POSTPONED:  { label: "Postponed",   cls: "bg-amber-50 text-amber-700 border border-amber-200" },
+  RESCHEDULED:{ label: "Rescheduled", cls: "bg-amber-50 text-amber-700 border border-amber-200" },
+  COMPLETED_PENDING_VERIFICATION: { label: "Awaiting OTP", cls: "bg-purple-50 text-purple-700 border border-purple-200" },
+  VERIFIED:   { label: "Verified",    cls: "bg-green-50 text-green-700 border border-green-200" },
+  CLOSED:     { label: "Closed",      cls: "bg-slate-100 text-slate-600 border border-slate-200" },
+  DECLINED:   { label: "Declined",    cls: "bg-red-50 text-red-700 border border-red-200" },
+  ISSUE_REPORTED: { label: "Issue",   cls: "bg-red-50 text-red-700 border border-red-200" },
+  CANCELLED:  { label: "Cancelled",   cls: "bg-slate-100 text-slate-500 border border-slate-200" },
+};
+function StatusBadge({ status }: { status: string }) {
+  const cfg = STATUS_CONFIG[status] ?? { label: status, cls: "bg-slate-100 text-slate-600 border border-slate-200" };
   return (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-    </svg>
-  );
-}
-function IconClock() {
-  return (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="10" />
-      <polyline points="12 6 12 12 16 14" />
-    </svg>
-  );
-}
-function IconAlert() {
-  return (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-      <line x1="12" y1="9" x2="12" y2="13" />
-      <line x1="12" y1="17" x2="12.01" y2="17" />
-    </svg>
-  );
-}
-function IconRevenue() {
-  return (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-      <line x1="12" y1="1" x2="12" y2="23" />
-      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-    </svg>
-  );
-}
-function IconBell() {
-  return (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-    </svg>
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${cfg.cls}`}>
+      {cfg.label}
+    </span>
   );
 }
 
 // ── Risk panel ────────────────────────────────────────────────────────────────
-const SEVERITY_STYLE: Record<string, string> = {
-  HIGH: "bg-red-50 border-red-200",
-  MEDIUM: "bg-amber-50 border-amber-200",
-  LOW: "bg-blue-50 border-blue-200",
+const SEVERITY_DOT: Record<string, string> = {
+  HIGH:   "bg-red-500",
+  MEDIUM: "bg-amber-500",
+  LOW:    "bg-blue-500",
 };
-const SEVERITY_BADGE: Record<string, string> = {
-  HIGH: "bg-red-100 text-red-700",
-  MEDIUM: "bg-amber-100 text-amber-700",
-  LOW: "bg-blue-100 text-blue-700",
+const SEVERITY_TEXT: Record<string, string> = {
+  HIGH:   "text-red-700",
+  MEDIUM: "text-amber-700",
+  LOW:    "text-blue-700",
+};
+const SEVERITY_BORDER: Record<string, string> = {
+  HIGH:   "border-l-red-500",
+  MEDIUM: "border-l-amber-500",
+  LOW:    "border-l-blue-500",
 };
 
 function RiskPanel({ risks }: { risks: JobRisk[] }) {
@@ -67,50 +53,63 @@ function RiskPanel({ risks }: { risks: JobRisk[] }) {
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
       <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h2 className="font-semibold text-gray-900">Job Risks</h2>
+          <h2 className="font-semibold text-slate-900">Job Risks</h2>
           {risks.length > 0 && (
-            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${highCount > 0 ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
+            <span
+              className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${
+                highCount > 0 ? "bg-red-50 text-red-700 border border-red-200" : "bg-amber-50 text-amber-700 border border-amber-200"
+              }`}
+            >
               {risks.length} {risks.length === 1 ? "issue" : "issues"}
             </span>
           )}
         </div>
-        <Link href="/admin/ai" className="text-xs text-blue-600 hover:underline">
-          AI Copilot →
+        <Link href="/admin/ai" className="text-xs text-blue-600 hover:text-blue-700 font-medium">
+          AI Copilot
         </Link>
       </div>
 
       {risks.length === 0 ? (
-        <div className="px-5 py-6 flex items-center gap-3 text-green-700">
-          <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
-          </svg>
-          <p className="text-sm font-medium">All active jobs look good — no risks detected.</p>
+        <div className="px-5 py-5 flex items-center gap-3">
+          <CheckCircle className="w-5 h-5 text-green-500 shrink-0" />
+          <p className="text-sm font-medium text-green-700">
+            All active jobs look good — no risks detected.
+          </p>
         </div>
       ) : (
         <div className="divide-y divide-gray-50">
           {displayed.map((risk, i) => (
-            <div key={i} className={`px-5 py-3 flex items-start gap-3 ${SEVERITY_STYLE[risk.severity] ?? ""}`}>
-              <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full whitespace-nowrap mt-0.5 ${SEVERITY_BADGE[risk.severity] ?? ""}`}>
-                {risk.severity}
-              </span>
+            <div
+              key={i}
+              className={`px-5 py-3.5 flex items-start gap-3 border-l-4 ${SEVERITY_BORDER[risk.severity] ?? "border-l-slate-300"}`}
+            >
+              <div className="flex items-center gap-2 shrink-0 mt-0.5">
+                <span className={`w-2 h-2 rounded-full ${SEVERITY_DOT[risk.severity] ?? "bg-slate-400"}`} />
+                <span className={`text-[10px] font-bold uppercase tracking-wide ${SEVERITY_TEXT[risk.severity] ?? "text-slate-600"}`}>
+                  {risk.severity}
+                </span>
+              </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-gray-900 truncate">
+                <p className="text-sm font-medium text-slate-900 truncate">
                   {risk.jobNumber} · {risk.clientName}
                 </p>
-                <p className="text-xs text-gray-600 mt-0.5">{risk.description}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{risk.action}</p>
+                <p className="text-xs text-slate-500 mt-0.5">{risk.description}</p>
+                <p className="text-xs text-slate-400 mt-0.5">{risk.action}</p>
               </div>
               <Link
-                href={`/admin/jobs`}
-                className="text-xs text-blue-600 hover:underline whitespace-nowrap"
+                href="/admin/jobs"
+                className="text-xs text-blue-600 hover:text-blue-700 font-medium whitespace-nowrap shrink-0"
               >
                 View
               </Link>
             </div>
           ))}
           {risks.length > 5 && (
-            <div className="px-5 py-2.5 text-xs text-gray-400 text-center">
-              +{risks.length - 5} more — <Link href="/admin/ai" className="text-blue-600 hover:underline">view all in AI Copilot</Link>
+            <div className="px-5 py-2.5 text-xs text-slate-400 text-center">
+              +{risks.length - 5} more —{" "}
+              <Link href="/admin/ai" className="text-blue-600 hover:underline">
+                view all in AI Copilot
+              </Link>
             </div>
           )}
         </div>
@@ -209,29 +208,37 @@ export default async function DashboardPage({
     {
       label: "Active Jobs",
       value: data.activeJobs,
-      icon: <IconWrench />,
-      color: "bg-blue-500",
+      desc: "Currently in progress",
+      Icon: Wrench,
+      iconBg: "bg-blue-50",
+      iconColor: "text-blue-600",
       link: "/admin/jobs?status=IN_PROGRESS",
     },
     {
       label: "Awaiting Verification",
       value: data.pendingVerification,
-      icon: <IconClock />,
-      color: "bg-amber-500",
+      desc: "Awaiting client OTP",
+      Icon: Clock,
+      iconBg: "bg-amber-50",
+      iconColor: "text-amber-500",
       link: "/admin/jobs?status=COMPLETED_PENDING_VERIFICATION",
     },
     {
       label: "Need Attention",
       value: data.postponedJobs,
-      icon: <IconAlert />,
-      color: "bg-red-500",
+      desc: "Postponed or stalled",
+      Icon: AlertTriangle,
+      iconBg: "bg-red-50",
+      iconColor: "text-red-500",
       link: "/admin/jobs?status=POSTPONED",
     },
     {
       label: "Revenue This Month",
       value: formatKES(revenue),
-      icon: <IconRevenue />,
-      color: "bg-green-500",
+      desc: "Paid invoices this month",
+      Icon: TrendingUp,
+      iconBg: "bg-green-50",
+      iconColor: "text-green-600",
       link: "/admin/invoices",
     },
   ];
@@ -247,7 +254,7 @@ export default async function DashboardPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+      <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
 
       {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -255,15 +262,22 @@ export default async function DashboardPage({
           <Link
             key={s.label}
             href={s.link}
-            className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow"
+            className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow group"
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">{s.label}</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{s.value}</p>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  {s.label}
+                </p>
+                <p className="text-2xl font-bold text-slate-900 mt-1.5 leading-none">
+                  {s.value}
+                </p>
+                <p className="text-xs text-slate-400 mt-1.5">{s.desc}</p>
               </div>
-              <div className={`${s.color} w-11 h-11 rounded-xl flex items-center justify-center text-white`}>
-                {s.icon}
+              <div
+                className={`${s.iconBg} w-10 h-10 rounded-xl flex items-center justify-center shrink-0`}
+              >
+                <s.Icon className={`w-5 h-5 ${s.iconColor}`} />
               </div>
             </div>
           </Link>
@@ -284,27 +298,40 @@ export default async function DashboardPage({
         {/* Recent jobs */}
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="font-semibold text-gray-900">Recent Jobs</h2>
-            <Link href="/admin/jobs" className="text-sm text-blue-600 hover:underline">
+            <div className="flex items-center gap-2">
+              <Wrench className="w-4 h-4 text-slate-400" />
+              <h2 className="font-semibold text-slate-900">Recent Jobs</h2>
+            </div>
+            <Link
+              href="/admin/jobs"
+              className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+            >
               View all
             </Link>
           </div>
           <div className="divide-y divide-gray-50">
             {data.recentJobs.map((job) => (
-              <div key={job.id} className="px-5 py-3 flex items-center justify-between">
+              <div
+                key={job.id}
+                className="px-5 py-3.5 flex items-center justify-between hover:bg-slate-50 transition-colors"
+              >
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{job.clientName}</p>
-                  <p className="text-xs text-gray-400 truncate">
+                  <p className="text-sm font-medium text-slate-900 truncate">
+                    {job.clientName}
+                  </p>
+                  <p className="text-xs text-slate-400 truncate mt-0.5">
                     {job.jobType} · {formatDate(job.updatedAt)}
                   </p>
                 </div>
-                <span className={`text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap ml-3 ${statusColor(job.status)}`}>
-                  {statusLabel(job.status)}
-                </span>
+                <div className="ml-3 shrink-0">
+                  <StatusBadge status={job.status} />
+                </div>
               </div>
             ))}
             {data.recentJobs.length === 0 && (
-              <p className="px-5 py-8 text-center text-sm text-gray-400">No jobs yet</p>
+              <p className="px-5 py-10 text-center text-sm text-slate-400">
+                No jobs yet
+              </p>
             )}
           </div>
         </div>
@@ -312,19 +339,29 @@ export default async function DashboardPage({
         {/* Notifications */}
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
-            <span className="text-gray-400"><IconBell /></span>
-            <h2 className="font-semibold text-gray-900">Unread Alerts</h2>
+            <Bell className="w-4 h-4 text-slate-400" />
+            <h2 className="font-semibold text-slate-900">Unread Alerts</h2>
           </div>
           <div className="divide-y divide-gray-50">
             {data.recentNotifications.map((n) => (
-              <div key={n.id} className="px-5 py-3">
-                <p className="text-sm font-medium text-gray-900">{n.title}</p>
-                <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{n.message}</p>
-                <p className="text-xs text-gray-300 mt-1">{formatDate(n.createdAt)}</p>
+              <div
+                key={n.id}
+                className="px-5 py-3.5 hover:bg-slate-50 transition-colors"
+              >
+                <p className="text-sm font-medium text-slate-900">{n.title}</p>
+                <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">
+                  {n.message}
+                </p>
+                <p className="text-xs text-slate-300 mt-1">
+                  {formatDate(n.createdAt)}
+                </p>
               </div>
             ))}
             {data.recentNotifications.length === 0 && (
-              <p className="px-5 py-8 text-center text-sm text-gray-400">All caught up</p>
+              <div className="px-5 py-10 flex flex-col items-center gap-2 text-center">
+                <CheckCircle className="w-8 h-8 text-green-400" />
+                <p className="text-sm text-slate-400">All caught up</p>
+              </div>
             )}
           </div>
         </div>

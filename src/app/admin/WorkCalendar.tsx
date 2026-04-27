@@ -1,17 +1,18 @@
 "use client";
 import { useRouter } from "next/navigation";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const PALETTE = [
-  { bg: "bg-blue-100", text: "text-blue-800", dot: "bg-blue-500" },
-  { bg: "bg-emerald-100", text: "text-emerald-800", dot: "bg-emerald-500" },
-  { bg: "bg-amber-100", text: "text-amber-800", dot: "bg-amber-500" },
-  { bg: "bg-violet-100", text: "text-violet-800", dot: "bg-violet-500" },
-  { bg: "bg-rose-100", text: "text-rose-800", dot: "bg-rose-500" },
-  { bg: "bg-cyan-100", text: "text-cyan-800", dot: "bg-cyan-500" },
-  { bg: "bg-orange-100", text: "text-orange-800", dot: "bg-orange-500" },
-  { bg: "bg-pink-100", text: "text-pink-800", dot: "bg-pink-500" },
-  { bg: "bg-lime-100", text: "text-lime-800", dot: "bg-lime-600" },
-  { bg: "bg-teal-100", text: "text-teal-800", dot: "bg-teal-500" },
+  { bg: "bg-blue-100",    text: "text-blue-800",    dot: "bg-blue-500"    },
+  { bg: "bg-emerald-100", text: "text-emerald-800",  dot: "bg-emerald-500" },
+  { bg: "bg-amber-100",   text: "text-amber-800",    dot: "bg-amber-500"   },
+  { bg: "bg-violet-100",  text: "text-violet-800",   dot: "bg-violet-500"  },
+  { bg: "bg-rose-100",    text: "text-rose-800",     dot: "bg-rose-500"    },
+  { bg: "bg-cyan-100",    text: "text-cyan-800",     dot: "bg-cyan-500"    },
+  { bg: "bg-orange-100",  text: "text-orange-800",   dot: "bg-orange-500"  },
+  { bg: "bg-pink-100",    text: "text-pink-800",     dot: "bg-pink-500"    },
+  { bg: "bg-lime-100",    text: "text-lime-800",     dot: "bg-lime-600"    },
+  { bg: "bg-teal-100",    text: "text-teal-800",     dot: "bg-teal-500"    },
 ];
 
 export interface CalendarWorker { id: string; name: string }
@@ -63,33 +64,29 @@ export default function WorkCalendar({
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
       {/* Header */}
       <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
-        <h2 className="font-semibold text-gray-900">Work Calendar</h2>
-        <div className="flex items-center gap-1">
+        <h2 className="font-semibold text-slate-900">Work Calendar</h2>
+        <div className="flex items-center gap-1 ml-auto">
           <button
             onClick={() => navigate(-1)}
-            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-700"
+            className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 hover:text-slate-700"
             aria-label="Previous week"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
+            <ChevronLeft className="w-4 h-4" />
           </button>
           <button
             onClick={() => router.push("/admin")}
-            className="px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors border border-gray-200 hover:border-gray-300"
           >
             Today
           </button>
           <button
             onClick={() => navigate(1)}
-            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-700"
+            className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 hover:text-slate-700"
             aria-label="Next week"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
+            <ChevronRight className="w-4 h-4" />
           </button>
-          <span className="text-xs text-gray-400 font-medium ml-1 whitespace-nowrap">
+          <span className="text-xs text-slate-400 font-medium ml-2 whitespace-nowrap">
             {label(weekStart, { day: "numeric", month: "short" })}
             {" – "}
             {label(days[6], { day: "numeric", month: "short", year: "numeric" })}
@@ -107,13 +104,32 @@ export default function WorkCalendar({
               day.getMonth() === today.getMonth() &&
               day.getDate() === today.getDate();
             const isWeekend = i >= 5;
-            const dayJobs = jobs.filter((j) => j.scheduledDate.slice(0, 10) === dayStr);
+            const dayJobs = jobs.filter(
+              (j) => j.scheduledDate.slice(0, 10) === dayStr
+            );
 
             return (
-              <div key={dayStr} className={isWeekend ? "bg-gray-50/60" : ""}>
+              <div
+                key={dayStr}
+                className={
+                  isToday
+                    ? "bg-blue-50/30"
+                    : isWeekend
+                    ? "bg-slate-50/50"
+                    : ""
+                }
+              >
                 {/* Day header */}
-                <div className={`px-2 py-2.5 text-center border-b border-gray-100 ${isToday ? "bg-blue-50" : ""}`}>
-                  <p className={`text-[10px] font-semibold uppercase tracking-widest ${isToday ? "text-blue-500" : "text-gray-400"}`}>
+                <div
+                  className={`px-2 py-2.5 text-center border-b border-gray-100 ${
+                    isToday ? "bg-blue-50" : ""
+                  }`}
+                >
+                  <p
+                    className={`text-[10px] font-semibold uppercase tracking-widest ${
+                      isToday ? "text-blue-500" : "text-slate-400"
+                    }`}
+                  >
                     {DAY_NAMES[i]}
                   </p>
                   {isToday ? (
@@ -121,28 +137,40 @@ export default function WorkCalendar({
                       {day.getDate()}
                     </span>
                   ) : (
-                    <p className="text-sm font-semibold text-gray-700 mt-0.5">{day.getDate()}</p>
+                    <p
+                      className={`text-sm font-semibold mt-0.5 ${
+                        isWeekend ? "text-slate-400" : "text-slate-700"
+                      }`}
+                    >
+                      {day.getDate()}
+                    </p>
                   )}
                 </div>
 
-                {/* Job cards */}
+                {/* Job pills */}
                 <div className="p-1.5 space-y-1 min-h-[120px]">
                   {dayJobs.length === 0 && (
-                    <p className="text-[10px] text-gray-200 text-center pt-4">—</p>
+                    <div className="mt-4 mx-1 border-t border-gray-100" />
                   )}
                   {dayJobs.map((job) => {
                     const wid = job.workerIds[0];
                     const color = wid
                       ? (colorMap.get(wid) ?? PALETTE[0])
-                      : { bg: "bg-gray-100", text: "text-gray-500", dot: "bg-gray-400" };
+                      : {
+                          bg: "bg-slate-100",
+                          text: "text-slate-500",
+                          dot: "bg-slate-400",
+                        };
                     return (
                       <div
                         key={job.id}
-                        className={`${color.bg} ${color.text} rounded-md px-1.5 py-1 text-[10px] leading-tight`}
+                        className={`${color.bg} ${color.text} rounded-lg px-2 py-1.5 text-[10px] leading-tight`}
                         title={`${job.clientName} · ${job.jobType}`}
                       >
-                        <p className="font-semibold truncate">{job.clientName}</p>
-                        <p className="opacity-60 truncate">{job.jobType}</p>
+                        <p className="font-medium truncate">{job.clientName}</p>
+                        <p className="opacity-60 truncate text-[9px] mt-0.5">
+                          {job.jobType}
+                        </p>
                       </div>
                     );
                   })}
@@ -160,14 +188,16 @@ export default function WorkCalendar({
             const c = PALETTE[i % PALETTE.length];
             return (
               <div key={w.id} className="flex items-center gap-1.5">
-                <span className={`w-2.5 h-2.5 rounded-sm flex-shrink-0 ${c.dot}`} />
-                <span className="text-xs text-gray-600">{w.name}</span>
+                <span
+                  className={`w-2 h-2 rounded-full flex-shrink-0 ${c.dot}`}
+                />
+                <span className="text-xs text-slate-600">{w.name}</span>
               </div>
             );
           })}
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm bg-gray-300 flex-shrink-0" />
-            <span className="text-xs text-gray-400">Unassigned</span>
+            <span className="w-2 h-2 rounded-full bg-slate-300 flex-shrink-0" />
+            <span className="text-xs text-slate-400">Unassigned</span>
           </div>
         </div>
       )}

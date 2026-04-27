@@ -2,36 +2,106 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createJob, reassignJob, rescheduleJob, updateJobStatus } from "@/app/actions/job-actions";
-import { statusColor, statusLabel, formatDate, formatKES } from "@/lib/utils";
+import { formatDate, formatKES } from "@/lib/utils";
+import { Plus, X, ExternalLink, Minus, Download } from "lucide-react";
 
-interface Worker { id: string; name: string; phone: string; baseZone?: string | null }
-interface AssetOption { id: string; name: string; assetType: string; clientName: string }
+// ── Design system ─────────────────────────────────────────────────────────────
+const inputCls =
+  "w-full bg-white border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors";
+const btnPrimary =
+  "inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50";
+const btnSecondary =
+  "inline-flex items-center gap-2 bg-white border border-gray-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-50 hover:border-gray-300 transition-colors";
+
+// ── Status badge ──────────────────────────────────────────────────────────────
+const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
+  ASSIGNED:    { label: "Assigned",    cls: "bg-blue-50 text-blue-700 border border-blue-200" },
+  IN_PROGRESS: { label: "In Progress", cls: "bg-indigo-50 text-indigo-700 border border-indigo-200" },
+  POSTPONED:   { label: "Postponed",   cls: "bg-amber-50 text-amber-700 border border-amber-200" },
+  RESCHEDULED: { label: "Rescheduled", cls: "bg-amber-50 text-amber-700 border border-amber-200" },
+  COMPLETED_PENDING_VERIFICATION: { label: "Awaiting OTP", cls: "bg-purple-50 text-purple-700 border border-purple-200" },
+  VERIFIED:    { label: "Verified",    cls: "bg-green-50 text-green-700 border border-green-200" },
+  CLOSED:      { label: "Closed",      cls: "bg-slate-100 text-slate-600 border border-slate-200" },
+  DECLINED:    { label: "Declined",    cls: "bg-red-50 text-red-700 border border-red-200" },
+  ISSUE_REPORTED: { label: "Issue",    cls: "bg-red-50 text-red-700 border border-red-200" },
+  CANCELLED:   { label: "Cancelled",  cls: "bg-slate-100 text-slate-500 border border-slate-200" },
+};
+function StatusBadge({ status }: { status: string }) {
+  const cfg = STATUS_CONFIG[status] ?? {
+    label: status,
+    cls: "bg-slate-100 text-slate-600 border border-slate-200",
+  };
+  return (
+    <span
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${cfg.cls}`}
+    >
+      {cfg.label}
+    </span>
+  );
+}
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+interface Worker {
+  id: string;
+  name: string;
+  phone: string;
+  baseZone?: string | null;
+}
+interface AssetOption {
+  id: string;
+  name: string;
+  assetType: string;
+  clientName: string;
+}
 interface Job {
-  id: string; jobNumber: string; clientName: string; clientPhone: string;
-  jobType: string; status: string; priority: string; location: string | null;
-  scheduledDate: Date | string | null; quotedAmount: number | null; finalAmount: number | null;
-  createdAt: Date | string; updatedAt: Date | string;
+  id: string;
+  jobNumber: string;
+  clientName: string;
+  clientPhone: string;
+  jobType: string;
+  status: string;
+  priority: string;
+  location: string | null;
+  scheduledDate: Date | string | null;
+  quotedAmount: number | null;
+  finalAmount: number | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
   workers: Worker[];
   invoice: { id: string; invoiceNumber: string; status: string; amount: number } | null;
   asset: { id: string; name: string; assetType: string } | null;
 }
 
 const STATUS_TABS = [
-  { label: "All", value: "" },
-  { label: "Active", value: "IN_PROGRESS" },
-  { label: "Assigned", value: "ASSIGNED" },
-  { label: "Awaiting OTP", value: "COMPLETED_PENDING_VERIFICATION" },
-  { label: "Postponed", value: "POSTPONED" },
-  { label: "Verified", value: "VERIFIED" },
-  { label: "Issues", value: "ISSUE_REPORTED" },
+  { label: "All",           value: "" },
+  { label: "Active",        value: "IN_PROGRESS" },
+  { label: "Assigned",      value: "ASSIGNED" },
+  { label: "Awaiting OTP",  value: "COMPLETED_PENDING_VERIFICATION" },
+  { label: "Postponed",     value: "POSTPONED" },
+  { label: "Verified",      value: "VERIFIED" },
+  { label: "Issues",        value: "ISSUE_REPORTED" },
 ];
 
 export default function JobsClient({
-  jobs, total, pages, workers, jobTypes, zones, assets, currentStatus, currentSearch,
+  jobs,
+  total,
+  pages,
+  workers,
+  jobTypes,
+  zones,
+  assets,
+  currentStatus,
+  currentSearch,
 }: {
-  jobs: Job[]; total: number; pages: number; workers: Worker[];
-  jobTypes: string[]; zones: string[]; assets: AssetOption[];
-  currentStatus?: string; currentSearch?: string;
+  jobs: Job[];
+  total: number;
+  pages: number;
+  workers: Worker[];
+  jobTypes: string[];
+  zones: string[];
+  assets: AssetOption[];
+  currentStatus?: string;
+  currentSearch?: string;
 }) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
@@ -52,7 +122,11 @@ export default function JobsClient({
     startTransition(async () => {
       const res = await createJob(fd);
       if (res.error) setFeedback(res.error);
-      else { setShowCreate(false); setFeedback("Job created!"); router.refresh(); }
+      else {
+        setShowCreate(false);
+        setFeedback("Job created!");
+        router.refresh();
+      }
     });
   }
 
@@ -78,26 +152,35 @@ export default function JobsClient({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      {/* Page header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Jobs <span className="text-gray-400 text-lg font-normal">({total})</span></h1>
-        <button onClick={() => setShowCreate(true)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium">
-          + New Job
+        <h1 className="text-2xl font-bold text-slate-900">
+          Jobs{" "}
+          <span className="text-slate-400 text-lg font-normal">({total})</span>
+        </h1>
+        <button onClick={() => setShowCreate(true)} className={btnPrimary}>
+          <Plus className="w-4 h-4" />
+          New Job
         </button>
       </div>
 
-      {feedback && <p className="text-sm bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-lg">{feedback}</p>}
+      {feedback && (
+        <p className="text-sm bg-green-50 border border-green-200 text-green-700 px-4 py-2.5 rounded-xl">
+          {feedback}
+        </p>
+      )}
 
       {/* Status tabs */}
-      <div className="flex gap-1 flex-wrap">
+      <div className="flex gap-1.5 flex-wrap">
         {STATUS_TABS.map((t) => (
           <button
             key={t.value}
             onClick={() => navigate({ status: t.value })}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-3.5 py-1.5 rounded-xl text-sm font-medium transition-colors ${
               (currentStatus ?? "") === t.value
                 ? "bg-blue-600 text-white"
-                : "bg-white border border-gray-200 text-gray-600 hover:border-blue-400"
+                : "bg-white border border-gray-200 text-slate-600 hover:bg-slate-50 hover:border-gray-300"
             }`}
           >
             {t.label}
@@ -111,58 +194,101 @@ export default function JobsClient({
         placeholder="Search by client, job type, location..."
         defaultValue={currentSearch}
         onKeyDown={(e) => {
-          if (e.key === "Enter") navigate({ search: (e.target as HTMLInputElement).value });
+          if (e.key === "Enter")
+            navigate({ search: (e.target as HTMLInputElement).value });
         }}
-        className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className={inputCls}
       />
 
       {/* Jobs table */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-slate-50 border-b border-gray-200">
               <tr>
-                <th className="text-left px-4 py-3 text-gray-500 font-medium">Job #</th>
-                <th className="text-left px-4 py-3 text-gray-500 font-medium">Client</th>
-                <th className="text-left px-4 py-3 text-gray-500 font-medium">Type</th>
-                <th className="text-left px-4 py-3 text-gray-500 font-medium">Worker</th>
-                <th className="text-left px-4 py-3 text-gray-500 font-medium">Scheduled</th>
-                <th className="text-left px-4 py-3 text-gray-500 font-medium">Status</th>
-                <th className="text-left px-4 py-3 text-gray-500 font-medium">Amount</th>
-                <th className="text-left px-4 py-3 text-gray-500 font-medium">Actions</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Job #
+                </th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Client
+                </th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Type
+                </th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Worker
+                </th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Scheduled
+                </th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Status
+                </th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Amount
+                </th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Actions
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-gray-100">
               {jobs.map((job) => (
-                <tr key={job.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-gray-500 font-mono text-xs">{job.jobNumber}</td>
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-gray-900">{job.clientName}</p>
-                    <p className="text-xs text-gray-400">{job.clientPhone}</p>
+                <tr
+                  key={job.id}
+                  className="hover:bg-slate-50 transition-colors"
+                >
+                  <td className="px-4 py-4 text-slate-500 font-mono text-xs">
+                    {job.jobNumber}
                   </td>
-                  <td className="px-4 py-3">
-                    <p className="text-gray-600">{job.jobType}</p>
+                  <td className="px-4 py-4">
+                    <p className="font-medium text-slate-900">
+                      {job.clientName}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {job.clientPhone}
+                    </p>
+                  </td>
+                  <td className="px-4 py-4">
+                    <p className="text-slate-700">{job.jobType}</p>
                     {job.asset && (
-                      <p className="text-xs text-blue-500 truncate max-w-[140px]">
-                        🏷️ {job.asset.name}
-                      </p>
+                      <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-100 max-w-[140px] truncate">
+                        {job.asset.name}
+                      </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{job.workers.map((w) => w.name).join(", ") || <span className="text-gray-300">Unassigned</span>}</td>
-                  <td className="px-4 py-3 text-gray-400 text-xs">{formatDate(job.scheduledDate)}</td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${statusColor(job.status)}`}>
-                      {statusLabel(job.status)}
-                    </span>
+                  <td className="px-4 py-4">
+                    {job.workers.length > 0 ? (
+                      <span className="text-slate-700">
+                        {job.workers.map((w) => w.name).join(", ")}
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-slate-400 text-xs">
+                        <Minus className="w-3 h-3" />
+                        Unassigned
+                      </span>
+                    )}
                   </td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {job.finalAmount ? formatKES(job.finalAmount) : job.quotedAmount ? formatKES(job.quotedAmount) : "—"}
+                  <td className="px-4 py-4 text-slate-400 text-xs">
+                    {formatDate(job.scheduledDate)}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-4">
+                    <StatusBadge status={job.status} />
+                  </td>
+                  <td className="px-4 py-4 font-semibold text-slate-900">
+                    {job.finalAmount
+                      ? formatKES(job.finalAmount)
+                      : job.quotedAmount
+                      ? formatKES(job.quotedAmount)
+                      : <span className="text-slate-400 font-normal">—</span>}
+                  </td>
+                  <td className="px-4 py-4">
                     <button
                       onClick={() => setSelectedJob(job)}
-                      className="text-blue-600 hover:underline text-xs"
+                      title="Manage job"
+                      className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 font-medium hover:underline transition-colors"
                     >
+                      <ExternalLink className="w-3.5 h-3.5" />
                       Manage
                     </button>
                   </td>
@@ -170,7 +296,19 @@ export default function JobsClient({
               ))}
               {jobs.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-gray-400">No jobs found</td>
+                  <td colSpan={8} className="px-4 py-16 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center">
+                        <Plus className="w-5 h-5 text-slate-400" />
+                      </div>
+                      <p className="text-sm text-slate-500 font-medium">
+                        No jobs found
+                      </p>
+                      <p className="text-xs text-slate-400">
+                        Create your first job to get started
+                      </p>
+                    </div>
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -184,19 +322,32 @@ export default function JobsClient({
           <form onSubmit={handleCreate} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <Field label="Client Name" name="clientName" required />
-              <Field label="Client Phone" name="clientPhone" placeholder="+254..." required />
+              <Field
+                label="Client Phone"
+                name="clientPhone"
+                placeholder="+254..."
+                required
+              />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Job Type</label>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  Job Type
+                </label>
                 <select name="jobType" required className={inputCls}>
                   <option value="">Select type</option>
-                  {jobTypes.map((t) => <option key={t} value={t}>{t}</option>)}
+                  {jobTypes.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
                   <option value="Other">Other</option>
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Priority</label>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  Priority
+                </label>
                 <select name="priority" className={inputCls}>
                   <option value="NORMAL">Normal</option>
                   <option value="HIGH">High</option>
@@ -208,19 +359,35 @@ export default function JobsClient({
             <Field label="Location / Address" name="location" />
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Zone</label>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  Zone
+                </label>
                 <select name="zone" className={inputCls}>
                   <option value="">Select zone</option>
-                  {zones.map((z) => <option key={z} value={z}>{z}</option>)}
+                  {zones.map((z) => (
+                    <option key={z} value={z}>
+                      {z}
+                    </option>
+                  ))}
                 </select>
               </div>
-              <Field label="Scheduled Date & Time" name="scheduledDate" type="datetime-local" />
+              <Field
+                label="Scheduled Date & Time"
+                name="scheduledDate"
+                type="datetime-local"
+              />
             </div>
-            <Field label="Quoted Amount (KES)" name="quotedAmount" type="number" />
+            <Field
+              label="Quoted Amount (KES)"
+              name="quotedAmount"
+              type="number"
+            />
             <Field label="Description" name="description" />
             {assets.length > 0 && (
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Linked Asset (optional)</label>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  Linked Asset (optional)
+                </label>
                 <select name="assetId" className={inputCls}>
                   <option value="">No asset linked</option>
                   {assets.map((a) => (
@@ -232,15 +399,31 @@ export default function JobsClient({
               </div>
             )}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Assign Worker (optional — auto-assigned if blank)</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1">
+                Assign Worker (optional — auto-assigned if blank)
+              </label>
               <select name="workerId" className={inputCls}>
                 <option value="">Auto-assign best worker</option>
-                {workers.map((w) => <option key={w.id} value={w.id}>{w.name} ({w.phone})</option>)}
+                {workers.map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {w.name} ({w.phone})
+                  </option>
+                ))}
               </select>
             </div>
             <div className="flex gap-2 pt-2">
-              <button type="button" onClick={() => setShowCreate(false)} className="flex-1 border border-gray-300 text-gray-600 rounded-lg py-2 text-sm hover:bg-gray-50">Cancel</button>
-              <button type="submit" disabled={isPending} className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+              <button
+                type="button"
+                onClick={() => setShowCreate(false)}
+                className={`flex-1 ${btnSecondary} justify-center`}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isPending}
+                className={`flex-1 ${btnPrimary} justify-center`}
+              >
                 {isPending ? "Creating..." : "Create Job"}
               </button>
             </div>
@@ -250,40 +433,78 @@ export default function JobsClient({
 
       {/* Manage Job Modal */}
       {selectedJob && (
-        <Modal title={`Job: ${selectedJob.jobNumber}`} onClose={() => setSelectedJob(null)}>
+        <Modal
+          title={`Job: ${selectedJob.jobNumber}`}
+          onClose={() => setSelectedJob(null)}
+        >
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-2 text-sm">
               <Info label="Client" value={selectedJob.clientName} />
               <Info label="Phone" value={selectedJob.clientPhone} />
               <Info label="Type" value={selectedJob.jobType} />
-              <Info label="Status" value={statusLabel(selectedJob.status)} />
+              <Info
+                label="Status"
+                value={
+                  STATUS_CONFIG[selectedJob.status]?.label ?? selectedJob.status
+                }
+              />
               <Info label="Location" value={selectedJob.location ?? "—"} />
-              <Info label="Scheduled" value={formatDate(selectedJob.scheduledDate)} />
-              {selectedJob.finalAmount && <Info label="Amount" value={formatKES(selectedJob.finalAmount)} />}
-              {selectedJob.invoice && <Info label="Invoice" value={`${selectedJob.invoice.invoiceNumber} (${selectedJob.invoice.status})`} />}
-              {selectedJob.asset && <Info label="Asset" value={`${selectedJob.asset.name} (${selectedJob.asset.assetType})`} />}
+              <Info
+                label="Scheduled"
+                value={formatDate(selectedJob.scheduledDate)}
+              />
+              {selectedJob.finalAmount != null && (
+                <Info
+                  label="Amount"
+                  value={formatKES(selectedJob.finalAmount)}
+                />
+              )}
+              {selectedJob.invoice && (
+                <Info
+                  label="Invoice"
+                  value={`${selectedJob.invoice.invoiceNumber} (${selectedJob.invoice.status})`}
+                />
+              )}
+              {selectedJob.asset && (
+                <Info
+                  label="Asset"
+                  value={`${selectedJob.asset.name} (${selectedJob.asset.assetType})`}
+                />
+              )}
             </div>
 
             {selectedJob.invoice?.id && (
               <a
                 href={`/api/invoices/${selectedJob.invoice.id}/pdf`}
                 target="_blank"
-                className="block text-center border border-blue-500 text-blue-600 rounded-lg py-2 text-sm hover:bg-blue-50"
+                className="flex items-center justify-center gap-2 border border-blue-200 bg-blue-50 text-blue-700 rounded-xl py-2.5 text-sm font-medium hover:bg-blue-100 transition-colors"
               >
-                📄 Download Invoice PDF
+                <Download className="w-4 h-4" />
+                Download Invoice PDF
               </a>
             )}
 
             {/* Reassign */}
-            {["ASSIGNED", "POSTPONED", "DECLINED", "RESCHEDULED"].includes(selectedJob.status) && (
+            {["ASSIGNED", "POSTPONED", "DECLINED", "RESCHEDULED"].includes(
+              selectedJob.status
+            ) && (
               <div>
-                <p className="text-xs font-medium text-gray-700 mb-1">Reassign Worker</p>
+                <p className="text-xs font-medium text-slate-700 mb-1">
+                  Reassign Worker
+                </p>
                 <select
-                  onChange={(e) => { if (e.target.value) handleReassign(selectedJob.id, e.target.value); }}
+                  onChange={(e) => {
+                    if (e.target.value)
+                      handleReassign(selectedJob.id, e.target.value);
+                  }}
                   className={inputCls}
                 >
                   <option value="">Select worker...</option>
-                  {workers.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+                  {workers.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name}
+                    </option>
+                  ))}
                 </select>
               </div>
             )}
@@ -291,15 +512,24 @@ export default function JobsClient({
             {/* Reschedule */}
             {["POSTPONED", "RESCHEDULED"].includes(selectedJob.status) && (
               <div>
-                <p className="text-xs font-medium text-gray-700 mb-1">Reschedule</p>
+                <p className="text-xs font-medium text-slate-700 mb-1">
+                  Reschedule
+                </p>
                 <div className="flex gap-2">
-                  <input type="datetime-local" id={`reschedule-${selectedJob.id}`} className={`${inputCls} flex-1`} />
+                  <input
+                    type="datetime-local"
+                    id={`reschedule-${selectedJob.id}`}
+                    className={`${inputCls} flex-1`}
+                  />
                   <button
                     onClick={() => {
-                      const el = document.getElementById(`reschedule-${selectedJob.id}`) as HTMLInputElement;
-                      if (el.value) handleReschedule(selectedJob.id, el.value);
+                      const el = document.getElementById(
+                        `reschedule-${selectedJob.id}`
+                      ) as HTMLInputElement;
+                      if (el.value)
+                        handleReschedule(selectedJob.id, el.value);
                     }}
-                    className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm"
+                    className={btnPrimary}
                   >
                     Save
                   </button>
@@ -308,10 +538,15 @@ export default function JobsClient({
             )}
 
             {/* Cancel */}
-            {!["VERIFIED", "CLOSED", "CANCELLED"].includes(selectedJob.status) && (
+            {!["VERIFIED", "CLOSED", "CANCELLED"].includes(
+              selectedJob.status
+            ) && (
               <button
-                onClick={() => { handleStatusChange(selectedJob.id, "CANCELLED"); setSelectedJob(null); }}
-                className="w-full border border-red-300 text-red-600 rounded-lg py-2 text-sm hover:bg-red-50"
+                onClick={() => {
+                  handleStatusChange(selectedJob.id, "CANCELLED");
+                  setSelectedJob(null);
+                }}
+                className="w-full border border-red-200 bg-red-50 text-red-600 rounded-xl py-2.5 text-sm font-medium hover:bg-red-100 transition-colors"
               >
                 Cancel Job
               </button>
@@ -323,13 +558,33 @@ export default function JobsClient({
   );
 }
 
-const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
-
-function Field({ label, name, type = "text", placeholder, required }: { label: string; name: string; type?: string; placeholder?: string; required?: boolean }) {
+function Field({
+  label,
+  name,
+  type = "text",
+  placeholder,
+  required,
+}: {
+  label: string;
+  name: string;
+  type?: string;
+  placeholder?: string;
+  required?: boolean;
+}) {
+  const inputCls =
+    "w-full bg-white border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors";
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-700 mb-1">{label}</label>
-      <input type={type} name={name} placeholder={placeholder} required={required} className={inputCls} />
+      <label className="block text-xs font-medium text-slate-700 mb-1">
+        {label}
+      </label>
+      <input
+        type={type}
+        name={name}
+        placeholder={placeholder}
+        required={required}
+        className={inputCls}
+      />
     </div>
   );
 }
@@ -337,19 +592,33 @@ function Field({ label, name, type = "text", placeholder, required }: { label: s
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs text-gray-400">{label}</p>
-      <p className="text-sm font-medium text-gray-900 mt-0.5">{value}</p>
+      <p className="text-xs text-slate-400">{label}</p>
+      <p className="text-sm font-medium text-slate-900 mt-0.5">{value}</p>
     </div>
   );
 }
 
-function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
+function Modal({
+  title,
+  children,
+  onClose,
+}: {
+  title: string;
+  children: React.ReactNode;
+  onClose: () => void;
+}) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="font-semibold text-gray-900">{title}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+          <h2 className="font-semibold text-slate-900">{title}</h2>
+          <button
+            onClick={onClose}
+            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+            aria-label="Close"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
         <div className="p-6">{children}</div>
       </div>
