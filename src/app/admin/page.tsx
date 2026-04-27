@@ -124,13 +124,14 @@ function PriorityAlert({ risks }: { risks: JobRisk[] }) {
                 {risk.severity}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-slate-900 truncate">{risk.jobNumber} · {risk.clientName}</p>
-                <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+                <p className="text-sm font-medium text-slate-900 truncate">{risk.clientName}</p>
+                <p className="text-[10px] font-mono text-slate-400 mt-0.5 truncate">{risk.jobNumber}</p>
+                <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
                   <Calendar className="w-3 h-3 shrink-0" />{risk.description}
                 </p>
                 <p className="text-xs text-slate-400 mt-0.5">{risk.action}</p>
               </div>
-              <Link href="/admin/jobs" className="shrink-0 text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-blue-700 transition-colors">
+              <Link href={`/admin/jobs?highlight=${risk.jobId}`} className="shrink-0 text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-blue-700 transition-colors">
                 View Job
               </Link>
             </div>

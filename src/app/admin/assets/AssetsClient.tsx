@@ -2,6 +2,7 @@
 import { useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { MapPin } from "lucide-react";
 import { createAsset, updateAsset, deleteAsset } from "@/app/actions/asset-actions";
 
 interface AssetRow {
@@ -183,7 +184,7 @@ export default function AssetsClient({
             </div>
 
             <div className="space-y-1 text-xs text-gray-500">
-              {a.location && <p className="flex items-center gap-1 truncate">📍 {a.location}</p>}
+              {a.location && <p className="flex items-center gap-1 truncate"><MapPin className="w-3 h-3 shrink-0" /> {a.location}</p>}
               {a.serialNumber && <p>SN: {a.serialNumber}</p>}
               {a.registrationNumber && <p>Reg: {a.registrationNumber}</p>}
               {a.identifier && <p>ID: {a.identifier}</p>}

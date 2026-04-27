@@ -3,9 +3,10 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import LogoutButton from "@/components/admin/LogoutButton";
 import NotificationBell from "@/components/notifications/NotificationBell";
+import UserDropdown from "@/components/admin/UserDropdown";
 import { NavLinks } from "@/components/admin/NavLinks";
 import { PageHeader } from "@/components/admin/PageHeader";
-import { Search, ChevronDown } from "lucide-react";
+import { Search } from "lucide-react";
 
 export default async function AdminLayout({
   children,
@@ -80,16 +81,7 @@ export default async function AdminLayout({
           <div className="flex items-center gap-3 ml-auto">
             <NotificationBell />
 
-            <div className="flex items-center gap-2 cursor-pointer">
-              <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white text-[11px] font-bold shrink-0">
-                {initials}
-              </div>
-              <div className="hidden md:block leading-none">
-                <p className="text-xs font-semibold text-slate-900">{name}</p>
-                <p className="text-[10px] text-slate-400 mt-0.5">Operations Manager</p>
-              </div>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden md:block" />
-            </div>
+            <UserDropdown name={name} initials={initials} />
           </div>
         </header>
 

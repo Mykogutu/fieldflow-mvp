@@ -1,6 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
+import { FileText } from "lucide-react";
 import { updateInvoiceStatus } from "@/app/actions/invoice-actions";
 import { formatDate, formatKES } from "@/lib/utils";
 
@@ -97,8 +98,9 @@ export default function InvoicesClient({
                     <a
                       href={`/api/invoices/${inv.id}/pdf`}
                       target="_blank"
-                      className="text-blue-600 hover:underline text-xs"
+                      className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 text-xs font-medium"
                     >
+                      <FileText className="w-3.5 h-3.5" />
                       PDF
                     </a>
                     {inv.status === "PENDING" && (

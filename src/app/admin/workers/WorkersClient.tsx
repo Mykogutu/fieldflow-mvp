@@ -1,6 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { MapPin } from "lucide-react";
 import { createUser, updateUser, deleteUser } from "@/app/actions/user-actions";
 
 interface Worker { id: string; name: string; phone: string; email: string | null; baseZone: string | null; isActive: boolean }
@@ -68,7 +69,7 @@ export default function WorkersClient({ workers, zones }: { workers: Worker[]; z
               </span>
             </div>
             {w.baseZone && (
-              <p className="text-xs text-gray-400 flex items-center gap-1">📍 {w.baseZone}</p>
+              <p className="text-xs text-gray-400 flex items-center gap-1"><MapPin className="w-3 h-3 shrink-0" /> {w.baseZone}</p>
             )}
             <div className="flex gap-2 pt-1">
               <button onClick={() => setEditing(w)} className="flex-1 text-xs border border-gray-200 rounded-lg py-1.5 hover:border-blue-400 text-gray-600">
