@@ -9,6 +9,7 @@ import { NavLinks } from "@/components/admin/NavLinks";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { MobileSidebar } from "@/components/admin/MobileSidebar";
 import { BottomNav } from "@/components/admin/BottomNav";
+import { AICopilotFloat } from "@/components/admin/AICopilotFloat";
 import { Search } from "lucide-react";
 
 const INDUSTRY_LABELS: Record<string, string> = {
@@ -134,6 +135,9 @@ export default async function AdminLayout({
 
       {/* ── Mobile bottom navigation bar ── */}
       <BottomNav />
+
+      {/* ── AI Copilot floating widget (hidden on /admin/ai) ── */}
+      <AICopilotFloat />
     </div>
   );
 }

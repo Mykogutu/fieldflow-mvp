@@ -251,7 +251,7 @@ function BriefingTab() {
   }
 
   return (
-    <div className="p-5 space-y-4">
+    <div className="flex-1 overflow-y-auto p-5 space-y-4">
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex rounded-lg border border-gray-200 overflow-hidden">
           {(["morning", "evening"] as const).map((t) => (
@@ -329,7 +329,7 @@ function FollowUpsTab() {
   }
 
   return (
-    <div className="p-5 space-y-4">
+    <div className="flex-1 overflow-y-auto p-5 space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-500">
           AI identifies clients, jobs, and workers that need your attention today.
@@ -423,7 +423,7 @@ function IntakeTab() {
     : "text-red-600";
 
   return (
-    <div className="p-5 space-y-4">
+    <div className="flex-1 overflow-y-auto p-5 space-y-4">
       <div>
         <label className="block text-xs font-medium text-gray-700 mb-1">
           Paste the client&apos;s WhatsApp message
@@ -509,38 +509,41 @@ export default function AICopilotClient() {
   const [activeTab, setActiveTab] = useState<Tab>("chat");
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
+    <div className="flex flex-col gap-4 h-full">
+      {/* Header row */}
+      <div className="flex items-center gap-3 shrink-0">
+        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shrink-0">
           <Icon name="spark" />
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Operations Intelligence</h1>
-          <p className="text-sm text-gray-500">AI assistant powered by your live business data</p>
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold text-gray-900 leading-tight">Operations Intelligence</h1>
+          <p className="text-xs text-gray-500 mt-0.5">AI assistant powered by your live business data</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col" style={{ minHeight: "600px" }}>
-        {/* Tab bar */}
-        <div className="flex border-b border-gray-100">
+      {/* Card fills remaining height */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col flex-1 min-h-0">
+        {/* Tab bar — icon+label on sm+, icon-only on mobile */}
+        <div className="flex border-b border-gray-100 shrink-0">
           {TABS.map((t) => (
             <button
               key={t.id}
               onClick={() => setActiveTab(t.id)}
-              className={`flex items-center gap-2 px-4 py-3.5 text-sm font-medium border-b-2 transition-colors ${
+              title={t.label}
+              className={`flex items-center justify-center gap-2 flex-1 sm:flex-none px-3 sm:px-5 py-3.5 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === t.id
                   ? "border-blue-600 text-blue-700"
                   : "border-transparent text-gray-500 hover:text-gray-700"
               }`}
             >
               <Icon name={t.icon} />
-              <span>{t.label}</span>
+              <span className="hidden sm:inline">{t.label}</span>
             </button>
           ))}
         </div>
 
-        {/* Tab body */}
-        <div className="flex-1 overflow-hidden flex flex-col">
+        {/* Tab body fills card */}
+        <div className="flex-1 overflow-hidden flex flex-col min-h-0">
           {activeTab === "chat" && <ChatTab />}
           {activeTab === "briefing" && <BriefingTab />}
           {activeTab === "followups" && <FollowUpsTab />}
