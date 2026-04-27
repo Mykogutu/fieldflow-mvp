@@ -2,8 +2,16 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createJob, reassignJob, rescheduleJob, updateJobStatus } from "@/app/actions/job-actions";
-import { formatDate, formatKES } from "@/lib/utils";
-import { Plus, X, ExternalLink, Minus, Download } from "lucide-react";
+import { formatKES, formatDate } from "@/lib/utils";
+import { Plus, X, ExternalLink, Minus, Download, Search } from "lucide-react";
+
+function formatScheduled(date: Date | string | null) {
+  if (!date) return "—";
+  const d = new Date(date);
+  const day = d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  const time = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  return { day, time };
+}
 
 // ── Design system ─────────────────────────────────────────────────────────────
 const inputCls =
@@ -189,16 +197,19 @@ export default function JobsClient({
       </div>
 
       {/* Search */}
-      <input
-        type="text"
-        placeholder="Search by client, job type, location..."
-        defaultValue={currentSearch}
-        onKeyDown={(e) => {
-          if (e.key === "Enter")
-            navigate({ search: (e.target as HTMLInputElement).value });
-        }}
-        className={inputCls}
-      />
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <input
+          type="text"
+          placeholder="Search by client, job type, location..."
+          defaultValue={currentSearch}
+          onKeyDown={(e) => {
+            if (e.key === "Enter")
+              navigate({ search: (e.target as HTMLInputElement).value });
+          }}
+          className={`${inputCls} pl-10`}
+        />
+      </div>
 
       {/* Jobs table */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -269,8 +280,17 @@ export default function JobsClient({
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-4 text-slate-400 text-xs">
-                    {formatDate(job.scheduledDate)}
+                  <td className="px-4 py-4">
+                    {(() => {
+                      const s = formatScheduled(job.scheduledDate);
+                      if (typeof s === "string") return <span className="text-slate-400 text-xs">{s}</span>;
+                      return (
+                        <div>
+                          <p className="text-xs text-slate-700">{s.day}</p>
+                          <p className="text-xs text-slate-400 mt-0.5">{s.time}</p>
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td className="px-4 py-4">
                     <StatusBadge status={job.status} />
