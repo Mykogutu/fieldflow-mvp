@@ -263,28 +263,30 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
   }
 
   return (
-    <div className="space-y-5">
-      {/* Page header */}
-      <div className="flex items-center justify-between gap-4">
-        <div>
+    <div className="space-y-5 w-full overflow-x-hidden">
+      {/* Page header — stacks on mobile, row on sm+ */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-xl font-bold text-slate-900">Workspace Settings</h1>
           <p className="text-xs text-slate-400 mt-0.5">Manage your workspace preferences, documents, branding, and automations.</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={resetChanges}
-            className="inline-flex items-center gap-2 bg-white border border-gray-200 text-slate-700 px-3.5 py-2 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors"
+            className="inline-flex items-center gap-2 bg-white border border-gray-200 text-slate-700 px-3 py-2 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors"
+            title="Reset changes"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Reset changes
+            <RotateCcw className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden sm:inline">Reset changes</span>
           </button>
           <button
             onClick={handleSave}
             disabled={isPending}
-            className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-2 bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50"
+            title={isPending ? "Saving…" : "Save all settings"}
           >
-            <Save className="w-3.5 h-3.5" />
-            {isPending ? "Saving..." : "Save all settings"}
+            <Save className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden sm:inline">{isPending ? "Saving..." : "Save all settings"}</span>
           </button>
         </div>
       </div>
@@ -295,20 +297,21 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
         </p>
       )}
 
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-gray-200">
+      {/* Tabs — icon-only on mobile, icon + label on sm+ */}
+      <div className="flex border-b border-gray-200">
         {TABS.map(({ id, label, Icon }) => (
           <button
             key={id}
             onClick={() => setTab(id)}
-            className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+            title={label}
+            className={`inline-flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors flex-1 sm:flex-none justify-center sm:justify-start ${
               tab === id
                 ? "border-blue-600 text-blue-600"
                 : "border-transparent text-slate-500 hover:text-slate-700"
             }`}
           >
-            <Icon className="w-4 h-4" />
-            {label}
+            <Icon className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline">{label}</span>
           </button>
         ))}
       </div>
@@ -433,7 +436,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
             {/* Industry Preset */}
             <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
               <Section title="Industry Preset" subtitle="Presets help us auto-fill labels, defaults, and recommendations.">
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {INDUSTRY_LIST.map((t) => {
                     const Icon = INDUSTRY_ICONS[t.key] ?? HelpCircle;
                     const active = industry === t.key;
