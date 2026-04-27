@@ -7,6 +7,8 @@ import NotificationBell from "@/components/notifications/NotificationBell";
 import UserDropdown from "@/components/admin/UserDropdown";
 import { NavLinks } from "@/components/admin/NavLinks";
 import { PageHeader } from "@/components/admin/PageHeader";
+import { MobileSidebar } from "@/components/admin/MobileSidebar";
+import { BottomNav } from "@/components/admin/BottomNav";
 import { Search } from "lucide-react";
 
 const INDUSTRY_LABELS: Record<string, string> = {
@@ -54,8 +56,8 @@ export default async function AdminLayout({
 
   return (
     <div className="flex h-screen bg-slate-50">
-      {/* Sidebar */}
-      <aside className="w-56 bg-white border-r border-gray-100 flex flex-col shrink-0">
+      {/* ── Desktop sidebar (hidden on mobile) ── */}
+      <aside className="hidden lg:flex w-56 bg-white border-r border-gray-100 flex-col shrink-0">
         {/* Workspace identity */}
         <div className="px-4 py-4 border-b border-gray-100">
           <div className="flex items-center gap-2.5">
@@ -80,15 +82,18 @@ export default async function AdminLayout({
         </div>
       </aside>
 
-      {/* Main */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      {/* ── Main column ── */}
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         {/* Header */}
-        <header className="bg-white border-b border-gray-100 px-5 py-2.5 flex items-center gap-4 shrink-0">
-          {/* Page title (client component reads pathname) */}
+        <header className="bg-white border-b border-gray-100 px-4 lg:px-5 py-2.5 flex items-center gap-3 shrink-0">
+          {/* Mobile hamburger + mobile drawer */}
+          <MobileSidebar companyName={companyName} industryLabel={industryLabel} />
+
+          {/* Page title */}
           <PageHeader />
 
-          {/* Search */}
-          <div className="flex-1 max-w-sm mx-4 hidden md:block">
+          {/* Search — hidden on small screens */}
+          <div className="flex-1 max-w-sm mx-2 hidden md:block">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
               <input
@@ -103,17 +108,19 @@ export default async function AdminLayout({
           </div>
 
           {/* Bell + user */}
-          <div className="flex items-center gap-3 ml-auto">
+          <div className="flex items-center gap-2 lg:gap-3 ml-auto">
             <NotificationBell />
-
             <UserDropdown name={name} initials={initials} />
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        {/* Page content — extra bottom padding on mobile for the bottom nav bar */}
+        <main className="flex-1 overflow-y-auto p-4 pb-24 lg:p-6 lg:pb-6">
+          {children}
+        </main>
 
-        {/* Footer */}
-        <footer className="bg-white border-t border-gray-100 px-6 py-2 flex items-center justify-between shrink-0">
+        {/* Footer — desktop only */}
+        <footer className="hidden lg:flex bg-white border-t border-gray-100 px-6 py-2 items-center justify-between shrink-0">
           <p className="text-[10px] text-slate-400">© 2026 FieldFlow. All rights reserved.</p>
           <div className="flex items-center gap-4">
             {["Help", "Privacy", "Terms"].map((l) => (
@@ -124,6 +131,9 @@ export default async function AdminLayout({
           </div>
         </footer>
       </div>
+
+      {/* ── Mobile bottom navigation bar ── */}
+      <BottomNav />
     </div>
   );
 }
