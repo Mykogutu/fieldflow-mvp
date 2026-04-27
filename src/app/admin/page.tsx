@@ -5,153 +5,134 @@ import Link from "next/link";
 import WorkCalendar, { type CalendarJob, type CalendarWorker } from "./WorkCalendar";
 import { detectJobRisks, type JobRisk } from "@/lib/risk-detection";
 import OnboardingChecklist from "./OnboardingChecklist";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
   Wrench, Clock, AlertTriangle, TrendingUp,
-  CheckCircle, Calendar, FileText, UserCheck, Sparkles,
-  CheckCircle2, Circle, ArrowRight, X,
-  DollarSign, ReceiptText,
+  CheckCircle, Calendar, FileText, Users, Sparkles,
+  ArrowRight, DollarSign, ReceiptText, X, ChevronRight,
+  Activity, CircleDollarSign,
 } from "lucide-react";
 
-// ── Sparkline SVGs (decorative) ───────────────────────────────────────────────
-function SparkLine({ color }: { color: string }) {
-  return (
-    <svg viewBox="0 0 80 28" className="w-20 h-7" fill="none">
-      <path d="M0,18 C8,16 12,10 20,12 C28,14 32,22 42,16 C52,10 58,14 64,10 C70,6 74,8 80,4"
-        stroke={color} strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-function SparkLineDown({ color }: { color: string }) {
-  return (
-    <svg viewBox="0 0 80 28" className="w-20 h-7" fill="none">
-      <path d="M0,8 C8,10 12,14 20,12 C28,10 32,16 42,18 C52,20 58,16 64,20 C70,22 74,20 80,24"
-        stroke={color} strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-function SparkBars({ color }: { color: string }) {
-  const h = [6, 10, 8, 14, 10, 16, 12, 18, 14, 20];
-  return (
-    <svg viewBox="0 0 80 28" className="w-20 h-7">
-      {h.map((v, i) => (
-        <rect key={i} x={i * 8} y={28 - v} width="6" height={v} fill={color} opacity="0.75" rx="1" />
-      ))}
-    </svg>
-  );
-}
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function timeAgo(date: Date | string): string {
   const ms = Date.now() - new Date(date).getTime();
   const m = Math.floor(ms / 60000);
+  if (m < 1) return "just now";
   if (m < 60) return `${m}m ago`;
   const hh = Math.floor(m / 60);
   if (hh < 24) return `${hh}h ago`;
   return `${Math.floor(hh / 24)}d ago`;
 }
 
-// ── Status config ─────────────────────────────────────────────────────────────
-const STATUS_CONFIG: Record<string, { label: string; cls: string; iconBg: string; iconColor: string }> = {
-  ASSIGNED:   { label: "Assigned",    cls: "bg-blue-50 text-blue-700 border border-blue-200",       iconBg: "bg-blue-100",   iconColor: "text-blue-600"   },
-  IN_PROGRESS:{ label: "In Progress", cls: "bg-indigo-50 text-indigo-700 border border-indigo-200", iconBg: "bg-indigo-100", iconColor: "text-indigo-600" },
-  POSTPONED:  { label: "Postponed",   cls: "bg-amber-50 text-amber-700 border border-amber-200",    iconBg: "bg-amber-100",  iconColor: "text-amber-600"  },
-  RESCHEDULED:{ label: "Rescheduled", cls: "bg-amber-50 text-amber-700 border border-amber-200",    iconBg: "bg-amber-100",  iconColor: "text-amber-600"  },
-  COMPLETED_PENDING_VERIFICATION: { label: "Awaiting OTP", cls: "bg-purple-50 text-purple-700 border border-purple-200", iconBg: "bg-purple-100", iconColor: "text-purple-600" },
-  VERIFIED:   { label: "Verified",    cls: "bg-green-50 text-green-700 border border-green-200",    iconBg: "bg-green-100",  iconColor: "text-green-600"  },
-  CLOSED:     { label: "Closed",      cls: "bg-slate-100 text-slate-600 border border-slate-200",   iconBg: "bg-slate-100",  iconColor: "text-slate-500"  },
-  DECLINED:   { label: "Declined",    cls: "bg-red-50 text-red-700 border border-red-200",          iconBg: "bg-red-100",    iconColor: "text-red-600"    },
-  ISSUE_REPORTED: { label: "Issue",   cls: "bg-red-50 text-red-700 border border-red-200",          iconBg: "bg-red-100",    iconColor: "text-red-600"    },
-  CANCELLED:  { label: "Cancelled",   cls: "bg-slate-100 text-slate-500 border border-slate-200",   iconBg: "bg-slate-100",  iconColor: "text-slate-400"  },
-};
-function StatusBadge({ status }: { status: string }) {
-  const cfg = STATUS_CONFIG[status] ?? { label: status, cls: "bg-slate-100 text-slate-600 border border-slate-200", iconBg: "", iconColor: "" };
-  return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${cfg.cls}`}>{cfg.label}</span>;
-}
-function JobIcon({ status }: { status: string }) {
-  const cfg = STATUS_CONFIG[status] ?? { iconBg: "bg-slate-100", iconColor: "text-slate-400" };
+function JobStatusIcon({ status }: { status: string }) {
+  const map: Record<string, { bg: string; color: string }> = {
+    ASSIGNED:   { bg: "bg-[#DBEAFE]", color: "text-[#2563EB]" },
+    IN_PROGRESS:{ bg: "bg-[#DCFCE7]", color: "text-[#16A34A]" },
+    COMPLETED_PENDING_VERIFICATION: { bg: "bg-[#EDE9FE]", color: "text-[#7C3AED]" },
+    VERIFIED:   { bg: "bg-[#DCFCE7]", color: "text-[#16A34A]" },
+    POSTPONED:  { bg: "bg-[#FEF3C7]", color: "text-[#D97706]" },
+    ISSUE_REPORTED: { bg: "bg-[#FEE2E2]", color: "text-[#DC2626]" },
+    DECLINED:   { bg: "bg-[#FEE2E2]", color: "text-[#DC2626]" },
+    CANCELLED:  { bg: "bg-[#F1F5F9]", color: "text-[#64748B]" },
+    CLOSED:     { bg: "bg-[#F1F5F9]", color: "text-[#64748B]" },
+  };
+  const s = map[status] ?? { bg: "bg-[#F1F5F9]", color: "text-[#64748B]" };
   return (
-    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${cfg.iconBg}`}>
-      <Wrench className={`w-4 h-4 ${cfg.iconColor}`} />
+    <div className={`w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0 ${s.bg}`}>
+      <Wrench className={`w-4 h-4 ${s.color}`} />
     </div>
   );
 }
 
-// ── Notification icon ─────────────────────────────────────────────────────────
-function NotifIcon({ type }: { type: string }) {
-  const t = type.toUpperCase();
-  if (t.includes("ISSUE") || t.includes("OVERDUE") || t.includes("DECLINED"))
-    return <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center shrink-0"><AlertTriangle className="w-4 h-4 text-red-500" /></div>;
-  if (t.includes("VERIFIED"))
-    return <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center shrink-0"><CheckCircle className="w-4 h-4 text-green-500" /></div>;
-  if (t.includes("PENDING") || t.includes("VERIFICATION"))
-    return <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0"><Clock className="w-4 h-4 text-amber-500" /></div>;
-  if (t.includes("INVOICE"))
-    return <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0"><FileText className="w-4 h-4 text-slate-500" /></div>;
-  if (t.includes("ASSIGN") || t.includes("JOB"))
-    return <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0"><UserCheck className="w-4 h-4 text-blue-500" /></div>;
-  return <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0"><Calendar className="w-4 h-4 text-slate-400" /></div>;
-}
-
 // ── Priority Alert panel ──────────────────────────────────────────────────────
-const SEV_BORDER: Record<string, string> = { HIGH: "border-l-red-500", MEDIUM: "border-l-amber-500", LOW: "border-l-blue-400" };
-const SEV_BADGE: Record<string, string>  = { HIGH: "bg-red-100 text-red-700", MEDIUM: "bg-amber-100 text-amber-700", LOW: "bg-blue-100 text-blue-700" };
 
-function PriorityAlert({ risks }: { risks: JobRisk[] }) {
-  const highCount = risks.filter((r) => r.severity === "HIGH").length;
-  const shown = risks.slice(0, 4);
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-      <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-blue-500 shrink-0" />
-          <h2 className="font-semibold text-slate-900">Operation Intelligence</h2>
-          {risks.length > 0 && (
-            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${highCount > 0 ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
-              {risks.length}
-            </span>
-          )}
+function NeedsAttentionPanel({ risks }: { risks: JobRisk[] }) {
+  if (risks.length === 0) {
+    return (
+      <div className="ff-card overflow-hidden">
+        <div className="px-5 py-3.5 border-b border-[#F1F5F9] flex items-center justify-between">
+          <h2 className="ff-section-title flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-[#94A3B8]" />
+            Needs Attention
+          </h2>
+          <Link href="/admin/ai" className="text-xs text-[#2563EB] hover:text-[#1D4ED8] font-medium flex items-center gap-1">
+            View all alerts <ArrowRight className="w-3 h-3" />
+          </Link>
         </div>
-        <Link href="/admin/ai" className="text-xs text-blue-600 hover:text-blue-700 font-medium">
-          View all alerts →
+        <div className="px-5 py-8 flex items-center gap-3">
+          <CheckCircle className="w-5 h-5 text-[#16A34A] shrink-0" />
+          <p className="text-sm font-medium text-[#16A34A]">All active jobs look good — no issues detected.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const shown = risks.slice(0, 3);
+  return (
+    <div className="ff-card overflow-hidden">
+      <div className="px-5 py-3.5 border-b border-[#F1F5F9] flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <h2 className="ff-section-title">Needs Attention</h2>
+          <span className="px-1.5 py-0.5 bg-[#FEE2E2] text-[#DC2626] text-[10px] font-bold rounded-full leading-none">
+            {risks.length}
+          </span>
+        </div>
+        <Link href="/admin/ai" className="text-xs text-[#2563EB] hover:text-[#1D4ED8] font-medium flex items-center gap-1">
+          View all alerts <ArrowRight className="w-3 h-3" />
         </Link>
       </div>
-      {risks.length === 0 ? (
-        <div className="px-5 py-5 flex items-center gap-3">
-          <CheckCircle className="w-5 h-5 text-green-500 shrink-0" />
-          <p className="text-sm font-medium text-green-700">All active jobs look good — no risks detected.</p>
-        </div>
-      ) : (
-        <div className="divide-y divide-gray-50">
-          {shown.map((risk, i) => (
-            <div key={i} className={`px-5 py-3.5 flex items-start gap-3 border-l-4 ${SEV_BORDER[risk.severity] ?? "border-l-slate-300"}`}>
-              <span className={`mt-0.5 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full shrink-0 ${SEV_BADGE[risk.severity] ?? "bg-slate-100 text-slate-500"}`}>
-                {risk.severity}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-slate-900 truncate">{risk.clientName}</p>
-                <p className="text-[10px] font-mono text-slate-400 mt-0.5 truncate">{risk.jobNumber}</p>
-                <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
-                  <Calendar className="w-3 h-3 shrink-0" />{risk.description}
-                </p>
-                <p className="text-xs text-slate-400 mt-0.5">{risk.action}</p>
+
+      <div className="divide-y divide-[#F1F5F9]">
+        {shown.map((risk, i) => {
+          const sevCls: Record<string, string> = {
+            HIGH: "border-l-[#DC2626] bg-[#FFF8F8]",
+            MEDIUM: "border-l-[#D97706] bg-[#FFFDF5]",
+            LOW: "border-l-[#2563EB]",
+          };
+          const badgeCls: Record<string, string> = {
+            HIGH: "bg-[#FEE2E2] text-[#DC2626]",
+            MEDIUM: "bg-[#FEF3C7] text-[#D97706]",
+            LOW: "bg-[#DBEAFE] text-[#2563EB]",
+          };
+          return (
+            <div
+              key={i}
+              className={`px-5 py-4 flex items-start gap-3 border-l-4 ${sevCls[risk.severity] ?? "border-l-slate-300"}`}
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${badgeCls[risk.severity] ?? "bg-[#F1F5F9] text-[#64748B]"}`}>
+                    {risk.severity === "HIGH" ? "HIGH ISSUE" : risk.severity}
+                  </span>
+                  <span className="text-[10px] text-[#94A3B8] font-mono">{risk.jobNumber}</span>
+                </div>
+                <p className="text-[13px] font-semibold text-[#0F172A] truncate">{risk.clientName}</p>
+                <p className="text-xs text-[#64748B] mt-0.5">{risk.description}</p>
               </div>
-              <Link href={`/admin/jobs?highlight=${risk.jobId}`} className="shrink-0 text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-blue-700 transition-colors">
-                View Job
+              <Link
+                href={`/admin/jobs/${risk.jobId}`}
+                className="shrink-0 text-xs bg-[#2563EB] text-white px-3 py-1.5 rounded-[8px] font-semibold hover:bg-[#1D4ED8] transition-colors"
+              >
+                View job
               </Link>
             </div>
-          ))}
-          {risks.length > 4 && (
-            <div className="px-5 py-2.5 text-xs text-slate-400 text-center">
-              +{risks.length - 4} more —{" "}
-              <Link href="/admin/ai" className="text-blue-600 hover:underline">view all in AI Copilot</Link>
-            </div>
-          )}
-        </div>
-      )}
+          );
+        })}
+        {risks.length > 3 && (
+          <div className="px-5 py-2.5 text-center">
+            <Link href="/admin/ai" className="text-xs text-[#64748B] hover:text-[#2563EB]">
+              +{risks.length - 3} more issues — view in AI Copilot
+            </Link>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 // ── Data ──────────────────────────────────────────────────────────────────────
+
 function getWeekStart(weekParam?: string): Date {
   if (weekParam) {
     const d = new Date(weekParam);
@@ -175,21 +156,23 @@ async function getDashboardData(weekStart: Date) {
   const [
     activeJobs, pendingVerification, postponedJobs,
     monthRevenue, monthInvoiced, outstandingInvoices, overdueCount,
-    recentNotifications, recentJobs, workers, calendarJobs, risks,
-    // onboarding fields
+    recentJobs, workers, calendarJobs, risks,
     companyNameSetting, industrySetting, jobTypesSetting, zonesSetting, documentConfigSetting,
     workerCount, clientCount, assetCount, jobCount, completedJobCount,
   ] = await Promise.all([
     prisma.job.count({ where: { workspaceId, status: { in: ["ASSIGNED", "IN_PROGRESS"] } } }),
     prisma.job.count({ where: { workspaceId, status: "COMPLETED_PENDING_VERIFICATION" } }),
     prisma.job.count({ where: { workspaceId, status: { in: ["POSTPONED", "ISSUE_REPORTED"] } } }),
-    // payment breakdown
     prisma.invoice.aggregate({ _sum: { amount: true }, where: { workspaceId, status: "PAID", paidAt: { gte: startOfMonth } } }),
     prisma.invoice.aggregate({ _sum: { amount: true }, where: { workspaceId, status: { not: "CANCELLED" }, createdAt: { gte: startOfMonth } } }),
     prisma.invoice.aggregate({ _sum: { amount: true }, where: { workspaceId, status: { in: ["PENDING", "PARTIALLY_PAID", "OVERDUE"] } } }),
     prisma.invoice.count({ where: { workspaceId, status: "OVERDUE" } }),
-    prisma.notification.findMany({ where: { workspaceId, isRead: false }, orderBy: { createdAt: "desc" }, take: 6 }),
-    prisma.job.findMany({ where: { workspaceId }, orderBy: { updatedAt: "desc" }, take: 6, include: { workers: { select: { name: true } } } }),
+    prisma.job.findMany({
+      where: { workspaceId },
+      orderBy: { updatedAt: "desc" },
+      take: 6,
+      include: { workers: { select: { name: true } } },
+    }),
     prisma.user.findMany({ where: { workspaceId, role: "TECHNICIAN" }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
     prisma.job.findMany({
       where: { workspaceId, scheduledDate: { gte: weekStart, lt: weekEnd }, status: { notIn: ["CANCELLED"] } },
@@ -197,13 +180,11 @@ async function getDashboardData(weekStart: Date) {
       orderBy: { scheduledDate: "asc" },
     }),
     detectJobRisks(workspaceId),
-    // onboarding settings
     prisma.setting.findFirst({ where: { workspaceId, key: "company_name" } }),
     prisma.setting.findFirst({ where: { workspaceId, key: "industry" } }),
     prisma.setting.findFirst({ where: { workspaceId, key: "job_types" } }),
     prisma.setting.findFirst({ where: { workspaceId, key: "zones" } }),
     prisma.setting.findFirst({ where: { workspaceId, key: "document_types" } }),
-    // onboarding counts
     prisma.user.count({ where: { workspaceId, role: "TECHNICIAN" } }),
     prisma.client.count({ where: { workspaceId } }),
     prisma.asset.count({ where: { workspaceId } }),
@@ -227,76 +208,25 @@ async function getDashboardData(weekStart: Date) {
     hasCompletedJob:   completedJobCount > 0,
   };
 
-  const outstanding = outstandingInvoices._sum.amount ?? 0;
-  const totalInvoicedMonth = monthInvoiced._sum.amount ?? 0;
-
   return {
     activeJobs, pendingVerification, postponedJobs,
-    monthRevenue, totalInvoicedMonth, outstanding, overdueCount,
-    recentNotifications, recentJobs, workers, calendarJobs, risks,
-    onboarding,
+    monthRevenue, monthInvoiced, outstandingInvoices, overdueCount,
+    recentJobs, workers, calendarJobs, risks, onboarding,
+    totalInvoicedMonth: monthInvoiced._sum.amount ?? 0,
+    outstanding: outstandingInvoices._sum.amount ?? 0,
   };
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
-export default async function DashboardPage({ searchParams }: { searchParams?: { week?: string } }) {
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams?: { week?: string };
+}) {
   const weekStart = getWeekStart(searchParams?.week);
   const data = await getDashboardData(weekStart);
   const revenue = data.monthRevenue._sum.amount ?? 0;
-
-  const statCards = [
-    {
-      label: "Active Jobs",
-      value: data.activeJobs,
-      desc: <span className="text-slate-400">In progress</span>,
-      Icon: Wrench,
-      iconBg: "bg-blue-50", iconColor: "text-blue-600",
-      spark: <SparkLine color="#3b82f6" />,
-      link: "/admin/jobs?status=IN_PROGRESS",
-    },
-    {
-      label: "Awaiting Verification",
-      value: data.pendingVerification,
-      desc: <span className="text-slate-400">Pending OTP</span>,
-      Icon: Clock,
-      iconBg: "bg-amber-50", iconColor: "text-amber-500",
-      spark: <SparkLine color="#f59e0b" />,
-      link: "/admin/jobs?status=COMPLETED_PENDING_VERIFICATION",
-    },
-    {
-      label: "Need Attention",
-      value: data.postponedJobs,
-      desc: <span className="text-slate-400">Postponed / issues</span>,
-      Icon: AlertTriangle,
-      iconBg: "bg-red-50", iconColor: "text-red-500",
-      spark: <SparkLineDown color="#ef4444" />,
-      link: "/admin/jobs?status=POSTPONED",
-    },
-    {
-      label: "Revenue This Month",
-      value: formatKES(revenue),
-      desc: (
-        <span className="flex flex-col gap-0.5">
-          <span className="text-slate-400 text-[10px]">{formatKES(data.totalInvoicedMonth)} invoiced</span>
-          {data.outstanding > 0 && (
-            <span className="flex items-center gap-1 text-red-500 text-[10px] font-medium">
-              <DollarSign className="w-2.5 h-2.5" />
-              {formatKES(data.outstanding)} outstanding{data.overdueCount > 0 ? ` · ${data.overdueCount} overdue` : ""}
-            </span>
-          )}
-          {data.outstanding === 0 && (
-            <span className="flex items-center gap-1 text-green-600 text-[10px] font-medium">
-              <TrendingUp className="w-2.5 h-2.5" />All invoices cleared
-            </span>
-          )}
-        </span>
-      ),
-      Icon: ReceiptText,
-      iconBg: "bg-green-50", iconColor: "text-green-600",
-      spark: <SparkBars color="#22c55e" />,
-      link: "/admin/invoices",
-    },
-  ];
 
   const calendarWorkers: CalendarWorker[] = data.workers;
   const calendarJobsList: CalendarJob[] = data.calendarJobs.map((j) => ({
@@ -307,95 +237,206 @@ export default async function DashboardPage({ searchParams }: { searchParams?: {
     workerIds: j.workers.map((w) => w.id),
   }));
 
+  // ── Stat cards config ─────────────────────────────────────────────────────
+  const statCards = [
+    {
+      label: "Active Jobs",
+      value: data.activeJobs,
+      sub: `${data.activeJobs === 1 ? "1 assigned" : `${data.activeJobs} in progress`}`,
+      iconBg: "bg-[#DBEAFE]",
+      iconColor: "text-[#2563EB]",
+      Icon: Wrench,
+      href: "/admin/jobs?status=IN_PROGRESS",
+    },
+    {
+      label: "Awaiting Verification",
+      value: data.pendingVerification,
+      sub: "Pending OTP",
+      iconBg: "bg-[#EDE9FE]",
+      iconColor: "text-[#7C3AED]",
+      Icon: Clock,
+      href: "/admin/jobs?status=COMPLETED_PENDING_VERIFICATION",
+    },
+    {
+      label: "Need Attention",
+      value: data.postponedJobs,
+      sub: "Postponed / issues",
+      iconBg: "bg-[#FEE2E2]",
+      iconColor: "text-[#DC2626]",
+      Icon: AlertTriangle,
+      href: "/admin/jobs?status=POSTPONED",
+    },
+    {
+      label: "Revenue This Month",
+      value: formatKES(revenue),
+      sub: null,
+      desc: (
+        <div className="space-y-0.5">
+          <p className="text-xs text-[#64748B]">{formatKES(data.totalInvoicedMonth)} invoiced</p>
+          {data.outstanding > 0 ? (
+            <p className="text-xs text-[#DC2626] font-medium flex items-center gap-1">
+              <DollarSign className="w-3 h-3" />
+              {formatKES(data.outstanding)} outstanding
+              {data.overdueCount > 0 && ` · ${data.overdueCount} overdue`}
+            </p>
+          ) : (
+            <p className="text-xs text-[#16A34A] font-medium flex items-center gap-1">
+              <TrendingUp className="w-3 h-3" />All invoices cleared
+            </p>
+          )}
+        </div>
+      ),
+      iconBg: "bg-[#DCFCE7]",
+      iconColor: "text-[#16A34A]",
+      Icon: CircleDollarSign,
+      href: "/admin/invoices",
+    },
+  ];
+
   return (
-    <div className="space-y-5">
-      {/* Onboarding checklist — only shows until workspace is fully set up */}
+    <div className="space-y-6">
+      {/* Onboarding banner */}
       <OnboardingChecklist state={data.onboarding} />
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Metric cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {statCards.map((s) => (
-          <Link key={s.label} href={s.link} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between gap-2 mb-3">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${s.iconBg}`}>
+          <Link
+            key={s.label}
+            href={s.href}
+            className="ff-card p-5 hover:shadow-card-hover transition-shadow duration-150 block"
+          >
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div className={`w-10 h-10 rounded-[12px] flex items-center justify-center shrink-0 ${s.iconBg}`}>
                 <s.Icon className={`w-5 h-5 ${s.iconColor}`} />
               </div>
-              <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide text-right leading-tight mt-1">{s.label}</p>
+              <p className="text-[11px] font-semibold text-[#64748B] uppercase tracking-wide text-right leading-tight mt-1">
+                {s.label}
+              </p>
             </div>
-            <p className="text-2xl font-bold text-slate-900 leading-none mb-1">{s.value}</p>
-            <div className="flex items-end justify-between mt-2">
-              <div className="text-xs">{s.desc}</div>
-              {s.spark}
+            <p className="text-2xl font-bold text-[#0F172A] leading-none">{s.value}</p>
+            <div className="mt-2 flex items-end justify-between">
+              {s.desc ? s.desc : <p className="text-xs text-[#64748B]">{s.sub}</p>}
+              <ChevronRight className="w-4 h-4 text-[#E2E8F0] shrink-0" />
             </div>
           </Link>
         ))}
       </div>
 
-      {/* Middle: Priority Alert + Calendar side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <PriorityAlert risks={data.risks} />
-        <WorkCalendar workers={calendarWorkers} jobs={calendarJobsList} weekStartISO={weekStart.toISOString()} />
+      {/* Middle row: Needs Attention + Work Calendar */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+        <NeedsAttentionPanel risks={data.risks} />
+        <WorkCalendar
+          workers={calendarWorkers}
+          jobs={calendarJobsList}
+          weekStartISO={weekStart.toISOString()}
+        />
       </div>
 
-      {/* Bottom: Recent Jobs + Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      {/* Bottom row: Recent Jobs + Invoice Summary */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
         {/* Recent Jobs */}
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="font-semibold text-slate-900">Recent Jobs</h2>
-            <Link href="/admin/jobs" className="text-xs text-blue-600 hover:text-blue-700 font-medium">View all jobs →</Link>
+        <div className="ff-card overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-[#F1F5F9] flex items-center justify-between">
+            <h2 className="ff-section-title">Recent Jobs</h2>
+            <Link href="/admin/jobs" className="text-xs text-[#2563EB] hover:text-[#1D4ED8] font-medium flex items-center gap-1">
+              View all jobs <ArrowRight className="w-3 h-3" />
+            </Link>
           </div>
-          <div className="divide-y divide-gray-50">
-            {data.recentJobs.map((job) => (
-              <Link key={job.id} href={`/admin/jobs/${job.id}`} className="px-5 py-3 flex items-center gap-3 hover:bg-slate-50 transition-colors">
-                <JobIcon status={job.status} />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-slate-900 truncate">{job.clientName}</p>
-                  <p className="text-xs text-slate-400 truncate mt-0.5">{job.jobType} · {formatDate(job.updatedAt)}</p>
+          <div className="divide-y divide-[#F1F5F9]">
+            {data.recentJobs.length === 0 ? (
+              <div className="px-5 py-12 flex flex-col items-center gap-2 text-center">
+                <div className="w-10 h-10 rounded-[10px] bg-[#F1F5F9] flex items-center justify-center">
+                  <Wrench className="w-4 h-4 text-[#94A3B8]" />
                 </div>
-                <StatusBadge status={job.status} />
-              </Link>
-            ))}
-            {data.recentJobs.length === 0 && (
-              <p className="px-5 py-10 text-center text-sm text-slate-400">No jobs yet</p>
+                <p className="text-sm text-[#64748B]">No jobs yet — create your first job</p>
+              </div>
+            ) : (
+              data.recentJobs.map((job) => (
+                <Link
+                  key={job.id}
+                  href={`/admin/jobs/${job.id}`}
+                  className="px-5 py-3.5 flex items-center gap-3 hover:bg-[#F8FAFC] transition-colors"
+                >
+                  <JobStatusIcon status={job.status} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-semibold text-[#0F172A] truncate">{job.clientName}</p>
+                    <p className="text-xs text-[#94A3B8] mt-0.5 truncate">
+                      {job.jobType}
+                      {job.workers.length > 0 && ` · ${job.workers[0].name}`}
+                      {" · "}{timeAgo(job.updatedAt)}
+                    </p>
+                  </div>
+                  <StatusBadge status={job.status} size="xs" />
+                </Link>
+              ))
             )}
           </div>
           {data.recentJobs.length > 0 && (
-            <div className="px-5 py-2.5 border-t border-gray-100 text-center">
-              <Link href="/admin/jobs" className="text-xs text-slate-500 hover:text-blue-600 font-medium transition-colors">Load more ↓</Link>
+            <div className="px-5 py-2.5 border-t border-[#F1F5F9] text-center">
+              <Link href="/admin/jobs" className="text-xs text-[#64748B] hover:text-[#2563EB] font-medium transition-colors">
+                View all jobs →
+              </Link>
             </div>
           )}
         </div>
 
-        {/* Activity & Alerts */}
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="font-semibold text-slate-900">Activity & Alerts</h2>
-            <Link href="/admin/notifications" className="text-xs text-blue-600 hover:text-blue-700 font-medium">View all →</Link>
+        {/* Invoice Summary */}
+        <div className="ff-card overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-[#F1F5F9] flex items-center justify-between">
+            <h2 className="ff-section-title">Invoice Summary</h2>
+            <Link href="/admin/invoices" className="text-xs text-[#2563EB] hover:text-[#1D4ED8] font-medium flex items-center gap-1">
+              View all invoices <ArrowRight className="w-3 h-3" />
+            </Link>
           </div>
-          <div className="divide-y divide-gray-50">
-            {data.recentNotifications.map((n) => (
-              <div key={n.id} className="px-5 py-3 flex items-start gap-3 hover:bg-slate-50 transition-colors">
-                <NotifIcon type={n.type} />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-slate-900 leading-snug">{n.title}</p>
-                  <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">{n.message}</p>
+          <div className="p-5">
+            {/* Donut-style summary */}
+            <div className="flex items-center justify-between gap-6">
+              {/* Visual ring */}
+              <div className="relative w-24 h-24 shrink-0">
+                <svg viewBox="0 0 80 80" className="w-full h-full -rotate-90">
+                  <circle cx="40" cy="40" r="30" fill="none" stroke="#F1F5F9" strokeWidth="12" />
+                  {revenue > 0 && (
+                    <circle
+                      cx="40" cy="40" r="30"
+                      fill="none"
+                      stroke="#16A34A"
+                      strokeWidth="12"
+                      strokeDasharray={`${(revenue / (data.totalInvoicedMonth || 1)) * 188.5} 188.5`}
+                      strokeLinecap="round"
+                    />
+                  )}
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <p className="text-[10px] text-[#64748B] leading-none">KES</p>
+                  <p className="text-sm font-bold text-[#0F172A] leading-tight mt-0.5">
+                    {revenue >= 1000 ? `${(revenue / 1000).toFixed(0)}K` : revenue.toString()}
+                  </p>
+                  <p className="text-[9px] text-[#94A3B8] leading-none mt-0.5">Total Invoiced</p>
                 </div>
-                <span className="text-[10px] text-slate-400 whitespace-nowrap shrink-0 mt-0.5">{timeAgo(n.createdAt)}</span>
               </div>
-            ))}
-            {data.recentNotifications.length === 0 && (
-              <div className="px-5 py-10 flex flex-col items-center gap-2 text-center">
-                <CheckCircle className="w-8 h-8 text-green-400" />
-                <p className="text-sm text-slate-400">All caught up</p>
+
+              {/* Legend */}
+              <div className="flex-1 space-y-2.5">
+                {[
+                  { label: "Total Invoiced", value: formatKES(data.totalInvoicedMonth), color: "#2563EB" },
+                  { label: "Paid",            value: formatKES(revenue),                color: "#16A34A" },
+                  { label: "Outstanding",     value: formatKES(data.outstanding),        color: "#D97706" },
+                  { label: "Overdue",         value: data.overdueCount > 0 ? `${data.overdueCount} invoice${data.overdueCount !== 1 ? "s" : ""}` : "None", color: data.overdueCount > 0 ? "#DC2626" : "#94A3B8" },
+                ].map((row) => (
+                  <div key={row.label} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: row.color }} />
+                      <span className="text-sm text-[#334155]">{row.label}</span>
+                    </div>
+                    <span className="text-sm font-semibold" style={{ color: row.color === "#94A3B8" ? "#94A3B8" : row.color === "#2563EB" ? "#0F172A" : row.color }}>
+                      {row.value}
+                    </span>
+                  </div>
+                ))}
               </div>
-            )}
-          </div>
-          {data.recentNotifications.length > 0 && (
-            <div className="px-5 py-2.5 border-t border-gray-100 text-center">
-              <Link href="/admin/notifications" className="text-xs text-slate-500 hover:text-blue-600 font-medium transition-colors">View full activity log →</Link>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

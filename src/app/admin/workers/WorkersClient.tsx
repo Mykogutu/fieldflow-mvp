@@ -1,12 +1,116 @@
 "use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { MapPin } from "lucide-react";
+import {
+  MapPin, Plus, X, Phone, Mail, Users,
+  CheckCircle2, XCircle, MessageCircle, HardHat,
+} from "lucide-react";
 import { createUser, updateUser, deleteUser } from "@/app/actions/user-actions";
 
-interface Worker { id: string; name: string; phone: string; email: string | null; baseZone: string | null; isActive: boolean }
+interface Worker {
+  id: string; name: string; phone: string; email: string | null;
+  baseZone: string | null; isActive: boolean;
+}
 
-const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
+function Field({ label, name, type = "text", placeholder, required, defaultValue }: {
+  label: string; name: string; type?: string; placeholder?: string; required?: boolean; defaultValue?: string;
+}) {
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-[#475569] mb-1.5">
+        {label}{required && <span className="text-red-400 ml-0.5">*</span>}
+      </label>
+      <input type={type} name={name} placeholder={placeholder} required={required}
+        defaultValue={defaultValue} className="ff-input text-sm" />
+    </div>
+  );
+}
+
+function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-[16px] shadow-2xl w-full max-w-md">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E2E8F0]">
+          <h2 className="font-bold text-[#0F172A]">{title}</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[#F8FAFC] text-[#94A3B8]">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="p-6">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function WorkerAvatar({ name }: { name: string }) {
+  const initials = name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+  const colors = [
+    "bg-blue-100 text-blue-700", "bg-purple-100 text-purple-700",
+    "bg-amber-100 text-amber-700", "bg-green-100 text-green-700",
+    "bg-indigo-100 text-indigo-700", "bg-rose-100 text-rose-700",
+  ];
+  const color = colors[name.charCodeAt(0) % colors.length];
+  return (
+    <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${color}`}>
+      {initials}
+    </div>
+  );
+}
+
+function WorkerCard({ w, onEdit, onDeactivate }: { w: Worker; onEdit: () => void; onDeactivate: () => void }) {
+  return (
+    <div className={`bg-white rounded-[16px] border shadow-card transition-all
+      ${w.isActive ? "border-[#E2E8F0] hover:shadow-card-hover hover:border-[#2563EB]/20" : "border-[#E2E8F0] opacity-60"}`}>
+      <div className="p-5">
+        <div className="flex items-start gap-3 mb-4">
+          <WorkerAvatar name={w.name} />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 mb-0.5">
+              <p className="font-semibold text-[#0F172A] text-sm truncate">{w.name}</p>
+              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-[4px] shrink-0
+                ${w.isActive ? "bg-green-50 text-green-700 border border-green-100" : "bg-[#F1F5F9] text-[#94A3B8] border border-[#E2E8F0]"}`}>
+                {w.isActive ? "Active" : "Inactive"}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-[#64748B]">
+              <Phone className="w-3 h-3 text-[#94A3B8]" />
+              {w.phone}
+            </div>
+            {w.email && (
+              <div className="flex items-center gap-1.5 text-xs text-[#94A3B8] mt-0.5">
+                <Mail className="w-3 h-3" />
+                <span className="truncate">{w.email}</span>
+              </div>
+            )}
+            {w.baseZone && (
+              <div className="flex items-center gap-1.5 text-xs text-[#94A3B8] mt-0.5">
+                <MapPin className="w-3 h-3 shrink-0" />{w.baseZone}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex gap-2 pt-4 border-t border-[#F1F5F9]">
+          <a href={`https://wa.me/${w.phone.replace("+", "")}`}
+            target="_blank" rel="noopener noreferrer"
+            className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-medium py-2 rounded-[8px] bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 transition-colors">
+            <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
+          </a>
+          <button onClick={onEdit}
+            className="flex-1 text-xs font-medium py-2 rounded-[8px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/40 hover:text-[#2563EB] hover:bg-blue-50/30 transition-colors">
+            Edit
+          </button>
+          {w.isActive && (
+            <button onClick={onDeactivate}
+              className="text-xs font-medium py-2 px-3 rounded-[8px] border border-red-200 text-[#DC2626] hover:bg-red-50 transition-colors">
+              <XCircle className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function WorkersClient({ workers, zones }: { workers: Worker[]; zones: string[] }) {
   const router = useRouter();
@@ -14,6 +118,9 @@ export default function WorkersClient({ workers, zones }: { workers: Worker[]; z
   const [editing, setEditing] = useState<Worker | null>(null);
   const [feedback, setFeedback] = useState("");
   const [isPending, startTransition] = useTransition();
+
+  const activeCount   = workers.filter(w => w.isActive).length;
+  const inactiveCount = workers.filter(w => !w.isActive).length;
 
   async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -36,64 +143,99 @@ export default function WorkersClient({ workers, zones }: { workers: Worker[]; z
     });
   }
 
-  async function handleDelete(id: string) {
+  async function handleDeactivate(id: string) {
     if (!confirm("Deactivate this worker?")) return;
-    startTransition(async () => {
-      await deleteUser(id);
-      router.refresh();
-    });
+    startTransition(async () => { await deleteUser(id); router.refresh(); });
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Workers <span className="text-gray-400 text-lg font-normal">({workers.length})</span></h1>
-        <button onClick={() => setShowAdd(true)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium">
-          + Add Worker
+    <div className="space-y-5">
+      {/* ── Page header ─────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="ff-page-title">Workers</h1>
+          <p className="ff-page-desc">{workers.length} total · {activeCount} active</p>
+        </div>
+        <button onClick={() => setShowAdd(true)} className="ff-btn-primary inline-flex items-center gap-2 text-sm px-4 py-2.5">
+          <Plus className="w-4 h-4" /> Add Worker
         </button>
       </div>
 
-      {feedback && <p className="text-sm bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-lg">{feedback}</p>}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {workers.map((w) => (
-          <div key={w.id} className={`bg-white rounded-xl border p-5 space-y-2 ${w.isActive ? "border-gray-200" : "border-gray-100 opacity-60"}`}>
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="font-semibold text-gray-900">{w.name}</p>
-                <p className="text-sm text-gray-500">{w.phone}</p>
-                {w.email && <p className="text-xs text-gray-400">{w.email}</p>}
-              </div>
-              <span className={`text-xs px-2 py-1 rounded-full ${w.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                {w.isActive ? "Active" : "Inactive"}
-              </span>
+      {/* ── Summary metrics ──────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        {[
+          { label: "Total Workers", value: workers.length.toString(), icon: Users,       color: "text-[#2563EB]", bg: "bg-blue-50" },
+          { label: "Active",        value: activeCount.toString(),    icon: CheckCircle2, color: "text-[#16A34A]", bg: "bg-green-50" },
+          { label: "Inactive",      value: inactiveCount.toString(),  icon: XCircle,     color: inactiveCount > 0 ? "text-[#94A3B8]" : "text-[#94A3B8]", bg: "bg-[#F1F5F9]" },
+        ].map(({ label, value, icon: Icon, color, bg }) => (
+          <div key={label} className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card p-4 flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-[10px] ${bg} flex items-center justify-center shrink-0`}>
+              <Icon className={`w-5 h-5 ${color}`} />
             </div>
-            {w.baseZone && (
-              <p className="text-xs text-gray-400 flex items-center gap-1"><MapPin className="w-3 h-3 shrink-0" /> {w.baseZone}</p>
-            )}
-            <div className="flex gap-2 pt-1">
-              <button onClick={() => setEditing(w)} className="flex-1 text-xs border border-gray-200 rounded-lg py-1.5 hover:border-blue-400 text-gray-600">
-                Edit
-              </button>
-              {w.isActive && (
-                <button onClick={() => handleDelete(w.id)} className="flex-1 text-xs border border-red-200 text-red-500 rounded-lg py-1.5 hover:bg-red-50">
-                  Deactivate
-                </button>
-              )}
+            <div>
+              <p className="text-xs text-[#94A3B8] font-medium">{label}</p>
+              <p className={`text-lg font-bold leading-tight ${color}`}>{value}</p>
             </div>
           </div>
         ))}
-        {workers.length === 0 && (
-          <p className="col-span-3 text-center text-gray-400 py-12">No workers yet. Add your first worker above.</p>
-        )}
       </div>
 
+      {/* Feedback */}
+      {feedback && (
+        <div className="flex items-center justify-between text-sm px-4 py-3 rounded-[10px] bg-green-50 text-green-700 border border-green-200">
+          {feedback}
+          <button onClick={() => setFeedback("")}><X className="w-4 h-4" /></button>
+        </div>
+      )}
+
+      {/* ── Workers Grid ─────────────────────────────────────────────────── */}
+      {workers.length === 0 ? (
+        <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card py-20 flex flex-col items-center gap-3">
+          <div className="w-14 h-14 rounded-2xl bg-[#F1F5F9] flex items-center justify-center">
+            <HardHat className="w-6 h-6 text-[#94A3B8]" />
+          </div>
+          <p className="text-sm font-semibold text-[#475569]">No workers yet</p>
+          <button onClick={() => setShowAdd(true)} className="ff-btn-primary text-sm px-4 py-2 inline-flex items-center gap-2">
+            <Plus className="w-4 h-4" /> Add Worker
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {workers.map(w => (
+            <WorkerCard key={w.id} w={w}
+              onEdit={() => setEditing(w)}
+              onDeactivate={() => handleDeactivate(w.id)} />
+          ))}
+        </div>
+      )}
+
+      {/* Add Modal */}
       {showAdd && (
         <Modal title="Add Worker" onClose={() => setShowAdd(false)}>
-          <WorkerForm zones={zones} isPending={isPending} onSubmit={handleCreate} onCancel={() => setShowAdd(false)} />
+          <form onSubmit={handleCreate} className="space-y-3">
+            <input type="hidden" name="role" value="TECHNICIAN" />
+            <Field label="Full Name" name="name" required />
+            <Field label="WhatsApp Phone" name="phone" placeholder="+254…" required />
+            <Field label="Email" name="email" type="email" placeholder="optional" />
+            <div>
+              <label className="block text-xs font-semibold text-[#475569] mb-1.5">Base Zone</label>
+              <select name="baseZone" className="ff-input text-sm">
+                <option value="">No zone</option>
+                {zones.map(z => <option key={z} value={z}>{z}</option>)}
+              </select>
+            </div>
+            <Field label="Password" name="password" type="password" required />
+            <div className="flex gap-2 pt-2">
+              <button type="button" onClick={() => setShowAdd(false)} className="ff-btn-secondary flex-1 text-sm">Cancel</button>
+              <button type="submit" disabled={isPending} className="ff-btn-primary flex-1 text-sm disabled:opacity-50">
+                {isPending ? "Adding…" : "Add Worker"}
+              </button>
+            </div>
+          </form>
         </Modal>
       )}
 
+      {/* Edit Modal */}
       {editing && (
         <Modal title="Edit Worker" onClose={() => setEditing(null)}>
           <form onSubmit={handleUpdate} className="space-y-3">
@@ -101,78 +243,22 @@ export default function WorkersClient({ workers, zones }: { workers: Worker[]; z
             <Field label="Name" name="name" defaultValue={editing.name} />
             <Field label="Email" name="email" type="email" defaultValue={editing.email ?? ""} />
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Zone</label>
-              <select name="baseZone" defaultValue={editing.baseZone ?? ""} className={inputCls}>
+              <label className="block text-xs font-semibold text-[#475569] mb-1.5">Base Zone</label>
+              <select name="baseZone" defaultValue={editing.baseZone ?? ""} className="ff-input text-sm">
                 <option value="">No zone</option>
-                {zones.map((z) => <option key={z} value={z}>{z}</option>)}
+                {zones.map(z => <option key={z} value={z}>{z}</option>)}
               </select>
             </div>
-            <Field label="New Password (leave blank to keep)" name="password" type="password" />
+            <Field label="New Password" name="password" type="password" placeholder="Leave blank to keep current" />
             <div className="flex gap-2 pt-2">
-              <button type="button" onClick={() => setEditing(null)} className="flex-1 border border-gray-300 text-gray-600 rounded-lg py-2 text-sm">Cancel</button>
-              <button type="submit" disabled={isPending} className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium disabled:opacity-50">
-                {isPending ? "Saving..." : "Save Changes"}
+              <button type="button" onClick={() => setEditing(null)} className="ff-btn-secondary flex-1 text-sm">Cancel</button>
+              <button type="submit" disabled={isPending} className="ff-btn-primary flex-1 text-sm disabled:opacity-50">
+                {isPending ? "Saving…" : "Save Changes"}
               </button>
             </div>
           </form>
         </Modal>
       )}
-    </div>
-  );
-}
-
-function WorkerForm({ zones, isPending, onSubmit, onCancel }: {
-  zones: string[]; isPending: boolean;
-  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
-  onCancel: () => void;
-}) {
-  const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
-  return (
-    <form onSubmit={onSubmit} className="space-y-3">
-      <input type="hidden" name="role" value="TECHNICIAN" />
-      <Field label="Full Name" name="name" required />
-      <Field label="WhatsApp Phone" name="phone" placeholder="+254..." required />
-      <Field label="Email (optional)" name="email" type="email" />
-      <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">Base Zone</label>
-        <select name="baseZone" className={inputCls}>
-          <option value="">No zone</option>
-          {zones.map((z) => <option key={z} value={z}>{z}</option>)}
-        </select>
-      </div>
-      <Field label="Password" name="password" type="password" required />
-      <div className="flex gap-2 pt-2">
-        <button type="button" onClick={onCancel} className="flex-1 border border-gray-300 text-gray-600 rounded-lg py-2 text-sm">Cancel</button>
-        <button type="submit" disabled={isPending} className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium disabled:opacity-50">
-          {isPending ? "Adding..." : "Add Worker"}
-        </button>
-      </div>
-    </form>
-  );
-}
-
-function Field({ label, name, type = "text", placeholder, required, defaultValue }: {
-  label: string; name: string; type?: string; placeholder?: string; required?: boolean; defaultValue?: string;
-}) {
-  const cls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
-  return (
-    <div>
-      <label className="block text-xs font-medium text-gray-700 mb-1">{label}</label>
-      <input type={type} name={name} placeholder={placeholder} required={required} defaultValue={defaultValue} className={cls} />
-    </div>
-  );
-}
-
-function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="font-semibold text-gray-900">{title}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
-        </div>
-        <div className="p-6">{children}</div>
-      </div>
     </div>
   );
 }

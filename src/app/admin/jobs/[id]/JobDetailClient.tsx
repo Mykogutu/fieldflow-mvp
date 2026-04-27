@@ -1,73 +1,69 @@
 "use client";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft, Phone, MapPin, Package, User, Clock, CheckCircle,
-  AlertTriangle, FileText, ExternalLink, Calendar, Banknote,
+  AlertTriangle, FileText, Calendar, Banknote,
   X, RefreshCw, CheckCircle2, XCircle, Send, Download,
-  ChevronDown, Clipboard, ShieldCheck, Award, FileCheck,
-  Truck, MessageCircle,
+  Clipboard, ShieldCheck, Award, FileCheck,
+  Truck, MessageCircle, MoreHorizontal, Zap,
+  ChevronDown, Eye, Copy, Image as ImageIcon, CreditCard,
+  Edit3, Flag, RotateCcw, Star, History, Hash, Building2,
+  Navigation,
 } from "lucide-react";
-import { formatKES, formatDate, statusLabel, statusColor } from "@/lib/utils";
+import { formatKES, formatDate, statusLabel } from "@/lib/utils";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
   updateJobStatus, rescheduleJob, reassignJob,
   closeJob, markJobPaid, deleteJob,
 } from "@/app/actions/job-actions";
 
-// ── Event config ──────────────────────────────────────────────────────────────
-const EVENT_CONFIG: Record<string, { label: string; color: string; Icon: React.ElementType }> = {
-  CREATED:           { label: "Job created",               color: "bg-blue-100 text-blue-600",    Icon: FileText      },
-  ASSIGNED:          { label: "Worker assigned",           color: "bg-blue-100 text-blue-600",    Icon: User          },
-  WHATSAPP_SENT:     { label: "Assignment sent via WhatsApp", color: "bg-green-100 text-green-600", Icon: MessageCircle },
-  ACCEPTED:          { label: "Worker accepted",           color: "bg-green-100 text-green-600",  Icon: CheckCircle2  },
-  DECLINED:          { label: "Worker declined",           color: "bg-red-100 text-red-600",      Icon: AlertTriangle },
-  CHECKED_IN:        { label: "Worker arrived on-site",    color: "bg-indigo-100 text-indigo-600", Icon: MapPin       },
-  COMPLETED:         { label: "Worker marked job done",    color: "bg-purple-100 text-purple-600", Icon: CheckCircle2 },
-  OTP_SENT:          { label: "OTP sent to client",        color: "bg-amber-100 text-amber-600",  Icon: Phone        },
-  OTP_VERIFIED:      { label: "Client verified OTP",       color: "bg-green-100 text-green-600",  Icon: CheckCircle2 },
-  VERIFIED:          { label: "Job verified",              color: "bg-green-100 text-green-600",  Icon: CheckCircle2 },
-  INVOICE_GENERATED: { label: "Invoice generated",         color: "bg-slate-100 text-slate-600",  Icon: FileText     },
-  JOB_CARD_GENERATED:{ label: "Job card generated",        color: "bg-slate-100 text-slate-600",  Icon: Clipboard    },
-  WARRANTY_GENERATED:{ label: "Warranty generated",        color: "bg-slate-100 text-slate-600",  Icon: ShieldCheck  },
-  POSTPONED:         { label: "Job postponed",             color: "bg-amber-100 text-amber-600",  Icon: Clock        },
-  RESCHEDULED:       { label: "Job rescheduled",           color: "bg-blue-100 text-blue-600",    Icon: Calendar     },
-  REASSIGNED:        { label: "Reassigned to new worker",  color: "bg-blue-100 text-blue-600",    Icon: RefreshCw    },
-  STATUS_CHANGE:     { label: "Status updated",            color: "bg-slate-100 text-slate-500",  Icon: CheckCircle  },
-  CLOSED:            { label: "Job closed",                color: "bg-slate-100 text-slate-500",  Icon: CheckCircle  },
-  CANCELLED:         { label: "Job cancelled",             color: "bg-red-100 text-red-500",      Icon: XCircle      },
-  ISSUE_REPORTED:    { label: "Issue reported",            color: "bg-red-100 text-red-600",      Icon: AlertTriangle},
-  PAYMENT_RECORDED:  { label: "Payment recorded",          color: "bg-green-100 text-green-600",  Icon: Banknote     },
+// ── Event config ───────────────────────────────────────────────────────────────
+const EVENT_CONFIG: Record<string, { label: string; color: string; dot: string; Icon: React.ElementType }> = {
+  CREATED:            { label: "Job created",                  color: "bg-blue-50 text-blue-600",    dot: "bg-blue-500",    Icon: FileText      },
+  ASSIGNED:           { label: "Worker assigned",              color: "bg-blue-50 text-blue-600",    dot: "bg-blue-500",    Icon: User          },
+  WHATSAPP_SENT:      { label: "Assignment sent via WhatsApp", color: "bg-green-50 text-green-600",  dot: "bg-green-500",   Icon: MessageCircle },
+  ACCEPTED:           { label: "Worker accepted",              color: "bg-green-50 text-green-600",  dot: "bg-green-500",   Icon: CheckCircle2  },
+  DECLINED:           { label: "Worker declined",              color: "bg-red-50 text-red-600",      dot: "bg-red-500",     Icon: AlertTriangle },
+  CHECKED_IN:         { label: "Worker arrived on-site",       color: "bg-indigo-50 text-indigo-600",dot: "bg-indigo-500",  Icon: Navigation    },
+  COMPLETED:          { label: "Worker marked job done",       color: "bg-purple-50 text-purple-700",dot: "bg-purple-500",  Icon: CheckCircle2  },
+  OTP_SENT:           { label: "OTP sent to client",           color: "bg-amber-50 text-amber-600",  dot: "bg-amber-500",   Icon: Phone         },
+  OTP_VERIFIED:       { label: "Client verified OTP",          color: "bg-green-50 text-green-600",  dot: "bg-green-500",   Icon: CheckCircle2  },
+  VERIFIED:           { label: "Job verified",                 color: "bg-green-50 text-green-700",  dot: "bg-green-600",   Icon: CheckCircle2  },
+  INVOICE_GENERATED:  { label: "Invoice generated",            color: "bg-slate-50 text-slate-600",  dot: "bg-slate-400",   Icon: FileText      },
+  JOB_CARD_GENERATED: { label: "Job card generated",           color: "bg-slate-50 text-slate-600",  dot: "bg-slate-400",   Icon: Clipboard     },
+  WARRANTY_GENERATED: { label: "Warranty generated",           color: "bg-slate-50 text-slate-600",  dot: "bg-slate-400",   Icon: ShieldCheck   },
+  POSTPONED:          { label: "Job postponed",                color: "bg-amber-50 text-amber-700",  dot: "bg-amber-500",   Icon: Clock         },
+  RESCHEDULED:        { label: "Job rescheduled",              color: "bg-blue-50 text-blue-600",    dot: "bg-blue-500",    Icon: Calendar      },
+  REASSIGNED:         { label: "Reassigned to new worker",     color: "bg-blue-50 text-blue-600",    dot: "bg-blue-500",    Icon: RefreshCw     },
+  STATUS_CHANGE:      { label: "Status updated",               color: "bg-slate-50 text-slate-500",  dot: "bg-slate-400",   Icon: CheckCircle   },
+  CLOSED:             { label: "Job closed",                   color: "bg-slate-50 text-slate-500",  dot: "bg-slate-400",   Icon: CheckCircle   },
+  CANCELLED:          { label: "Job cancelled",                color: "bg-red-50 text-red-600",      dot: "bg-red-500",     Icon: XCircle       },
+  ISSUE_REPORTED:     { label: "Issue reported",               color: "bg-red-50 text-red-600",      dot: "bg-red-500",     Icon: AlertTriangle },
+  PAYMENT_RECORDED:   { label: "Payment recorded",             color: "bg-green-50 text-green-600",  dot: "bg-green-500",   Icon: Banknote      },
+  NOTE_ADDED:         { label: "Note added",                   color: "bg-slate-50 text-slate-600",  dot: "bg-slate-400",   Icon: Edit3         },
 };
 
 const DOC_CONFIG: Record<string, { label: string; Icon: React.ElementType; color: string; bg: string }> = {
-  INVOICE:                     { label: "Invoice",               Icon: FileText,    color: "text-blue-600",   bg: "bg-blue-50"   },
-  JOB_CARD:                    { label: "Job Card",              Icon: Clipboard,   color: "text-slate-600",  bg: "bg-slate-100" },
-  WARRANTY_CERTIFICATE:        { label: "Warranty Certificate",  Icon: ShieldCheck, color: "text-green-600",  bg: "bg-green-50"  },
-  INSTALLATION_REPORT:         { label: "Installation Report",   Icon: FileCheck,   color: "text-indigo-600", bg: "bg-indigo-50" },
-  SERVICE_REPORT:              { label: "Service Report",        Icon: Award,       color: "text-purple-600", bg: "bg-purple-50" },
-  FUEL_CALIBRATION_REPORT:     { label: "Fuel Calibration",      Icon: Package,     color: "text-amber-600",  bg: "bg-amber-50"  },
-  DEVICE_REPLACEMENT_REPORT:   { label: "Device Replacement",    Icon: Package,     color: "text-orange-600", bg: "bg-orange-50" },
-  CLIENT_CONFIRMATION_RECEIPT: { label: "Client Confirmation",   Icon: CheckCircle2,color: "text-green-600",  bg: "bg-green-50"  },
-  DELIVERY_NOTE:               { label: "Delivery Note",         Icon: Truck,       color: "text-cyan-600",   bg: "bg-cyan-50"   },
-  OTHER:                       { label: "Document",              Icon: FileText,    color: "text-slate-500",  bg: "bg-slate-100" },
+  INVOICE:                     { label: "Invoice",              Icon: FileText,    color: "text-blue-600",   bg: "bg-blue-50"   },
+  JOB_CARD:                    { label: "Job Card",             Icon: Clipboard,   color: "text-slate-600",  bg: "bg-slate-100" },
+  WARRANTY_CERTIFICATE:        { label: "Warranty",             Icon: ShieldCheck, color: "text-green-600",  bg: "bg-green-50"  },
+  INSTALLATION_REPORT:         { label: "Installation Report",  Icon: FileCheck,   color: "text-indigo-600", bg: "bg-indigo-50" },
+  SERVICE_REPORT:               { label: "Service Report",       Icon: Award,       color: "text-purple-600", bg: "bg-purple-50" },
+  FUEL_CALIBRATION_REPORT:     { label: "Fuel Calibration",     Icon: Package,     color: "text-amber-600",  bg: "bg-amber-50"  },
+  DEVICE_REPLACEMENT_REPORT:   { label: "Device Replacement",   Icon: Package,     color: "text-orange-600", bg: "bg-orange-50" },
+  CLIENT_CONFIRMATION_RECEIPT: { label: "Client Confirmation",  Icon: CheckCircle2,color: "text-green-600",  bg: "bg-green-50"  },
+  DELIVERY_NOTE:               { label: "Delivery Note",        Icon: Truck,       color: "text-cyan-600",   bg: "bg-cyan-50"   },
+  OTHER:                       { label: "Document",             Icon: FileText,    color: "text-slate-500",  bg: "bg-slate-100" },
 };
 
-type Worker = { id: string; name: string; phone: string };
-type Asset = {
-  id: string; name: string; assetType: string;
-  identifier: string | null; serialNumber: string | null; registrationNumber: string | null;
-};
-type Invoice = {
-  id: string; invoiceNumber: string; amount: number; status: string;
-  paidAt: Date | null; paymentMethod: string | null; paymentReference: string | null;
-  pdfUrl: string | null;
-};
+// ── Types ──────────────────────────────────────────────────────────────────────
+type Worker   = { id: string; name: string; phone: string };
+type Asset    = { id: string; name: string; assetType: string; identifier: string | null; serialNumber: string | null; registrationNumber: string | null };
+type Invoice  = { id: string; invoiceNumber: string; amount: number; status: string; paidAt: Date | null; paymentMethod: string | null; paymentReference: string | null; pdfUrl: string | null };
 type JobEvent = { id: string; type: string; note: string | null; createdAt: Date };
-type Document = {
-  id: string; type: string; title: string | null; pdfUrl: string | null;
-  sentAt: Date | null; sentVia: string | null; generatedAt: Date;
-};
+type Document = { id: string; type: string; title: string | null; pdfUrl: string | null; sentAt: Date | null; sentVia: string | null; generatedAt: Date };
 
 export type JobDetailData = {
   id: string; jobNumber: string; jobType: string; status: string; priority: string;
@@ -76,15 +72,21 @@ export type JobDetailData = {
   quotedAmount: number | null; finalAmount: number | null;
   otpCode: string | null; verifiedAt: Date | null; completedAt: Date | null;
   postponeReason: string | null;
-  workers: Worker[];
-  invoice: Invoice | null;
-  events: JobEvent[];
-  asset: Asset | null;
-  documents: Document[];
-  allWorkers: Worker[];
+  workers: Worker[]; invoice: Invoice | null; events: JobEvent[];
+  asset: Asset | null; documents: Document[]; allWorkers: Worker[];
 };
 
-// ── Mark Paid Modal ───────────────────────────────────────────────────────────
+type TabId = "timeline" | "documents" | "details" | "notes" | "photos" | "payments";
+
+// ── Small helpers ──────────────────────────────────────────────────────────────
+function priorityBadge(priority: string) {
+  if (priority === "EMERGENCY") return "bg-red-50 text-red-700 border border-red-200";
+  if (priority === "HIGH")      return "bg-orange-50 text-orange-700 border border-orange-200";
+  if (priority === "LOW")       return "bg-slate-50 text-slate-500 border border-slate-200";
+  return "";
+}
+
+// ── Mark Paid Modal ────────────────────────────────────────────────────────────
 function MarkPaidModal({ jobId, onClose }: { jobId: string; onClose: () => void }) {
   const [method, setMethod] = useState("MPESA");
   const [reference, setReference] = useState("");
@@ -94,39 +96,36 @@ function MarkPaidModal({ jobId, onClose }: { jobId: string; onClose: () => void 
   function submit() {
     startTransition(async () => {
       await markJobPaid(jobId, method, reference || undefined);
-      onClose();
-      router.refresh();
+      onClose(); router.refresh();
     });
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white rounded-[16px] shadow-2xl w-full max-w-sm p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-bold text-slate-900">Record Payment</h3>
-          <button onClick={onClose}><X className="w-4 h-4 text-slate-400" /></button>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400"><X className="w-4 h-4" /></button>
         </div>
         <div className="space-y-3">
           <div>
-            <label className="text-xs font-medium text-slate-600 block mb-1">Payment Method</label>
-            <select value={method} onChange={e => setMethod(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <label className="text-xs font-medium text-slate-600 block mb-1.5">Payment Method</label>
+            <select value={method} onChange={e => setMethod(e.target.value)} className="ff-input text-sm">
               {["MPESA", "CASH", "BANK", "CHEQUE", "OTHER"].map(m => <option key={m}>{m}</option>)}
             </select>
           </div>
           {method === "MPESA" && (
             <div>
-              <label className="text-xs font-medium text-slate-600 block mb-1">M-Pesa Reference</label>
+              <label className="text-xs font-medium text-slate-600 block mb-1.5">M-Pesa Reference</label>
               <input value={reference} onChange={e => setReference(e.target.value)}
-                placeholder="e.g. QJ7F8K2L" maxLength={20}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                placeholder="e.g. QJ7F8K2L" maxLength={20} className="ff-input text-sm" />
             </div>
           )}
         </div>
         <div className="flex gap-2 pt-2">
-          <button onClick={onClose} className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-slate-600 hover:bg-slate-50">Cancel</button>
+          <button onClick={onClose} className="ff-btn-secondary flex-1 text-sm">Cancel</button>
           <button onClick={submit} disabled={pending}
-            className="flex-1 bg-green-600 text-white rounded-xl py-2 text-sm font-semibold hover:bg-green-700 disabled:opacity-50">
+            className="flex-1 bg-[#16A34A] hover:bg-green-700 text-white rounded-[10px] py-2 text-sm font-semibold disabled:opacity-50 transition-colors">
             {pending ? "Saving…" : "Mark Paid"}
           </button>
         </div>
@@ -135,7 +134,7 @@ function MarkPaidModal({ jobId, onClose }: { jobId: string; onClose: () => void 
   );
 }
 
-// ── Reschedule Modal ──────────────────────────────────────────────────────────
+// ── Reschedule Modal ───────────────────────────────────────────────────────────
 function RescheduleModal({ jobId, onClose }: { jobId: string; onClose: () => void }) {
   const [date, setDate] = useState("");
   const [pending, startTransition] = useTransition();
@@ -145,27 +144,24 @@ function RescheduleModal({ jobId, onClose }: { jobId: string; onClose: () => voi
     if (!date) return;
     startTransition(async () => {
       await rescheduleJob(jobId, date);
-      onClose();
-      router.refresh();
+      onClose(); router.refresh();
     });
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white rounded-[16px] shadow-2xl w-full max-w-sm p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-bold text-slate-900">Reschedule Job</h3>
-          <button onClick={onClose}><X className="w-4 h-4 text-slate-400" /></button>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400"><X className="w-4 h-4" /></button>
         </div>
         <div>
-          <label className="text-xs font-medium text-slate-600 block mb-1">New Date & Time</label>
-          <input type="datetime-local" value={date} onChange={e => setDate(e.target.value)}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <label className="text-xs font-medium text-slate-600 block mb-1.5">New Date & Time</label>
+          <input type="datetime-local" value={date} onChange={e => setDate(e.target.value)} className="ff-input text-sm" />
         </div>
         <div className="flex gap-2 pt-2">
-          <button onClick={onClose} className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-slate-600 hover:bg-slate-50">Cancel</button>
-          <button onClick={submit} disabled={!date || pending}
-            className="flex-1 bg-blue-600 text-white rounded-xl py-2 text-sm font-semibold hover:bg-blue-700 disabled:opacity-50">
+          <button onClick={onClose} className="ff-btn-secondary flex-1 text-sm">Cancel</button>
+          <button onClick={submit} disabled={!date || pending} className="ff-btn-primary flex-1 text-sm disabled:opacity-50">
             {pending ? "Saving…" : "Reschedule"}
           </button>
         </div>
@@ -174,7 +170,7 @@ function RescheduleModal({ jobId, onClose }: { jobId: string; onClose: () => voi
   );
 }
 
-// ── Reassign Modal ────────────────────────────────────────────────────────────
+// ── Reassign Modal ─────────────────────────────────────────────────────────────
 function ReassignModal({ jobId, allWorkers, currentWorkerId, onClose }: {
   jobId: string; allWorkers: Worker[]; currentWorkerId?: string; onClose: () => void;
 }) {
@@ -186,30 +182,27 @@ function ReassignModal({ jobId, allWorkers, currentWorkerId, onClose }: {
     if (!workerId) return;
     startTransition(async () => {
       await reassignJob(jobId, workerId);
-      onClose();
-      router.refresh();
+      onClose(); router.refresh();
     });
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white rounded-[16px] shadow-2xl w-full max-w-sm p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-bold text-slate-900">Reassign Worker</h3>
-          <button onClick={onClose}><X className="w-4 h-4 text-slate-400" /></button>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400"><X className="w-4 h-4" /></button>
         </div>
         <div>
-          <label className="text-xs font-medium text-slate-600 block mb-1">Select Worker</label>
-          <select value={workerId} onChange={e => setWorkerId(e.target.value)}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <label className="text-xs font-medium text-slate-600 block mb-1.5">Select Worker</label>
+          <select value={workerId} onChange={e => setWorkerId(e.target.value)} className="ff-input text-sm">
             <option value="">Choose worker…</option>
             {allWorkers.map(w => <option key={w.id} value={w.id}>{w.name} · {w.phone}</option>)}
           </select>
         </div>
         <div className="flex gap-2 pt-2">
-          <button onClick={onClose} className="flex-1 border border-gray-200 rounded-xl py-2 text-sm text-slate-600 hover:bg-slate-50">Cancel</button>
-          <button onClick={submit} disabled={!workerId || pending}
-            className="flex-1 bg-blue-600 text-white rounded-xl py-2 text-sm font-semibold hover:bg-blue-700 disabled:opacity-50">
+          <button onClick={onClose} className="ff-btn-secondary flex-1 text-sm">Cancel</button>
+          <button onClick={submit} disabled={!workerId || pending} className="ff-btn-primary flex-1 text-sm disabled:opacity-50">
             {pending ? "Saving…" : "Reassign"}
           </button>
         </div>
@@ -218,17 +211,25 @@ function ReassignModal({ jobId, allWorkers, currentWorkerId, onClose }: {
   );
 }
 
-// ── Admin Actions Panel ───────────────────────────────────────────────────────
-function AdminActions({ job }: { job: JobDetailData }) {
+// ── More Actions Dropdown ──────────────────────────────────────────────────────
+function MoreActionsMenu({ job }: { job: JobDetailData }) {
+  const [open, setOpen] = useState(false);
   const [modal, setModal] = useState<"paid" | "reschedule" | "reassign" | null>(null);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
-  const worker = job.workers[0];
+  const ref = useRef<HTMLDivElement>(null);
+
+  const isDone = job.status === "CLOSED" || job.status === "CANCELLED";
   const inv = job.invoice;
   const isPaid = inv?.status === "PAID";
-  const isClosed = job.status === "CLOSED";
-  const isCancelled = job.status === "CANCELLED";
-  const isDone = isClosed || isCancelled;
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   function doClose() {
     if (!confirm("Close this job?")) return;
@@ -239,416 +240,675 @@ function AdminActions({ job }: { job: JobDetailData }) {
     startTransition(async () => { await deleteJob(job.id); router.refresh(); });
   }
 
+  const items = [
+    ...(inv && !isPaid ? [{ label: "Mark as Paid", icon: Banknote, action: () => { setModal("paid"); setOpen(false); }, color: "text-green-700" }] : []),
+    ...(!isDone ? [{ label: "Reschedule Job", icon: Calendar, action: () => { setModal("reschedule"); setOpen(false); }, color: "text-blue-700" }] : []),
+    ...(!isDone ? [{ label: "Reassign Worker", icon: RefreshCw, action: () => { setModal("reassign"); setOpen(false); }, color: "text-slate-700" }] : []),
+    { label: "Duplicate Job", icon: Copy, action: () => setOpen(false), color: "text-slate-700" },
+    ...((!isDone && (job.status === "VERIFIED" || job.status === "COMPLETED_PENDING_VERIFICATION"))
+      ? [{ label: "Close Job", icon: CheckCircle2, action: () => { doClose(); setOpen(false); }, color: "text-slate-700" }] : []),
+    ...(!isDone ? [{ label: "Cancel Job", icon: XCircle, action: () => { doCancel(); setOpen(false); }, color: "text-red-600" }] : []),
+  ];
+
   return (
     <>
       {modal === "paid" && <MarkPaidModal jobId={job.id} onClose={() => setModal(null)} />}
       {modal === "reschedule" && <RescheduleModal jobId={job.id} onClose={() => setModal(null)} />}
       {modal === "reassign" && (
         <ReassignModal jobId={job.id} allWorkers={job.allWorkers}
-          currentWorkerId={worker?.id} onClose={() => setModal(null)} />
+          currentWorkerId={job.workers[0]?.id} onClose={() => setModal(null)} />
       )}
-
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-gray-100">
-          <h2 className="font-semibold text-slate-900 text-sm">Admin Actions</h2>
-        </div>
-        <div className="p-4 grid grid-cols-2 gap-2">
-          {/* Mark Paid */}
-          {inv && !isPaid && (
-            <button onClick={() => setModal("paid")}
-              className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-green-50 hover:bg-green-100 border border-green-200 text-green-700 text-xs font-medium transition-colors">
-              <Banknote className="w-3.5 h-3.5 shrink-0" /> Mark Paid
-            </button>
-          )}
-
-          {/* Reschedule */}
-          {!isDone && (
-            <button onClick={() => setModal("reschedule")}
-              className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 text-xs font-medium transition-colors">
-              <Calendar className="w-3.5 h-3.5 shrink-0" /> Reschedule
-            </button>
-          )}
-
-          {/* Reassign */}
-          {!isDone && (
-            <button onClick={() => setModal("reassign")}
-              className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium transition-colors">
-              <RefreshCw className="w-3.5 h-3.5 shrink-0" /> Reassign
-            </button>
-          )}
-
-          {/* Send payment reminder */}
-          {inv && !isPaid && (
-            <a href={`https://wa.me/${job.clientPhone.replace("+", "")}?text=${encodeURIComponent(
-              `Hi ${job.clientName}, a friendly reminder that your invoice of ${formatKES(inv.amount)} for ${job.jobType} is pending. Ref: ${inv.invoiceNumber}.`)}`}
-              target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 text-xs font-medium transition-colors">
-              <Send className="w-3.5 h-3.5 shrink-0" /> Payment Reminder
-            </a>
-          )}
-
-          {/* Ask client for OTP */}
-          {job.status === "COMPLETED_PENDING_VERIFICATION" && (
-            <a href={`https://wa.me/${job.clientPhone.replace("+", "")}?text=${encodeURIComponent(
-              `Hi ${job.clientName}, your ${job.jobType} service has been completed. Please share your service code with the technician to confirm. Thank you!`)}`}
-              target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 text-xs font-medium transition-colors">
-              <Phone className="w-3.5 h-3.5 shrink-0" /> Ask for OTP
-            </a>
-          )}
-
-          {/* Ask worker for update */}
-          {worker && !isDone && (
-            <a href={`https://wa.me/${worker.phone.replace("+", "")}?text=${encodeURIComponent(
-              `Hi ${worker.name}, please send an update on the ${job.jobType} job for ${job.clientName}.`)}`}
-              target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 text-xs font-medium transition-colors">
-              <MessageCircle className="w-3.5 h-3.5 shrink-0" /> Ask Worker
-            </a>
-          )}
-
-          {/* Close job */}
-          {!isDone && (job.status === "VERIFIED" || job.status === "COMPLETED_PENDING_VERIFICATION") && (
-            <button onClick={doClose} disabled={pending}
-              className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium transition-colors disabled:opacity-50">
-              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> Close Job
-            </button>
-          )}
-
-          {/* Cancel job */}
-          {!isDone && (
-            <button onClick={doCancel} disabled={pending}
-              className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 text-xs font-medium transition-colors disabled:opacity-50">
-              <XCircle className="w-3.5 h-3.5 shrink-0" /> Cancel Job
-            </button>
-          )}
-        </div>
+      <div ref={ref} className="relative">
+        <button onClick={() => setOpen(v => !v)}
+          className="ff-btn-secondary inline-flex items-center gap-1.5 text-sm px-3 py-2">
+          <MoreHorizontal className="w-4 h-4" /> More
+          <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+        </button>
+        {open && (
+          <div className="absolute right-0 top-full mt-1.5 bg-white rounded-[12px] border border-[#E2E8F0] shadow-card py-1 z-30 w-48 min-w-max">
+            {items.map((item, i) => (
+              <button key={i} onClick={item.action}
+                className={`w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium hover:bg-[#F8FAFC] transition-colors ${item.color}`}>
+                <item.icon className="w-3.5 h-3.5 shrink-0" />
+                {item.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </>
   );
 }
 
-// ── Documents Panel ───────────────────────────────────────────────────────────
-function DocumentsPanel({ docs, clientPhone, clientName }: {
-  docs: Document[]; clientPhone: string; clientName: string;
-}) {
-  if (docs.length === 0) return null;
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-      <div className="px-5 py-3.5 border-b border-gray-100">
-        <h2 className="font-semibold text-slate-900">Documents</h2>
-        <p className="text-xs text-slate-400 mt-0.5">{docs.length} document{docs.length !== 1 ? "s" : ""} generated</p>
+// ── Timeline Tab ───────────────────────────────────────────────────────────────
+function TimelineTab({ events }: { events: JobEvent[] }) {
+  if (events.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
+          <History className="w-5 h-5 text-slate-400" />
+        </div>
+        <p className="text-sm font-medium text-slate-500">No timeline events yet</p>
+        <p className="text-xs text-slate-400 mt-1">Events will appear here as the job progresses</p>
       </div>
-      <div className="divide-y divide-gray-50">
-        {docs.map(doc => {
-          const cfg = DOC_CONFIG[doc.type] ?? DOC_CONFIG.OTHER;
-          const waText = `Hi ${clientName}, please find your ${cfg.label} attached.`;
-          return (
-            <div key={doc.id} className="px-5 py-3.5 flex items-center gap-3">
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${cfg.bg}`}>
-                <cfg.Icon className={`w-4 h-4 ${cfg.color}`} />
+    );
+  }
+
+  return (
+    <div className="p-5">
+      <div className="relative">
+        {/* Vertical line */}
+        <div className="absolute left-[17px] top-2 bottom-2 w-px bg-[#E2E8F0]" />
+        <div className="space-y-4">
+          {[...events].reverse().map((ev, i) => {
+            const cfg = EVENT_CONFIG[ev.type] ?? {
+              label: ev.type.replace(/_/g, " ").toLowerCase(),
+              color: "bg-slate-50 text-slate-500",
+              dot: "bg-slate-300",
+              Icon: Clock,
+            };
+            const isLatest = i === 0;
+            return (
+              <div key={ev.id} className="relative flex items-start gap-3.5 pl-10">
+                {/* Dot */}
+                <div className={`absolute left-0 w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${cfg.color}`}>
+                  <cfg.Icon className="w-4 h-4" />
+                </div>
+                {/* Content */}
+                <div className="flex-1 min-w-0 pb-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-semibold text-[#0F172A] capitalize leading-tight">{cfg.label}</p>
+                    {isLatest && (
+                      <span className="text-[10px] bg-[#2563EB] text-white px-2 py-0.5 rounded-full font-semibold">Latest</span>
+                    )}
+                  </div>
+                  {ev.note && <p className="text-xs text-[#64748B] mt-0.5 leading-relaxed">{ev.note}</p>}
+                  <p className="text-[10px] text-[#94A3B8] mt-1">{formatDate(ev.createdAt)}</p>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-800 truncate">{doc.title ?? cfg.label}</p>
-                <p className="text-[10px] text-slate-400 mt-0.5">{formatDate(doc.generatedAt)}{doc.sentAt ? ` · Sent ${doc.sentVia ?? ""}` : ""}</p>
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0">
-                {doc.pdfUrl && (
-                  <a href={doc.pdfUrl} target="_blank" rel="noopener noreferrer"
-                    className="p-1.5 rounded-lg border border-gray-200 text-slate-500 hover:border-blue-300 hover:text-blue-600 transition-colors" title="Download PDF">
-                    <Download className="w-3.5 h-3.5" />
-                  </a>
-                )}
-                <a href={`https://wa.me/${clientPhone.replace("+", "")}?text=${encodeURIComponent(waText)}`}
-                  target="_blank" rel="noopener noreferrer"
-                  className="p-1.5 rounded-lg border border-gray-200 text-slate-500 hover:border-green-300 hover:text-green-600 transition-colors" title="Send via WhatsApp">
-                  <MessageCircle className="w-3.5 h-3.5" />
-                </a>
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
 }
 
-// ── Main Component ────────────────────────────────────────────────────────────
+// ── Documents Tab ──────────────────────────────────────────────────────────────
+function DocumentsTab({ docs, clientPhone, clientName }: {
+  docs: Document[]; clientPhone: string; clientName: string;
+}) {
+  if (docs.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
+          <FileText className="w-5 h-5 text-slate-400" />
+        </div>
+        <p className="text-sm font-medium text-slate-500">No documents yet</p>
+        <p className="text-xs text-slate-400 mt-1">Documents are auto-generated when the job is verified</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-5 space-y-2">
+      {docs.map(doc => {
+        const cfg = DOC_CONFIG[doc.type] ?? DOC_CONFIG.OTHER;
+        const waText = `Hi ${clientName}, please find your ${cfg.label} attached.`;
+        return (
+          <div key={doc.id}
+            className="flex items-center gap-3 p-3.5 rounded-[12px] border border-[#E2E8F0] hover:border-[#2563EB]/30 hover:bg-blue-50/30 transition-colors group">
+            <div className={`w-10 h-10 rounded-[10px] flex items-center justify-center shrink-0 ${cfg.bg}`}>
+              <cfg.Icon className={`w-4.5 h-4.5 ${cfg.color}`} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-[#0F172A] truncate">{doc.title ?? cfg.label}</p>
+              <p className="text-[10px] text-[#94A3B8] mt-0.5">
+                {formatDate(doc.generatedAt)}
+                {doc.sentAt ? ` · Sent via ${doc.sentVia ?? "WhatsApp"}` : " · Not sent yet"}
+              </p>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+              {doc.pdfUrl && (
+                <a href={doc.pdfUrl} target="_blank" rel="noopener noreferrer"
+                  className="p-2 rounded-[8px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/50 hover:text-[#2563EB] hover:bg-blue-50 transition-colors" title="Download">
+                  <Download className="w-3.5 h-3.5" />
+                </a>
+              )}
+              <a href={`https://wa.me/${clientPhone.replace("+", "")}?text=${encodeURIComponent(waText)}`}
+                target="_blank" rel="noopener noreferrer"
+                className="p-2 rounded-[8px] border border-[#E2E8F0] text-[#64748B] hover:border-green-400 hover:text-green-600 hover:bg-green-50 transition-colors" title="Send via WhatsApp">
+                <MessageCircle className="w-3.5 h-3.5" />
+              </a>
+              {doc.pdfUrl && (
+                <a href={doc.pdfUrl} target="_blank" rel="noopener noreferrer"
+                  className="p-2 rounded-[8px] border border-[#E2E8F0] text-[#64748B] hover:border-[#E2E8F0] hover:bg-[#F8FAFC] transition-colors" title="View">
+                  <Eye className="w-3.5 h-3.5" />
+                </a>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Details Tab ────────────────────────────────────────────────────────────────
+function DetailsTab({ job }: { job: JobDetailData }) {
+  return (
+    <div className="p-5 space-y-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {[
+          { label: "Job Type", value: job.jobType, icon: Hash },
+          { label: "Status", value: statusLabel(job.status), icon: Flag },
+          { label: "Priority", value: job.priority, icon: Zap },
+          { label: "Location", value: job.location ?? "—", icon: MapPin },
+          { label: "Zone", value: job.zone ?? "—", icon: Navigation },
+          { label: "Scheduled", value: job.scheduledDate ? formatDate(job.scheduledDate) : "—", icon: Calendar },
+          { label: "Quoted Amount", value: job.quotedAmount ? formatKES(job.quotedAmount) : "—", icon: Banknote },
+          { label: "Final Amount", value: job.invoice ? formatKES(job.invoice.amount) : job.finalAmount ? formatKES(job.finalAmount) : "—", icon: CreditCard },
+        ].map(({ label, value, icon: Icon }) => (
+          <div key={label} className="flex items-start gap-3 p-3.5 rounded-[12px] bg-[#F8FAFC] border border-[#E2E8F0]">
+            <div className="w-8 h-8 rounded-[8px] bg-white border border-[#E2E8F0] flex items-center justify-center shrink-0">
+              <Icon className="w-3.5 h-3.5 text-[#64748B]" />
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold text-[#94A3B8] uppercase tracking-wide">{label}</p>
+              <p className="text-sm font-medium text-[#0F172A] mt-0.5">{value}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Notes Tab ─────────────────────────────────────────────────────────────────
+function NotesTab({ job }: { job: JobDetailData }) {
+  const hasNotes = job.description || job.postponeReason;
+  if (!hasNotes) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
+          <Edit3 className="w-5 h-5 text-slate-400" />
+        </div>
+        <p className="text-sm font-medium text-slate-500">No notes yet</p>
+        <p className="text-xs text-slate-400 mt-1">Job notes and postponement reasons appear here</p>
+      </div>
+    );
+  }
+  return (
+    <div className="p-5 space-y-4">
+      {job.description && (
+        <div className="p-4 rounded-[12px] bg-[#F8FAFC] border border-[#E2E8F0]">
+          <p className="text-[10px] font-semibold text-[#94A3B8] uppercase tracking-wide mb-2">Job Description</p>
+          <p className="text-sm text-[#334155] whitespace-pre-wrap leading-relaxed">{job.description}</p>
+        </div>
+      )}
+      {job.postponeReason && (
+        <div className="p-4 rounded-[12px] bg-amber-50 border border-amber-200">
+          <p className="text-[10px] font-semibold text-amber-600 uppercase tracking-wide mb-2">Postponement Reason</p>
+          <p className="text-sm text-amber-800 leading-relaxed">{job.postponeReason}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Photos Tab ────────────────────────────────────────────────────────────────
+function PhotosTab() {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
+        <ImageIcon className="w-5 h-5 text-slate-400" />
+      </div>
+      <p className="text-sm font-medium text-slate-500">No photos yet</p>
+      <p className="text-xs text-slate-400 mt-1">Workers can attach before/after photos via WhatsApp</p>
+    </div>
+  );
+}
+
+// ── Payments Tab ──────────────────────────────────────────────────────────────
+function PaymentsTab({ job }: { job: JobDetailData }) {
+  const inv = job.invoice;
+  if (!inv) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
+          <CreditCard className="w-5 h-5 text-slate-400" />
+        </div>
+        <p className="text-sm font-medium text-slate-500">No invoice yet</p>
+        <p className="text-xs text-slate-400 mt-1">Invoice is auto-generated when the worker reports completion</p>
+      </div>
+    );
+  }
+  const isPaid = inv.status === "PAID";
+  return (
+    <div className="p-5 space-y-4">
+      {/* Invoice summary */}
+      <div className="p-4 rounded-[12px] border border-[#E2E8F0] bg-white">
+        <div className="flex items-start justify-between mb-3">
+          <div>
+            <p className="text-[10px] font-semibold text-[#94A3B8] uppercase tracking-wide">Invoice</p>
+            <p className="font-mono text-sm font-bold text-[#0F172A] mt-0.5">{inv.invoiceNumber}</p>
+          </div>
+          <StatusBadge status={inv.status} />
+        </div>
+        <p className="text-3xl font-bold text-[#0F172A]">{formatKES(inv.amount)}</p>
+        {inv.paidAt && (
+          <p className="text-xs text-[#64748B] mt-2">Paid {formatDate(inv.paidAt)}</p>
+        )}
+        {inv.paymentMethod && (
+          <p className="text-xs text-[#64748B] mt-1">
+            via {inv.paymentMethod}{inv.paymentReference ? ` · ${inv.paymentReference}` : ""}
+          </p>
+        )}
+      </div>
+      {/* Actions */}
+      <div className="flex gap-2 flex-wrap">
+        {inv.pdfUrl && (
+          <a href={inv.pdfUrl} target="_blank" rel="noopener noreferrer"
+            className="ff-btn-secondary inline-flex items-center gap-1.5 text-sm px-3 py-2">
+            <Download className="w-3.5 h-3.5" /> Download Invoice
+          </a>
+        )}
+        <a href={`https://wa.me/${job.clientPhone.replace("+", "")}?text=${encodeURIComponent(
+          `Hi ${job.clientName}, your invoice ${inv.invoiceNumber} for ${formatKES(inv.amount)} is ready.`)}`}
+          target="_blank" rel="noopener noreferrer"
+          className="ff-btn-secondary inline-flex items-center gap-1.5 text-sm px-3 py-2">
+          <Send className="w-3.5 h-3.5" /> Send Invoice
+        </a>
+        {!isPaid && (
+          <a href={`https://wa.me/${job.clientPhone.replace("+", "")}?text=${encodeURIComponent(
+            `Hi ${job.clientName}, a gentle reminder that your invoice of ${formatKES(inv.amount)} (${inv.invoiceNumber}) is still pending. Thank you!`)}`}
+            target="_blank" rel="noopener noreferrer"
+            className="ff-btn-secondary inline-flex items-center gap-1.5 text-sm px-3 py-2 text-amber-700 border-amber-300 hover:bg-amber-50">
+            <AlertTriangle className="w-3.5 h-3.5" /> Send Reminder
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Admin Quick Actions ────────────────────────────────────────────────────────
+function AdminQuickActions({ job }: { job: JobDetailData }) {
+  const [modal, setModal] = useState<"paid" | "reschedule" | "reassign" | null>(null);
+  const worker = job.workers[0];
+  const inv = job.invoice;
+  const isPaid = inv?.status === "PAID";
+  const isDone = job.status === "CLOSED" || job.status === "CANCELLED";
+
+  const actions: { label: string; icon: React.ElementType; color: string; bg: string; border: string; href?: string; onClick?: () => void; disabled?: boolean }[] = [
+    ...(inv ? [{
+      label: "Send Invoice",
+      icon: FileText,
+      color: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200",
+      href: `https://wa.me/${job.clientPhone.replace("+", "")}?text=${encodeURIComponent(`Hi ${job.clientName}, please find your invoice ${inv.invoiceNumber} of ${formatKES(inv.amount)} attached.`)}`,
+    }] : []),
+    {
+      label: "Send Job Card",
+      icon: Clipboard,
+      color: "text-slate-700", bg: "bg-slate-50", border: "border-slate-200",
+      href: `https://wa.me/${job.clientPhone.replace("+", "")}?text=${encodeURIComponent(`Hi ${job.clientName}, your job card for ${job.jobType} is ready.`)}`,
+    },
+    {
+      label: "Send Warranty",
+      icon: ShieldCheck,
+      color: "text-green-700", bg: "bg-green-50", border: "border-green-200",
+      href: `https://wa.me/${job.clientPhone.replace("+", "")}?text=${encodeURIComponent(`Hi ${job.clientName}, your warranty certificate is attached.`)}`,
+    },
+    {
+      label: "Service Report",
+      icon: Award,
+      color: "text-purple-700", bg: "bg-purple-50", border: "border-purple-200",
+      href: `https://wa.me/${job.clientPhone.replace("+", "")}?text=${encodeURIComponent(`Hi ${job.clientName}, your service report is attached.`)}`,
+    },
+    ...(inv && !isPaid ? [{
+      label: "Payment Reminder",
+      icon: Banknote,
+      color: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200",
+      href: `https://wa.me/${job.clientPhone.replace("+", "")}?text=${encodeURIComponent(`Hi ${job.clientName}, reminder: your invoice of ${formatKES(inv.amount)} is still pending. Ref: ${inv.invoiceNumber}.`)}`,
+    }] : []),
+    ...(!isDone ? [{
+      label: "Reschedule",
+      icon: Calendar,
+      color: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200",
+      onClick: () => setModal("reschedule"),
+    }] : []),
+    ...(!isDone ? [{
+      label: "Reassign",
+      icon: RefreshCw,
+      color: "text-slate-700", bg: "bg-slate-50", border: "border-slate-200",
+      onClick: () => setModal("reassign"),
+    }] : []),
+    ...(worker ? [{
+      label: "Ask Worker",
+      icon: MessageCircle,
+      color: "text-indigo-700", bg: "bg-indigo-50", border: "border-indigo-200",
+      href: `https://wa.me/${worker.phone.replace("+", "")}?text=${encodeURIComponent(`Hi ${worker.name}, please send an update on the ${job.jobType} job for ${job.clientName}.`)}`,
+    }] : []),
+    {
+      label: "View Client",
+      icon: Building2,
+      color: "text-slate-700", bg: "bg-slate-50", border: "border-slate-200",
+      href: `/admin/clients?search=${encodeURIComponent(job.clientPhone)}`,
+    },
+    ...(job.asset ? [{
+      label: "View Asset",
+      icon: Package,
+      color: "text-slate-700", bg: "bg-slate-50", border: "border-slate-200",
+      href: `/admin/assets/${job.asset.id}`,
+    }] : []),
+    {
+      label: "Duplicate Job",
+      icon: Copy,
+      color: "text-slate-700", bg: "bg-slate-50", border: "border-slate-200",
+      onClick: () => {},
+    },
+  ];
+
+  return (
+    <>
+      {modal === "reschedule" && <RescheduleModal jobId={job.id} onClose={() => setModal(null)} />}
+      {modal === "reassign" && (
+        <ReassignModal jobId={job.id} allWorkers={job.allWorkers}
+          currentWorkerId={worker?.id} onClose={() => setModal(null)} />
+      )}
+      <div className="grid grid-cols-2 gap-2 p-4">
+        {actions.map((action, i) => {
+          const content = (
+            <div className="flex items-center gap-2">
+              <div className={`w-7 h-7 rounded-[8px] flex items-center justify-center shrink-0 ${action.bg} ${action.border} border`}>
+                <action.icon className={`w-3.5 h-3.5 ${action.color}`} />
+              </div>
+              <span className="text-xs font-medium text-[#334155] leading-tight">{action.label}</span>
+            </div>
+          );
+          const cls = `flex items-center gap-2 px-3 py-2.5 rounded-[10px] border border-[#E2E8F0] hover:border-[#2563EB]/30 hover:bg-blue-50/30 transition-colors text-left ${action.disabled ? "opacity-40 cursor-not-allowed" : ""}`;
+
+          if (action.href) {
+            return (
+              <a key={i} href={action.href} target={action.href.startsWith("http") ? "_blank" : undefined}
+                rel={action.href.startsWith("http") ? "noopener noreferrer" : undefined}
+                className={cls}>{content}</a>
+            );
+          }
+          return (
+            <button key={i} onClick={action.onClick} disabled={action.disabled} className={cls}>
+              {content}
+            </button>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+// ── Main Component ─────────────────────────────────────────────────────────────
 export default function JobDetailClient({ job }: { job: JobDetailData }) {
+  const [activeTab, setActiveTab] = useState<TabId>("timeline");
   const worker = job.workers[0] ?? null;
   const inv = job.invoice;
   const isPaid = inv?.status === "PAID";
   const isVerified = job.status === "VERIFIED" || job.status === "CLOSED";
+  const noteCount = (job.description ? 1 : 0) + (job.postponeReason ? 1 : 0);
+
+  const tabs: { id: TabId; label: string; count?: number }[] = [
+    { id: "timeline", label: "Timeline", count: job.events.length },
+    { id: "documents", label: "Documents", count: job.documents.length },
+    { id: "details", label: "Job Details" },
+    { id: "notes", label: "Notes", count: noteCount || undefined },
+    { id: "photos", label: "Photos" },
+    { id: "payments", label: "Payments" },
+  ];
 
   return (
-    <div className="space-y-5 max-w-6xl">
+    <div className="space-y-5 max-w-7xl">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-xs text-slate-400">
-        <Link href="/admin/jobs" className="hover:text-blue-600 flex items-center gap-1">
+      <div className="flex items-center gap-2 text-xs text-[#94A3B8]">
+        <Link href="/admin/jobs"
+          className="hover:text-[#2563EB] flex items-center gap-1 font-medium transition-colors">
           <ArrowLeft className="w-3.5 h-3.5" /> Jobs
         </Link>
         <span>/</span>
-        <span className="font-mono text-slate-600">{job.jobNumber}</span>
+        <span className="font-mono text-[#64748B] font-medium">{job.jobNumber}</span>
       </div>
 
-      {/* Header card */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
+      {/* ── Header Card ────────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card p-5 sm:p-6">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="min-w-0">
-            <div className="flex items-center gap-3 flex-wrap mb-1">
-              <span className="font-mono text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded">{job.jobNumber}</span>
-              <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${statusColor(job.status)}`}>
-                {statusLabel(job.status)}
+            <div className="flex items-center gap-2 flex-wrap mb-2">
+              <span className="font-mono text-xs bg-[#F8FAFC] border border-[#E2E8F0] text-[#64748B] px-2.5 py-1 rounded-[6px] font-medium">
+                {job.jobNumber}
               </span>
+              <StatusBadge status={job.status} />
               {job.priority !== "NORMAL" && (
-                <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
-                  job.priority === "EMERGENCY" ? "bg-red-100 text-red-700" :
-                  job.priority === "HIGH" ? "bg-orange-100 text-orange-700" :
-                  "bg-slate-100 text-slate-500"}`}>{job.priority}</span>
+                <span className={`text-xs px-2.5 py-1 rounded-[6px] font-semibold ${priorityBadge(job.priority)}`}>
+                  {job.priority === "EMERGENCY" ? "🚨 Emergency" : job.priority === "HIGH" ? "⚠️ High Priority" : job.priority}
+                </span>
               )}
             </div>
-            <h1 className="text-2xl font-bold text-slate-900">{job.jobType}</h1>
-            {job.scheduledDate && (
-              <p className="text-sm text-slate-500 flex items-center gap-1.5 mt-1">
-                <Calendar className="w-3.5 h-3.5" /> Scheduled: {formatDate(job.scheduledDate)}
-              </p>
-            )}
+            <h1 className="text-2xl font-bold text-[#0F172A] leading-tight">{job.jobType}</h1>
+            <div className="flex items-center gap-4 mt-2 flex-wrap">
+              {job.scheduledDate && (
+                <p className="text-xs text-[#64748B] flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-[#94A3B8]" /> {formatDate(job.scheduledDate)}
+                </p>
+              )}
+              {job.location && (
+                <p className="text-xs text-[#64748B] flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-[#94A3B8]" /> {job.location}
+                </p>
+              )}
+              {job.completedAt && (
+                <p className="text-xs text-[#64748B] flex items-center gap-1.5">
+                  <CheckCircle className="w-3.5 h-3.5 text-[#94A3B8]" /> Completed {formatDate(job.completedAt)}
+                </p>
+              )}
+            </div>
           </div>
-          {/* Quick action buttons */}
-          <div className="flex flex-wrap gap-2 shrink-0">
-            <a href={`https://wa.me/${job.clientPhone.replace("+", "")}?text=${encodeURIComponent(
-              `Hi ${job.clientName}, following up on your ${job.jobType} job.`)}`}
+          {/* Action buttons */}
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            <a href={`https://wa.me/${job.clientPhone.replace("+", "")}?text=${encodeURIComponent(`Hi ${job.clientName}, following up on your ${job.jobType}.`)}`}
               target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 bg-white border border-gray-200 text-slate-700 px-3.5 py-2 rounded-xl text-sm font-medium hover:border-green-400 hover:text-green-700 transition-colors">
+              className="ff-btn-secondary inline-flex items-center gap-1.5 text-sm px-3 py-2">
               <Phone className="w-4 h-4" /> Message Client
             </a>
-            {worker && (
-              <a href={`https://wa.me/${worker.phone.replace("+", "")}`}
-                target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 bg-white border border-gray-200 text-slate-700 px-3.5 py-2 rounded-xl text-sm font-medium hover:border-blue-400 hover:text-blue-700 transition-colors">
-                <User className="w-4 h-4" /> Message Worker
-              </a>
-            )}
+            <MoreActionsMenu job={job} />
           </div>
         </div>
 
-        {/* Quick stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-gray-100">
-          <QuickStat label="Quoted" value={job.quotedAmount ? formatKES(job.quotedAmount) : "—"} />
-          <QuickStat
-            label="Final Amount"
-            value={inv ? formatKES(inv.amount) : job.finalAmount ? formatKES(job.finalAmount) : "—"}
-          />
-          <QuickStat
-            label="Payment"
-            value={inv?.status === "PARTIALLY_PAID" ? "Partial" : (inv?.status ?? "—")}
-            badge={inv ? (isPaid ? "bg-green-100 text-green-700" : inv.status === "PARTIALLY_PAID" ? "bg-amber-100 text-amber-700" : "bg-yellow-100 text-yellow-700") : ""}
-          />
-          <QuickStat
-            label="OTP"
-            value={isVerified ? "Verified" : job.otpCode ? "Sent" : "Not sent"}
-            badge={isVerified ? "bg-green-100 text-green-700" : job.otpCode ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"}
-          />
+        {/* ── 5 Info Cards Row ─────────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-5 pt-5 border-t border-[#E2E8F0]">
+          {/* Client */}
+          <div className="p-3.5 rounded-[12px] bg-[#F8FAFC] border border-[#E2E8F0] space-y-1">
+            <p className="text-[10px] font-semibold text-[#94A3B8] uppercase tracking-wide flex items-center gap-1">
+              <User className="w-3 h-3" /> Client
+            </p>
+            <p className="text-sm font-semibold text-[#0F172A] truncate">{job.clientName}</p>
+            <p className="text-[11px] text-[#64748B] truncate">{job.clientPhone}</p>
+          </div>
+
+          {/* Worker */}
+          <div className="p-3.5 rounded-[12px] bg-[#F8FAFC] border border-[#E2E8F0] space-y-1">
+            <p className="text-[10px] font-semibold text-[#94A3B8] uppercase tracking-wide flex items-center gap-1">
+              <User className="w-3 h-3" /> Worker
+            </p>
+            {worker ? (
+              <>
+                <p className="text-sm font-semibold text-[#0F172A] truncate">{worker.name}</p>
+                <p className="text-[11px] text-[#64748B] truncate">{worker.phone}</p>
+              </>
+            ) : (
+              <p className="text-xs text-[#94A3B8]">Not assigned</p>
+            )}
+          </div>
+
+          {/* Asset */}
+          <div className="p-3.5 rounded-[12px] bg-[#F8FAFC] border border-[#E2E8F0] space-y-1">
+            <p className="text-[10px] font-semibold text-[#94A3B8] uppercase tracking-wide flex items-center gap-1">
+              <Package className="w-3 h-3" /> Asset
+            </p>
+            {job.asset ? (
+              <>
+                <p className="text-sm font-semibold text-[#0F172A] truncate">{job.asset.name}</p>
+                <p className="text-[11px] text-[#64748B] truncate">{job.asset.assetType}</p>
+              </>
+            ) : (
+              <p className="text-xs text-[#94A3B8]">No asset linked</p>
+            )}
+          </div>
+
+          {/* Payment */}
+          <div className="p-3.5 rounded-[12px] bg-[#F8FAFC] border border-[#E2E8F0] space-y-1">
+            <p className="text-[10px] font-semibold text-[#94A3B8] uppercase tracking-wide flex items-center gap-1">
+              <Banknote className="w-3 h-3" /> Payment
+            </p>
+            {inv ? (
+              <>
+                <p className="text-sm font-bold text-[#0F172A]">{formatKES(inv.amount)}</p>
+                <StatusBadge status={inv.status} size="xs" />
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-bold text-[#0F172A]">{job.quotedAmount ? formatKES(job.quotedAmount) : "—"}</p>
+                <p className="text-[11px] text-[#94A3B8]">No invoice yet</p>
+              </>
+            )}
+          </div>
+
+          {/* Verification */}
+          <div className="p-3.5 rounded-[12px] bg-[#F8FAFC] border border-[#E2E8F0] space-y-1">
+            <p className="text-[10px] font-semibold text-[#94A3B8] uppercase tracking-wide flex items-center gap-1">
+              <ShieldCheck className="w-3 h-3" /> Verification
+            </p>
+            {isVerified ? (
+              <>
+                <p className="text-sm font-semibold text-[#16A34A]">Verified ✓</p>
+                {job.verifiedAt && <p className="text-[11px] text-[#64748B]">{formatDate(job.verifiedAt)}</p>}
+              </>
+            ) : job.otpCode ? (
+              <>
+                <p className="text-sm font-semibold text-[#D97706]">OTP Sent</p>
+                <p className="text-[11px] text-[#64748B]">Awaiting client</p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-semibold text-[#94A3B8]">Not started</p>
+                <p className="text-[11px] text-[#94A3B8]">No OTP yet</p>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Left column */}
-        <div className="space-y-4">
-          {/* Client card */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Client</h3>
-            <p className="font-semibold text-slate-900">{job.clientName}</p>
-            <div className="space-y-1.5 mt-2 text-sm text-slate-500">
-              <p className="flex items-center gap-2"><Phone className="w-3.5 h-3.5 text-slate-400" />{job.clientPhone}</p>
-              {job.location && <p className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5 text-slate-400" />{job.location}</p>}
-              {job.zone && <p className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5 text-slate-400" />{job.zone}</p>}
-            </div>
-            <div className="flex gap-2 mt-4">
-              <a href={`https://wa.me/${job.clientPhone.replace("+", "")}`}
-                target="_blank" rel="noopener noreferrer"
-                className="flex-1 text-center text-xs bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 rounded-lg py-1.5 font-medium transition-colors">
-                WhatsApp
-              </a>
-              <Link href={`/admin/clients?search=${encodeURIComponent(job.clientPhone)}`}
-                className="flex-1 text-center text-xs bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 rounded-lg py-1.5 font-medium transition-colors">
-                View Client
-              </Link>
+      {/* ── Body: Main Tabs + Right Panel ──────────────────────────────────── */}
+      <div className="flex gap-5 items-start">
+        {/* Left: Tab Card */}
+        <div className="flex-1 bg-white rounded-[16px] border border-[#E2E8F0] shadow-card overflow-hidden min-w-0">
+          {/* Tab Bar */}
+          <div className="border-b border-[#E2E8F0] px-4 overflow-x-auto scrollbar-none">
+            <div className="flex gap-0 min-w-max">
+              {tabs.map(tab => (
+                <button key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`ff-tab ${activeTab === tab.id ? "ff-tab-active" : "ff-tab-inactive"}`}>
+                  {tab.label}
+                  {tab.count !== undefined && tab.count > 0 && (
+                    <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-semibold
+                      ${activeTab === tab.id ? "bg-[#2563EB]/15 text-[#2563EB]" : "bg-[#F1F5F9] text-[#64748B]"}`}>
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Worker card */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Assigned Worker</h3>
-            {worker ? (
-              <>
-                <p className="font-semibold text-slate-900">{worker.name}</p>
-                <p className="text-sm text-slate-500 flex items-center gap-2 mt-1.5">
-                  <Phone className="w-3.5 h-3.5 text-slate-400" />{worker.phone}
-                </p>
-                <span className={`mt-2 inline-flex text-xs px-2 py-0.5 rounded-full font-medium ${statusColor(job.status)}`}>
-                  {statusLabel(job.status)}
-                </span>
-                {job.events.length > 0 && (
-                  <p className="text-[10px] text-slate-400 mt-1.5">
-                    Last action: {formatDate(job.events[job.events.length - 1].createdAt)}
-                  </p>
-                )}
-                <a href={`https://wa.me/${worker.phone.replace("+", "")}`}
-                  target="_blank" rel="noopener noreferrer"
-                  className="mt-3 block text-center text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded-lg py-1.5 font-medium transition-colors">
-                  WhatsApp Worker
-                </a>
-              </>
-            ) : (
-              <p className="text-sm text-slate-400">No worker assigned yet.</p>
-            )}
-          </div>
-
-          {/* Asset card */}
-          {job.asset && (
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Linked Asset</h3>
-              <p className="font-semibold text-slate-900">{job.asset.name}</p>
-              <p className="text-xs text-slate-500 mt-0.5">{job.asset.assetType}</p>
-              <div className="space-y-1 mt-2 text-xs text-slate-500">
-                {job.asset.serialNumber && <p>SN: {job.asset.serialNumber}</p>}
-                {job.asset.registrationNumber && <p>Reg: {job.asset.registrationNumber}</p>}
-                {job.asset.identifier && <p className="flex items-center gap-1.5"><Package className="w-3 h-3" />{job.asset.identifier}</p>}
-              </div>
-              <Link href={`/admin/assets/${job.asset.id}`}
-                className="mt-4 block text-center text-xs bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 rounded-lg py-1.5 font-medium transition-colors">
-                View Asset →
-              </Link>
-            </div>
+          {/* Tab Content */}
+          {activeTab === "timeline" && <TimelineTab events={job.events} />}
+          {activeTab === "documents" && (
+            <DocumentsTab docs={job.documents} clientPhone={job.clientPhone} clientName={job.clientName} />
           )}
-
-          {/* Invoice card */}
-          {inv && (
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Invoice</h3>
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-sm text-slate-700">{inv.invoiceNumber}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${isPaid ? "bg-green-100 text-green-700" : inv.status === "PARTIALLY_PAID" ? "bg-amber-100 text-amber-700" : "bg-yellow-100 text-yellow-700"}`}>
-                  {inv.status === "PARTIALLY_PAID" ? "Partial" : inv.status}
-                </span>
-              </div>
-              <p className="text-2xl font-bold text-slate-900 mt-2">{formatKES(inv.amount)}</p>
-              {inv.paidAt && <p className="text-xs text-slate-400 mt-1">Paid {formatDate(inv.paidAt)}</p>}
-              {inv.paymentMethod && <p className="text-xs text-slate-500 mt-1">via {inv.paymentMethod}{inv.paymentReference ? ` · ${inv.paymentReference}` : ""}</p>}
-              <a href={`/api/invoices/${inv.id}/pdf`} target="_blank" rel="noopener noreferrer"
-                className="mt-3 flex items-center justify-center gap-1.5 text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded-lg py-1.5 font-medium transition-colors">
-                <Download className="w-3.5 h-3.5" /> Download PDF
-              </a>
-            </div>
-          )}
-
-          {/* Admin Actions */}
-          <AdminActions job={job} />
-
-          {/* Notes */}
-          {job.description && (
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Job Notes</h3>
-              <p className="text-sm text-slate-700 whitespace-pre-wrap">{job.description}</p>
-            </div>
-          )}
-          {job.postponeReason && (
-            <div className="bg-amber-50 rounded-xl border border-amber-200 p-5">
-              <h3 className="text-xs font-semibold text-amber-600 uppercase tracking-wide mb-2">Postpone Reason</h3>
-              <p className="text-sm text-amber-800">{job.postponeReason}</p>
-            </div>
-          )}
+          {activeTab === "details" && <DetailsTab job={job} />}
+          {activeTab === "notes" && <NotesTab job={job} />}
+          {activeTab === "photos" && <PhotosTab />}
+          {activeTab === "payments" && <PaymentsTab job={job} />}
         </div>
 
-        {/* Right: Timeline + Documents Panel + OTP */}
-        <div className="lg:col-span-2 space-y-5">
-          {/* Timeline */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-gray-100">
-              <h2 className="font-semibold text-slate-900">Job Timeline</h2>
-              <p className="text-xs text-slate-400 mt-0.5">Full audit trail of all events</p>
+        {/* Right Panel */}
+        <div className="hidden xl:flex flex-col gap-4 w-72 shrink-0">
+          {/* Admin Actions */}
+          <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card overflow-hidden">
+            <div className="px-4 py-3.5 border-b border-[#E2E8F0] flex items-center gap-2">
+              <div className="w-7 h-7 rounded-[8px] bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-center">
+                <Zap className="w-3.5 h-3.5 text-[#64748B]" />
+              </div>
+              <h3 className="text-sm font-semibold text-[#0F172A]">Quick Actions</h3>
             </div>
-            <div className="p-5">
-              {job.events.length === 0 ? (
-                <p className="text-sm text-slate-400 text-center py-6">No timeline events yet.</p>
-              ) : (
-                <div className="relative">
-                  <div className="absolute left-4 top-0 bottom-0 w-px bg-gray-100" />
-                  <div className="space-y-5">
-                    {job.events.map((ev, i) => {
-                      const cfg = EVENT_CONFIG[ev.type] ?? {
-                        label: ev.type.replace(/_/g, " ").toLowerCase(),
-                        color: "bg-slate-100 text-slate-500",
-                        Icon: Clock,
-                      };
-                      const { label, color, Icon } = cfg;
-                      return (
-                        <div key={ev.id} className="relative flex items-start gap-4 pl-9">
-                          <div className={`absolute left-0 w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${color}`}>
-                            <Icon className="w-3.5 h-3.5" />
-                          </div>
-                          <div className="min-w-0 flex-1 pt-0.5">
-                            <p className="text-sm font-medium text-slate-900 capitalize">{label}</p>
-                            {ev.note && <p className="text-xs text-slate-500 mt-0.5">{ev.note}</p>}
-                            <p className="text-[10px] text-slate-400 mt-1">{formatDate(ev.createdAt)}</p>
-                          </div>
-                          {i === job.events.length - 1 && (
-                            <span className="shrink-0 text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded-full font-semibold">Latest</span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
+            <AdminQuickActions job={job} />
           </div>
 
-          {/* Documents Panel */}
-          <DocumentsPanel docs={job.documents} clientPhone={job.clientPhone} clientName={job.clientName} />
-
-          {/* OTP status */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h2 className="font-semibold text-slate-900 mb-3">Client Verification</h2>
+          {/* OTP Verification Status */}
+          <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card p-4">
+            <h3 className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wide mb-3">Client Verification</h3>
             {isVerified ? (
-              <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
-                <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
+              <div className="flex items-start gap-3 p-3 rounded-[10px] bg-green-50 border border-green-200">
+                <CheckCircle className="w-4.5 h-4.5 text-[#16A34A] shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-semibold text-green-800">Service confirmed by client</p>
-                  {job.verifiedAt && <p className="text-xs text-green-600 mt-0.5">Verified at {formatDate(job.verifiedAt)}</p>}
+                  <p className="text-xs font-semibold text-green-800">Service confirmed</p>
+                  {job.verifiedAt && (
+                    <p className="text-[10px] text-green-600 mt-0.5">{formatDate(job.verifiedAt)}</p>
+                  )}
+                  {job.otpCode && (
+                    <p className="text-[10px] text-green-600 mt-0.5 font-mono">Code: {job.otpCode}</p>
+                  )}
                 </div>
               </div>
             ) : job.otpCode ? (
-              <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-                <Clock className="w-5 h-5 text-amber-600 shrink-0" />
+              <div className="flex items-start gap-3 p-3 rounded-[10px] bg-amber-50 border border-amber-200">
+                <Clock className="w-4.5 h-4.5 text-[#D97706] shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-semibold text-amber-800">OTP sent — waiting for client</p>
-                  <p className="text-xs text-amber-600 mt-0.5">Client has received a 6-digit verification code</p>
+                  <p className="text-xs font-semibold text-amber-800">OTP sent to client</p>
+                  <p className="text-[10px] text-amber-600 mt-0.5">Waiting for confirmation</p>
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
-                <AlertTriangle className="w-4 h-4 text-slate-400 shrink-0" />
-                <p className="text-sm text-slate-500">No OTP generated yet. Worker needs to report job completion.</p>
+              <div className="flex items-start gap-3 p-3 rounded-[10px] bg-[#F8FAFC] border border-[#E2E8F0]">
+                <AlertTriangle className="w-4.5 h-4.5 text-[#94A3B8] shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-medium text-[#64748B]">No OTP generated yet</p>
+                  <p className="text-[10px] text-[#94A3B8] mt-0.5">Worker needs to report completion first</p>
+                </div>
               </div>
             )}
           </div>
+
+          {/* Worker Card */}
+          {worker && (
+            <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card p-4">
+              <h3 className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wide mb-3">Assigned Worker</h3>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-full bg-[#2563EB] flex items-center justify-center text-white text-sm font-bold shrink-0">
+                  {worker.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-[#0F172A] truncate">{worker.name}</p>
+                  <p className="text-xs text-[#64748B] truncate">{worker.phone}</p>
+                </div>
+              </div>
+              <a href={`https://wa.me/${worker.phone.replace("+", "")}`}
+                target="_blank" rel="noopener noreferrer"
+                className="w-full ff-btn-secondary inline-flex items-center justify-center gap-1.5 text-xs py-2">
+                <MessageCircle className="w-3.5 h-3.5" /> WhatsApp Worker
+              </a>
+            </div>
+          )}
         </div>
       </div>
-    </div>
-  );
-}
-
-function QuickStat({ label, value, badge }: { label: string; value: string; badge?: string }) {
-  return (
-    <div>
-      <p className="text-xs text-slate-400">{label}</p>
-      {badge ? (
-        <span className={`inline-flex mt-1 text-xs px-2.5 py-1 rounded-full font-semibold ${badge}`}>{value}</span>
-      ) : (
-        <p className="text-base font-bold text-slate-900 mt-0.5">{value}</p>
-      )}
     </div>
   );
 }

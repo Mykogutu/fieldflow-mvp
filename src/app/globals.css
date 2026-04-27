@@ -3,7 +3,135 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --primary:        #2563EB;
+    --primary-hover:  #1D4ED8;
+    --primary-dark:   #1E40AF;
+
+    --sidebar-bg:       #071B3A;
+    --sidebar-secondary:#0B2550;
+    --sidebar-active:   #2563EB;
+    --sidebar-text:     #CBD5E1;
+    --sidebar-section:  #94A3B8;
+
+    --app-bg:     #F8FAFC;
+    --card-bg:    #FFFFFF;
+    --card-border:#E2E8F0;
+
+    --text-strong: #0F172A;
+    --text-normal: #334155;
+    --text-muted:  #64748B;
+    --text-faint:  #94A3B8;
+
+    --success:        #16A34A;
+    --success-bg:     #DCFCE7;
+    --success-border: #BBF7D0;
+
+    --warning:        #D97706;
+    --warning-bg:     #FEF3C7;
+    --warning-border: #FDE68A;
+
+    --danger:         #DC2626;
+    --danger-bg:      #FEE2E2;
+    --danger-border:  #FECACA;
+
+    --info:           #2563EB;
+    --info-bg:        #DBEAFE;
+    --info-border:    #BFDBFE;
+
+    --purple:         #7C3AED;
+    --purple-bg:      #EDE9FE;
+    --purple-border:  #DDD6FE;
+  }
+
   body {
-    @apply bg-gray-50 text-gray-900 antialiased;
+    background-color: #F8FAFC;
+    color: #334155;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Smooth scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #E2E8F0 transparent;
+  }
+  *::-webkit-scrollbar { width: 5px; height: 5px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb { background-color: #E2E8F0; border-radius: 99px; }
+}
+
+@layer components {
+  /* ── Shared card ──────────────────────────────────────────────── */
+  .ff-card {
+    @apply bg-white rounded-[16px] border border-[#E2E8F0] shadow-card;
+  }
+  .ff-card-hover {
+    @apply ff-card hover:shadow-card-hover transition-shadow duration-150;
+  }
+
+  /* ── Shared inputs ────────────────────────────────────────────── */
+  .ff-input {
+    @apply w-full bg-white border border-[#E2E8F0] rounded-[10px] px-3.5 py-2.5 text-sm text-[#0F172A]
+           placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#2563EB]
+           focus:border-[#2563EB] transition-colors;
+  }
+
+  /* ── Shared buttons ───────────────────────────────────────────── */
+  .ff-btn-primary {
+    @apply inline-flex items-center gap-2 bg-[#2563EB] text-white px-4 py-2.5
+           rounded-[10px] text-sm font-semibold hover:bg-[#1D4ED8]
+           transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .ff-btn-secondary {
+    @apply inline-flex items-center gap-2 bg-white border border-[#E2E8F0] text-[#334155]
+           px-4 py-2.5 rounded-[10px] text-sm font-medium hover:bg-[#F8FAFC]
+           hover:border-[#CBD5E1] transition-colors;
+  }
+  .ff-btn-danger {
+    @apply inline-flex items-center gap-2 bg-white border border-[#FECACA] text-[#DC2626]
+           px-4 py-2.5 rounded-[10px] text-sm font-medium hover:bg-[#FEE2E2] transition-colors;
+  }
+  .ff-btn-ghost {
+    @apply inline-flex items-center gap-1.5 text-[#64748B] hover:text-[#0F172A]
+           px-3 py-2 rounded-[8px] text-sm font-medium hover:bg-[#F1F5F9] transition-colors;
+  }
+
+  /* ── Table ────────────────────────────────────────────────────── */
+  .ff-table th {
+    @apply text-left px-4 py-3 text-[11px] font-semibold text-[#64748B] uppercase tracking-wide bg-[#F8FAFC] border-b border-[#E2E8F0];
+  }
+  .ff-table td {
+    @apply px-4 py-3.5 text-sm text-[#334155] border-b border-[#F1F5F9];
+  }
+  .ff-table tr:last-child td {
+    @apply border-b-0;
+  }
+  .ff-table tr:hover td {
+    @apply bg-[#F8FAFC];
+  }
+
+  /* ── Page header ──────────────────────────────────────────────── */
+  .ff-page-title {
+    @apply text-[26px] font-bold text-[#0F172A] leading-tight;
+  }
+  .ff-page-desc {
+    @apply text-sm text-[#64748B] mt-0.5;
+  }
+
+  /* ── Section header ───────────────────────────────────────────── */
+  .ff-section-title {
+    @apply text-[15px] font-semibold text-[#0F172A];
+  }
+
+  /* ── Filter pill tabs ─────────────────────────────────────────── */
+  .ff-tab-active {
+    @apply bg-[#2563EB] text-white border border-[#2563EB] font-semibold;
+  }
+  .ff-tab-inactive {
+    @apply bg-white border border-[#E2E8F0] text-[#334155] hover:bg-[#F8FAFC] hover:border-[#CBD5E1];
+  }
+  .ff-tab {
+    @apply px-3.5 py-1.5 rounded-[8px] text-sm font-medium transition-colors cursor-pointer;
   }
 }

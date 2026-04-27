@@ -52,57 +52,61 @@ export default async function AdminLayout({
     .slice(0, 2)
     .toUpperCase();
 
-  const companyName = companyNameSetting?.value ?? "FieldFlow";
+  const companyName  = companyNameSetting?.value ?? "FieldFlow";
   const industryLabel = INDUSTRY_LABELS[industrySetting?.value ?? ""] ?? "Field Service Platform";
 
   return (
-    <div className="flex h-screen bg-slate-50">
-      {/* ── Desktop sidebar (hidden on mobile) ── */}
-      <aside className="hidden lg:flex w-56 bg-white border-r border-gray-100 flex-col shrink-0">
+    <div className="flex h-screen bg-[#F8FAFC]">
+
+      {/* ── Desktop sidebar ───────────────────────────────────────── */}
+      <aside className="hidden lg:flex w-56 bg-[#071B3A] flex-col shrink-0 shadow-sidebar">
         {/* Workspace identity */}
-        <div className="px-4 py-4 border-b border-gray-100">
+        <div className="px-4 py-4 border-b border-[#0B2550]">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 bg-[#2563EB] rounded-[10px] flex items-center justify-center shrink-0">
               <span className="text-white text-xs font-extrabold tracking-tight">
                 {companyName.charAt(0).toUpperCase()}
               </span>
             </div>
             <div className="min-w-0">
-              <p className="font-bold text-slate-900 text-sm leading-tight truncate">{companyName}</p>
-              <p className="text-[10px] text-slate-400 leading-tight truncate">{industryLabel}</p>
+              <p className="font-bold text-white text-sm leading-tight truncate">{companyName}</p>
+              <p className="text-[10px] text-[#94A3B8] leading-tight truncate">{industryLabel}</p>
             </div>
           </div>
         </div>
 
-        {/* Nav */}
+        {/* Navigation */}
         <NavLinks />
 
-        {/* Logout */}
-        <div className="p-3 border-t border-gray-100">
+        {/* Sign Out */}
+        <div className="p-3 border-t border-[#0B2550]">
           <LogoutButton />
         </div>
       </aside>
 
-      {/* ── Main column ── */}
+      {/* ── Main column ───────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        {/* Header */}
-        <header className="bg-white border-b border-gray-100 px-4 lg:px-5 py-2.5 flex items-center gap-3 shrink-0">
-          {/* Mobile hamburger + mobile drawer */}
+
+        {/* Top bar */}
+        <header className="bg-white border-b border-[#E2E8F0] px-4 lg:px-5 py-2.5 flex items-center gap-3 shrink-0">
+          {/* Mobile hamburger */}
           <MobileSidebar companyName={companyName} industryLabel={industryLabel} />
 
-          {/* Page title */}
+          {/* Page title — from route metadata */}
           <PageHeader />
 
-          {/* Search — hidden on small screens */}
+          {/* Global search */}
           <div className="flex-1 max-w-sm mx-2 hidden md:block">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94A3B8]" />
               <input
                 type="text"
-                placeholder="Search jobs, workers, assets..."
-                className="w-full pl-8 pr-14 py-1.5 text-xs bg-slate-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 placeholder:text-slate-400"
+                placeholder="Search jobs, clients, assets, workers..."
+                className="w-full pl-8 pr-12 py-1.5 text-xs bg-[#F8FAFC] border border-[#E2E8F0] rounded-[10px]
+                           focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB]
+                           text-[#334155] placeholder:text-[#94A3B8] transition-colors"
               />
-              <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] font-mono bg-white border border-gray-200 text-slate-400 px-1.5 py-0.5 rounded">
+              <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] font-mono bg-white border border-[#E2E8F0] text-[#94A3B8] px-1.5 py-0.5 rounded">
                 ⌘K
               </kbd>
             </div>
@@ -115,17 +119,17 @@ export default async function AdminLayout({
           </div>
         </header>
 
-        {/* Page content — extra bottom padding on mobile for the bottom nav bar */}
+        {/* Page content */}
         <main className="flex-1 overflow-y-auto p-4 pb-24 lg:p-6 lg:pb-6">
           {children}
         </main>
 
         {/* Footer — desktop only */}
-        <footer className="hidden lg:flex bg-white border-t border-gray-100 px-6 py-2 items-center justify-between shrink-0">
-          <p className="text-[10px] text-slate-400">© 2026 FieldFlow. All rights reserved.</p>
+        <footer className="hidden lg:flex bg-white border-t border-[#E2E8F0] px-6 py-2 items-center justify-between shrink-0">
+          <p className="text-[10px] text-[#94A3B8]">© 2026 FieldFlow. All rights reserved.</p>
           <div className="flex items-center gap-4">
             {["Help", "Privacy", "Terms"].map((l) => (
-              <a key={l} href="#" className="text-[10px] text-slate-400 hover:text-slate-600 transition-colors">
+              <a key={l} href="#" className="text-[10px] text-[#94A3B8] hover:text-[#64748B] transition-colors">
                 {l}
               </a>
             ))}
@@ -133,10 +137,10 @@ export default async function AdminLayout({
         </footer>
       </div>
 
-      {/* ── Mobile bottom navigation bar ── */}
+      {/* Mobile bottom navigation */}
       <BottomNav />
 
-      {/* ── AI Copilot floating widget (hidden on /admin/ai) ── */}
+      {/* AI Copilot floating button — hidden on /admin/ai and /admin/settings */}
       <AICopilotFloat />
     </div>
   );

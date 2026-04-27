@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Search, Plus, MapPin, Phone, Building2, User, X,
-  ChevronRight, Briefcase, AlertCircle, Calendar,
+  ChevronRight, AlertCircle, MoreHorizontal, Mail,
+  Briefcase, TrendingUp, Users, DollarSign,
 } from "lucide-react";
 import { createClient, updateClient, deactivateClient } from "@/app/actions/client-actions";
 import { formatKES, formatDate } from "@/lib/utils";
@@ -18,16 +19,217 @@ interface Client {
   lastJobDate: Date | null;
 }
 
-const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
+// ── Field helper ──────────────────────────────────────────────────────────────
+function Field({ label, name, type = "text", placeholder, required, defaultValue }: {
+  label: string; name: string; type?: string; placeholder?: string; required?: boolean; defaultValue?: string;
+}) {
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-[#475569] mb-1.5">{label}{required && <span className="text-red-400 ml-0.5">*</span>}</label>
+      <input type={type} name={name} placeholder={placeholder} required={required} defaultValue={defaultValue}
+        className="ff-input text-sm" />
+    </div>
+  );
+}
 
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-[16px] shadow-2xl w-full max-w-md max-h-[90dvh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E2E8F0] shrink-0">
+          <h2 className="font-bold text-[#0F172A]">{title}</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[#F8FAFC] text-[#94A3B8] hover:text-[#475569] transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="p-6 overflow-y-auto">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+// ── Client Form ───────────────────────────────────────────────────────────────
+function ClientForm({ isPending, onSubmit, onCancel, defaultValues }: {
+  isPending: boolean;
+  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+  onCancel: () => void;
+  defaultValues?: Partial<Client>;
+}) {
+  return (
+    <form onSubmit={onSubmit} className="space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Full Name" name="name" required defaultValue={defaultValues?.name} />
+        <Field label="Phone" name="phone" placeholder="+254…" required defaultValue={defaultValues?.phone} />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Email" name="email" type="email" placeholder="optional" defaultValue={defaultValues?.email ?? ""} />
+        <Field label="Company" name="company" placeholder="optional" defaultValue={defaultValues?.company ?? ""} />
+      </div>
+      <Field label="Location" name="location" placeholder="Nairobi, Karen…" defaultValue={defaultValues?.location ?? ""} />
+      {!defaultValues && <Field label="Notes" name="address" placeholder="Optional notes…" />}
+      <div>
+        <label className="block text-xs font-semibold text-[#475569] mb-1.5">Client Type</label>
+        <select name="type" defaultValue={defaultValues?.type ?? "INDIVIDUAL"}
+          className="ff-input text-sm">
+          <option value="INDIVIDUAL">Individual</option>
+          <option value="COMPANY">Company</option>
+        </select>
+      </div>
+      <div className="flex gap-2 pt-3">
+        <button type="button" onClick={onCancel} className="ff-btn-secondary flex-1 text-sm">Cancel</button>
+        <button type="submit" disabled={isPending} className="ff-btn-primary flex-1 text-sm disabled:opacity-50">
+          {isPending ? "Saving…" : defaultValues ? "Save Changes" : "Add Client"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+// ── Client Avatar ─────────────────────────────────────────────────────────────
+function ClientAvatar({ name, size = "md" }: { name: string; size?: "sm" | "md" | "lg" }) {
+  const initials = name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+  const colors = [
+    "bg-blue-100 text-blue-700", "bg-purple-100 text-purple-700",
+    "bg-green-100 text-green-700", "bg-amber-100 text-amber-700",
+    "bg-indigo-100 text-indigo-700", "bg-pink-100 text-pink-700",
+  ];
+  const color = colors[name.charCodeAt(0) % colors.length];
+  const sz = size === "lg" ? "w-14 h-14 text-lg" : size === "sm" ? "w-8 h-8 text-xs" : "w-10 h-10 text-sm";
+  return (
+    <div className={`${sz} rounded-full flex items-center justify-center font-bold shrink-0 ${color}`}>
+      {initials}
+    </div>
+  );
+}
+
+// ── Client Card ───────────────────────────────────────────────────────────────
+function ClientCard({ c, onEdit }: { c: Client; onEdit: () => void }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  return (
+    <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card hover:shadow-card-hover hover:border-[#2563EB]/20 transition-all group">
+      <div className="p-5">
+        {/* Top row */}
+        <div className="flex items-start gap-3 mb-4">
+          <ClientAvatar name={c.name} />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 mb-0.5">
+              <Link href={`/admin/clients/${c.id}`}
+                className="font-semibold text-[#0F172A] hover:text-[#2563EB] truncate text-sm transition-colors">
+                {c.name}
+              </Link>
+              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-[4px] shrink-0
+                ${c.type === "COMPANY" ? "bg-blue-50 text-blue-700 border border-blue-100" : "bg-[#F1F5F9] text-[#64748B] border border-[#E2E8F0]"}`}>
+                {c.type === "COMPANY" ? "Co." : "Ind."}
+              </span>
+            </div>
+            {c.company && (
+              <p className="text-[11px] text-[#94A3B8] flex items-center gap-1 truncate">
+                <Building2 className="w-3 h-3 shrink-0" />{c.company}
+              </p>
+            )}
+          </div>
+          {/* More menu */}
+          <div className="relative shrink-0">
+            <button onClick={() => setMenuOpen(v => !v)}
+              className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-[#F8FAFC] text-[#94A3B8] hover:text-[#475569] transition-all">
+              <MoreHorizontal className="w-4 h-4" />
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 top-full mt-1 bg-white rounded-[10px] border border-[#E2E8F0] shadow-card py-1 z-20 w-36">
+                <Link href={`/admin/clients/${c.id}`}
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-2 px-3 py-1.5 text-xs text-[#334155] hover:bg-[#F8FAFC]">
+                  <User className="w-3.5 h-3.5" /> View Profile
+                </Link>
+                <button onClick={() => { setMenuOpen(false); onEdit(); }}
+                  className="flex items-center gap-2 px-3 py-1.5 text-xs text-[#334155] hover:bg-[#F8FAFC] w-full text-left">
+                  <Briefcase className="w-3.5 h-3.5" /> Edit
+                </button>
+                <a href={`https://wa.me/${c.phone.replace("+", "")}`}
+                  target="_blank" rel="noopener noreferrer"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-2 px-3 py-1.5 text-xs text-[#334155] hover:bg-[#F8FAFC]">
+                  <Phone className="w-3.5 h-3.5" /> WhatsApp
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Contact info */}
+        <div className="space-y-1.5">
+          <p className="text-xs text-[#64748B] flex items-center gap-2">
+            <Phone className="w-3 h-3 text-[#94A3B8] shrink-0" />{c.phone}
+          </p>
+          {c.email && (
+            <p className="text-xs text-[#64748B] flex items-center gap-2 truncate">
+              <Mail className="w-3 h-3 text-[#94A3B8] shrink-0" />{c.email}
+            </p>
+          )}
+          {c.location && (
+            <p className="text-xs text-[#64748B] flex items-center gap-2 truncate">
+              <MapPin className="w-3 h-3 text-[#94A3B8] shrink-0" />{c.location}
+            </p>
+          )}
+        </div>
+
+        {/* Stats row */}
+        <div className="grid grid-cols-3 gap-0 mt-4 pt-4 border-t border-[#F1F5F9]">
+          <div className="text-center border-r border-[#F1F5F9]">
+            <p className="text-[10px] text-[#94A3B8] mb-0.5">Jobs</p>
+            <p className="text-sm font-bold text-[#0F172A]">{c.jobCount}</p>
+          </div>
+          <div className="text-center border-r border-[#F1F5F9]">
+            <p className="text-[10px] text-[#94A3B8] mb-0.5">Balance</p>
+            <p className={`text-sm font-bold ${c.outstanding > 0 ? "text-[#DC2626]" : "text-[#16A34A]"}`}>
+              {c.outstanding > 0 ? formatKES(c.outstanding) : "Clear"}
+            </p>
+          </div>
+          <div className="text-center">
+            <p className="text-[10px] text-[#94A3B8] mb-0.5">Last Job</p>
+            <p className="text-xs font-medium text-[#334155]">
+              {c.lastJobDate ? formatDate(c.lastJobDate) : "—"}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer action */}
+      <div className="border-t border-[#F1F5F9] px-5 py-3 flex items-center justify-between bg-[#FAFBFC] rounded-b-[16px]">
+        {c.outstanding > 0 && (
+          <span className="flex items-center gap-1 text-[10px] text-[#DC2626] font-medium">
+            <AlertCircle className="w-3 h-3" /> Unpaid balance
+          </span>
+        )}
+        {!c.isActive && (
+          <span className="text-[10px] text-[#94A3B8]">Inactive</span>
+        )}
+        {c.outstanding === 0 && c.isActive && <span />}
+        <Link href={`/admin/clients/${c.id}`}
+          className="inline-flex items-center gap-1 text-xs text-[#2563EB] font-semibold hover:text-[#1D4ED8] transition-colors">
+          View <ChevronRight className="w-3.5 h-3.5" />
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Component ─────────────────────────────────────────────────────────────
 export default function ClientsClient({ clients, total }: { clients: Client[]; total: number }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
-  const [activeFilter, setActiveFilter] = useState<"all" | "unpaid">("all");
+  const [activeFilter, setActiveFilter] = useState<"all" | "company" | "individual" | "unpaid">("all");
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<Client | null>(null);
   const [feedback, setFeedback] = useState<{ type: "ok" | "error"; msg: string } | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const companyCount    = clients.filter(c => c.type === "COMPANY").length;
+  const individualCount = clients.filter(c => c.type === "INDIVIDUAL").length;
+  const unpaidCount     = clients.filter(c => c.outstanding > 0).length;
+  const totalRevenue    = clients.reduce((s, c) => s + (c.jobCount > 0 ? c.jobCount * 5000 : 0), 0); // rough proxy
+  const totalOutstanding = clients.reduce((s, c) => s + c.outstanding, 0);
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -37,7 +239,7 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
     router.push(`/admin/clients?${sp.toString()}`);
   }
 
-  function handleFilter(f: "all" | "unpaid") {
+  function handleFilter(f: typeof activeFilter) {
     setActiveFilter(f);
     const sp = new URLSearchParams();
     if (search) sp.set("search", search);
@@ -52,7 +254,7 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
       const res = await createClient(fd);
       if (res.error) { setFeedback({ type: "error", msg: res.error }); return; }
       setShowAdd(false);
-      setFeedback({ type: "ok", msg: "Client added." });
+      setFeedback({ type: "ok", msg: "Client added successfully." });
       router.refresh();
     });
   }
@@ -65,6 +267,7 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
       const res = await updateClient(fd);
       if (res.error) { setFeedback({ type: "error", msg: res.error }); return; }
       setEditing(null);
+      setFeedback({ type: "ok", msg: "Client updated." });
       router.refresh();
     });
   }
@@ -74,223 +277,138 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
     startTransition(async () => { await deactivateClient(id); router.refresh(); });
   }
 
-  const unpaidCount = clients.filter(c => c.outstanding > 0).length;
+  const tabs: { key: typeof activeFilter; label: string; count?: number }[] = [
+    { key: "all", label: "All Clients", count: total },
+    { key: "company", label: "Companies", count: companyCount },
+    { key: "individual", label: "Individuals", count: individualCount },
+    { key: "unpaid", label: "Unpaid", count: unpaidCount },
+  ];
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4">
+    <div className="space-y-5">
+      {/* ── Page header ─────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Clients</h1>
-          <p className="text-xs text-slate-400 mt-0.5">{total} total · {unpaidCount} with outstanding balance</p>
+          <h1 className="ff-page-title">Clients</h1>
+          <p className="ff-page-desc">{total} total · {unpaidCount} with outstanding balance</p>
         </div>
-        <button onClick={() => setShowAdd(true)}
-          className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors">
+        <button onClick={() => setShowAdd(true)} className="ff-btn-primary inline-flex items-center gap-2 text-sm px-4 py-2.5">
           <Plus className="w-4 h-4" /> Add Client
         </button>
       </div>
 
-      {/* Search + filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <form onSubmit={handleSearch} className="flex gap-2 flex-1 min-w-0">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Search name, phone, company..."
-              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <button type="submit" className="px-4 py-2 bg-white border border-gray-200 text-slate-600 text-sm rounded-xl hover:border-blue-400 transition-colors">Search</button>
-        </form>
-        <div className="flex gap-1.5">
-          {([["all", "All"], ["unpaid", "Unpaid"]] as const).map(([key, label]) => (
-            <button key={key} onClick={() => handleFilter(key)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${
-                activeFilter === key ? "bg-blue-600 text-white" : "bg-white border border-gray-200 text-slate-600 hover:border-blue-300"}`}>
-              {label}{key === "unpaid" && unpaidCount > 0 ? ` (${unpaidCount})` : ""}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {feedback && (
-        <div className={`flex items-center justify-between text-sm px-4 py-2.5 rounded-xl ${feedback.type === "ok" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
-          {feedback.msg}
-          <button onClick={() => setFeedback(null)}><X className="w-4 h-4" /></button>
-        </div>
-      )}
-
-      {/* Clients grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {clients.map(c => (
-          <div key={c.id} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow">
-            {/* Top: name + type */}
-            <div className="flex items-start justify-between gap-2 mb-3">
-              <div className="min-w-0 flex-1">
-                <Link href={`/admin/clients/${c.id}`} className="font-semibold text-slate-900 hover:text-blue-600 truncate block">
-                  {c.name}
-                </Link>
-                {c.company && (
-                  <p className="text-xs text-slate-400 truncate flex items-center gap-1 mt-0.5">
-                    <Building2 className="w-3 h-3 shrink-0" />{c.company}
-                  </p>
-                )}
-              </div>
-              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${c.type === "COMPANY" ? "bg-blue-50 text-blue-700" : "bg-slate-100 text-slate-500"}`}>
-                {c.type === "COMPANY" ? "Company" : "Individual"}
-              </span>
+      {/* ── Summary metrics ──────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: "Total Clients", value: total.toString(), icon: Users, color: "text-[#2563EB]", bg: "bg-blue-50" },
+          { label: "Companies", value: companyCount.toString(), icon: Building2, color: "text-[#7C3AED]", bg: "bg-purple-50" },
+          { label: "Individuals", value: individualCount.toString(), icon: User, color: "text-[#0891B2]", bg: "bg-cyan-50" },
+          { label: "Outstanding", value: totalOutstanding > 0 ? formatKES(totalOutstanding) : "Clear", icon: AlertCircle, color: totalOutstanding > 0 ? "text-[#DC2626]" : "text-[#16A34A]", bg: totalOutstanding > 0 ? "bg-red-50" : "bg-green-50" },
+        ].map(({ label, value, icon: Icon, color, bg }) => (
+          <div key={label} className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card p-4 flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-[10px] ${bg} flex items-center justify-center shrink-0`}>
+              <Icon className={`w-5 h-5 ${color}`} />
             </div>
-
-            {/* Contact info */}
-            <div className="space-y-1 text-xs text-slate-500">
-              <p className="flex items-center gap-1.5"><Phone className="w-3 h-3 shrink-0 text-slate-400" />{c.phone}</p>
-              {c.location && <p className="flex items-center gap-1.5 truncate"><MapPin className="w-3 h-3 shrink-0 text-slate-400" />{c.location}</p>}
-            </div>
-
-            {/* Stats row */}
-            <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-gray-100">
-              <div className="text-center">
-                <p className="text-[10px] text-slate-400">Jobs</p>
-                <p className="text-sm font-bold text-slate-900">{c.jobCount}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-[10px] text-slate-400">Outstanding</p>
-                <p className={`text-sm font-bold ${c.outstanding > 0 ? "text-red-600" : "text-green-600"}`}>
-                  {c.outstanding > 0 ? formatKES(c.outstanding) : "Clear"}
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-[10px] text-slate-400">Last Job</p>
-                <p className="text-xs font-medium text-slate-600">
-                  {c.lastJobDate ? formatDate(c.lastJobDate) : "—"}
-                </p>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
-              <Link href={`/admin/clients/${c.id}`}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs text-blue-600 font-medium hover:text-blue-700">
-                View profile <ChevronRight className="w-3.5 h-3.5" />
-              </Link>
-              <button onClick={() => setEditing(c)}
-                className="text-xs text-slate-400 hover:text-slate-700 border border-gray-200 rounded-lg px-2.5 py-1.5 transition-colors">
-                Edit
-              </button>
+            <div>
+              <p className="text-xs text-[#94A3B8] font-medium">{label}</p>
+              <p className="text-lg font-bold text-[#0F172A] leading-tight">{value}</p>
             </div>
           </div>
         ))}
-        {clients.length === 0 && (
-          <div className="col-span-3 bg-white rounded-xl border border-gray-200 py-16 flex flex-col items-center gap-3">
-            <User className="w-10 h-10 text-slate-200" />
-            <p className="text-sm text-slate-400">No clients found.</p>
-            <button onClick={() => setShowAdd(true)}
-              className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700">
-              <Plus className="w-4 h-4" /> Add Client
-            </button>
-          </div>
-        )}
       </div>
 
-      {/* Add Modal */}
+      {/* ── Search + Filter ──────────────────────────────────────────────── */}
+      <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card">
+        {/* Tab bar */}
+        <div className="border-b border-[#E2E8F0] px-4 overflow-x-auto scrollbar-none">
+          <div className="flex gap-0 min-w-max">
+            {tabs.map(tab => (
+              <button key={tab.key} onClick={() => handleFilter(tab.key)}
+                className={`ff-tab ${activeFilter === tab.key ? "ff-tab-active" : "ff-tab-inactive"}`}>
+                {tab.label}
+                {tab.count !== undefined && (
+                  <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-semibold
+                    ${activeFilter === tab.key ? "bg-[#2563EB]/15 text-[#2563EB]" : "bg-[#F1F5F9] text-[#64748B]"}`}>
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Search bar */}
+        <div className="p-4">
+          <form onSubmit={handleSearch} className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94A3B8]" />
+              <input value={search} onChange={e => setSearch(e.target.value)}
+                placeholder="Search by name, phone, company, location…"
+                className="ff-input pl-9 text-sm" />
+            </div>
+            <button type="submit" className="ff-btn-secondary text-sm px-4">Search</button>
+          </form>
+        </div>
+      </div>
+
+      {/* Feedback */}
+      {feedback && (
+        <div className={`flex items-center justify-between text-sm px-4 py-3 rounded-[10px] ${
+          feedback.type === "ok"
+            ? "bg-green-50 text-green-700 border border-green-200"
+            : "bg-red-50 text-red-700 border border-red-200"}`}>
+          {feedback.msg}
+          <button onClick={() => setFeedback(null)} className="p-1 rounded hover:bg-black/5">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* ── Client Grid ──────────────────────────────────────────────────── */}
+      {clients.length === 0 ? (
+        <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card py-20 flex flex-col items-center gap-3">
+          <div className="w-14 h-14 rounded-2xl bg-[#F1F5F9] flex items-center justify-center">
+            <Users className="w-6 h-6 text-[#94A3B8]" />
+          </div>
+          <p className="text-sm font-semibold text-[#475569]">No clients found</p>
+          <p className="text-xs text-[#94A3B8]">Add your first client to get started</p>
+          <button onClick={() => setShowAdd(true)} className="ff-btn-primary text-sm px-4 py-2 mt-1 inline-flex items-center gap-2">
+            <Plus className="w-4 h-4" /> Add Client
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {clients.map(c => (
+            <ClientCard key={c.id} c={c} onEdit={() => setEditing(c)} />
+          ))}
+        </div>
+      )}
+
+      {/* ── Add Modal ────────────────────────────────────────────────────── */}
       {showAdd && (
         <Modal title="Add Client" onClose={() => setShowAdd(false)}>
           <ClientForm isPending={isPending} onSubmit={handleCreate} onCancel={() => setShowAdd(false)} />
         </Modal>
       )}
 
-      {/* Edit Modal */}
+      {/* ── Edit Modal ───────────────────────────────────────────────────── */}
       {editing && (
         <Modal title="Edit Client" onClose={() => setEditing(null)}>
-          <form onSubmit={handleUpdate} className="space-y-3">
-            <input type="hidden" name="id" value={editing.id} />
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Full Name" name="name" required defaultValue={editing.name} />
-              <Field label="Phone" name="phone" required defaultValue={editing.phone} />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Email" name="email" type="email" defaultValue={editing.email ?? ""} />
-              <Field label="Company" name="company" defaultValue={editing.company ?? ""} />
-            </div>
-            <Field label="Location" name="location" defaultValue={editing.location ?? ""} />
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Client Type</label>
-              <select name="type" defaultValue={editing.type} className={inputCls}>
-                <option value="INDIVIDUAL">Individual</option>
-                <option value="COMPANY">Company</option>
-              </select>
-            </div>
-            <div className="flex gap-2 pt-2">
-              <button type="button" onClick={() => setEditing(null)} className="flex-1 border border-gray-200 text-slate-600 rounded-lg py-2 text-sm">Cancel</button>
-              <button type="submit" disabled={isPending} className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm font-semibold disabled:opacity-50">
-                {isPending ? "Saving..." : "Save Changes"}
-              </button>
-            </div>
-            <div className="pt-2 border-t border-gray-100">
-              <button type="button" onClick={() => { setEditing(null); handleDeactivate(editing.id); }}
-                className="w-full text-xs text-red-500 hover:text-red-600">
-                Deactivate client
-              </button>
-            </div>
-          </form>
+          <ClientForm
+            isPending={isPending}
+            onSubmit={handleUpdate}
+            onCancel={() => setEditing(null)}
+            defaultValues={editing}
+          />
+          <div className="pt-4 mt-2 border-t border-[#E2E8F0]">
+            <button
+              onClick={() => { setEditing(null); handleDeactivate(editing.id); }}
+              className="w-full text-xs text-[#DC2626] hover:text-red-700 py-2 transition-colors">
+              Deactivate client
+            </button>
+          </div>
         </Modal>
       )}
-    </div>
-  );
-}
-
-function ClientForm({ isPending, onSubmit, onCancel }: {
-  isPending: boolean; onSubmit: (e: React.FormEvent<HTMLFormElement>) => void; onCancel: () => void;
-}) {
-  return (
-    <form onSubmit={onSubmit} className="space-y-3">
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Full Name" name="name" required />
-        <Field label="Phone" name="phone" placeholder="+254..." required />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Email (optional)" name="email" type="email" />
-        <Field label="Company (optional)" name="company" />
-      </div>
-      <Field label="Location" name="location" placeholder="Nairobi, Karen..." />
-      <Field label="Address / Notes (optional)" name="address" />
-      <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">Client Type</label>
-        <select name="type" defaultValue="INDIVIDUAL" className={inputCls}>
-          <option value="INDIVIDUAL">Individual</option>
-          <option value="COMPANY">Company</option>
-        </select>
-      </div>
-      <div className="flex gap-2 pt-2">
-        <button type="button" onClick={onCancel} className="flex-1 border border-gray-200 text-slate-600 rounded-lg py-2 text-sm">Cancel</button>
-        <button type="submit" disabled={isPending} className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm font-semibold disabled:opacity-50">
-          {isPending ? "Adding..." : "Add Client"}
-        </button>
-      </div>
-    </form>
-  );
-}
-
-function Field({ label, name, type = "text", placeholder, required, defaultValue }: {
-  label: string; name: string; type?: string; placeholder?: string; required?: boolean; defaultValue?: string;
-}) {
-  return (
-    <div>
-      <label className="block text-xs font-medium text-gray-700 mb-1">{label}</label>
-      <input type={type} name={name} placeholder={placeholder} required={required} defaultValue={defaultValue} className={inputCls} />
-    </div>
-  );
-}
-
-function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="font-semibold text-slate-900">{title}</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
-        </div>
-        <div className="p-6">{children}</div>
-      </div>
     </div>
   );
 }

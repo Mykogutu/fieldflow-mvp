@@ -1,92 +1,56 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import {
+  Sparkles, Sun, Moon, Bell, Inbox, Send, Copy, Check,
+  MessageSquare, RefreshCw, ArrowRight, AlertTriangle,
+  Info, Zap,
+} from "lucide-react";
 import type { CopilotMessage, FollowUp, DraftJob } from "@/lib/ai-ops";
 
-// ── Tab ───────────────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 type Tab = "chat" | "briefing" | "followups" | "intake";
 
-const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: "chat", label: "Copilot", icon: "chat" },
-  { id: "briefing", label: "Briefing", icon: "sun" },
-  { id: "followups", label: "Follow-ups", icon: "bell" },
-  { id: "intake", label: "Job Intake", icon: "inbox" },
+const TABS: { id: Tab; label: string; Icon: React.ElementType }[] = [
+  { id: "chat",      label: "Copilot",     Icon: MessageSquare },
+  { id: "briefing",  label: "Briefing",    Icon: Sun           },
+  { id: "followups", label: "Follow-ups",  Icon: Bell          },
+  { id: "intake",    label: "Job Intake",  Icon: Inbox         },
 ];
 
 const STARTER_QUESTIONS = [
   "What happened today?",
   "Which jobs are still pending?",
   "Which clients have unpaid invoices?",
-  "Which technician has not accepted their jobs?",
+  "Who hasn't accepted their jobs yet?",
   "How much did we invoice this week?",
   "Which jobs were postponed and why?",
   "Which jobs need follow up tomorrow?",
   "Who are our top performing technicians?",
 ];
 
-const PRIORITY_COLORS: Record<string, string> = {
-  HIGH: "bg-red-50 border-red-200 text-red-700",
-  MEDIUM: "bg-amber-50 border-amber-200 text-amber-700",
-  LOW: "bg-blue-50 border-blue-200 text-blue-700",
-};
-
-// ── Icons ─────────────────────────────────────────────────────────────────────
-function Icon({ name }: { name: string }) {
-  const cls = "w-4 h-4 flex-shrink-0";
-  if (name === "chat")
-    return (
-      <svg className={cls} fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-      </svg>
-    );
-  if (name === "sun")
-    return (
-      <svg className={cls} fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="5" />
-        <line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" />
-        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-        <line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" />
-        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-      </svg>
-    );
-  if (name === "bell")
-    return (
-      <svg className={cls} fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-      </svg>
-    );
-  if (name === "inbox")
-    return (
-      <svg className={cls} fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-        <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
-        <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
-      </svg>
-    );
-  if (name === "send")
-    return (
-      <svg className={cls} fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-        <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
-      </svg>
-    );
-  if (name === "copy")
-    return (
-      <svg className={cls} fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-      </svg>
-    );
-  if (name === "spark")
-    return (
-      <svg className={cls} fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-        <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
-      </svg>
-    );
-  return null;
+// ── Spinner ───────────────────────────────────────────────────────────────────
+function Spinner({ size = "sm" }: { size?: "sm" | "md" }) {
+  const cls = size === "sm" ? "w-3.5 h-3.5" : "w-5 h-5";
+  return (
+    <span className={`inline-block ${cls} border-2 border-current border-t-transparent rounded-full animate-spin`} />
+  );
 }
 
-function Spinner() {
+// ── CopyButton ────────────────────────────────────────────────────────────────
+function CopyButton({ text, className = "" }: { text: string; className?: string }) {
+  const [copied, setCopied] = useState(false);
+  function handleCopy() {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
   return (
-    <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+    <button onClick={handleCopy}
+      className={`inline-flex items-center gap-1 text-[11px] font-medium transition-colors ${className}`}
+      title="Copy">
+      {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+      {copied ? "Copied!" : "Copy"}
+    </button>
   );
 }
 
@@ -107,7 +71,6 @@ function ChatTab() {
     setHistory(next);
     setInput("");
     setLoading(true);
-
     try {
       const res = await fetch("/api/ai/chat", {
         method: "POST",
@@ -126,19 +89,21 @@ function ChatTab() {
   return (
     <div className="flex flex-col h-full">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
+      <div className="flex-1 overflow-y-auto p-5 space-y-4 min-h-0">
         {history.length === 0 && (
-          <div className="space-y-3">
-            <p className="text-sm text-gray-500 text-center py-4">
-              Ask anything about your operations, jobs, clients, or workers.
-            </p>
+          <div className="space-y-4">
+            <div className="text-center py-4">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#2563EB] to-[#7C3AED] flex items-center justify-center mx-auto mb-3">
+                <Sparkles className="w-6 h-6 text-white" />
+              </div>
+              <p className="text-sm font-semibold text-[#334155]">Ask anything about your operations</p>
+              <p className="text-xs text-[#94A3B8] mt-1">Jobs, clients, workers, invoices — all at once.</p>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {STARTER_QUESTIONS.map((q) => (
-                <button
-                  key={q}
-                  onClick={() => send(q)}
-                  className="text-left text-xs px-3 py-2.5 rounded-lg border border-gray-200 text-gray-600 hover:border-blue-400 hover:text-blue-700 hover:bg-blue-50 transition-colors"
-                >
+              {STARTER_QUESTIONS.map(q => (
+                <button key={q} onClick={() => send(q)}
+                  className="text-left text-xs px-3 py-2.5 rounded-[10px] border border-[#E2E8F0] text-[#475569]
+                    hover:border-[#2563EB]/40 hover:text-[#2563EB] hover:bg-blue-50/50 transition-colors">
                   {q}
                 </button>
               ))}
@@ -149,28 +114,20 @@ function ChatTab() {
         {history.map((msg, i) => (
           <div key={i} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
             {msg.role === "assistant" && (
-              <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Icon name="spark" />
-                {/* override icon color */}
-                <style>{`.copilot-icon { color: white }`}</style>
+              <div className="w-7 h-7 rounded-[8px] bg-gradient-to-br from-[#2563EB] to-[#7C3AED] flex items-center justify-center shrink-0 mt-0.5">
+                <Sparkles className="w-3.5 h-3.5 text-white" />
               </div>
             )}
-            <div
-              className={`max-w-[80%] rounded-xl px-4 py-3 text-sm whitespace-pre-wrap leading-relaxed ${
-                msg.role === "user"
-                  ? "bg-blue-600 text-white rounded-br-sm"
-                  : "bg-gray-100 text-gray-800 rounded-bl-sm"
-              }`}
-            >
+            <div className={`max-w-[82%] rounded-[14px] px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap
+              ${msg.role === "user"
+                ? "bg-[#2563EB] text-white rounded-br-[4px]"
+                : "bg-[#F8FAFC] border border-[#E2E8F0] text-[#334155] rounded-bl-[4px]"
+              }`}>
               {msg.content}
               {msg.role === "assistant" && (
-                <button
-                  onClick={() => navigator.clipboard.writeText(msg.content)}
-                  className="ml-2 opacity-40 hover:opacity-80 inline-flex items-center"
-                  title="Copy"
-                >
-                  <Icon name="copy" />
-                </button>
+                <div className="mt-2 pt-2 border-t border-[#E2E8F0]">
+                  <CopyButton text={msg.content} className="text-[#94A3B8] hover:text-[#64748B]" />
+                </div>
               )}
             </div>
           </div>
@@ -178,10 +135,10 @@ function ChatTab() {
 
         {loading && (
           <div className="flex gap-3 justify-start">
-            <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 text-white">
-              <Icon name="spark" />
+            <div className="w-7 h-7 rounded-[8px] bg-gradient-to-br from-[#2563EB] to-[#7C3AED] flex items-center justify-center shrink-0 text-white">
+              <Sparkles className="w-3.5 h-3.5" />
             </div>
-            <div className="bg-gray-100 rounded-xl rounded-bl-sm px-4 py-3 text-gray-400 flex items-center gap-2">
+            <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-[14px] rounded-bl-[4px] px-4 py-3 text-[#94A3B8] flex items-center gap-2 text-sm">
               <Spinner /> Thinking…
             </div>
           </div>
@@ -190,31 +147,23 @@ function ChatTab() {
       </div>
 
       {/* Input */}
-      <div className="border-t border-gray-100 p-3">
-        <form
-          onSubmit={(e) => { e.preventDefault(); send(input); }}
-          className="flex gap-2"
-        >
+      <div className="border-t border-[#E2E8F0] p-4">
+        <form onSubmit={e => { e.preventDefault(); send(input); }} className="flex gap-2">
           <input
             value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask a question about your operations…"
-            className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onChange={e => setInput(e.target.value)}
+            placeholder="Ask about jobs, clients, workers, revenue…"
+            className="ff-input flex-1 text-sm"
           />
-          <button
-            type="submit"
-            disabled={!input.trim() || loading}
-            className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-40 transition-colors flex items-center gap-1.5 text-sm font-medium"
-          >
-            <Icon name="send" />
+          <button type="submit" disabled={!input.trim() || loading}
+            className="ff-btn-primary px-3 py-2 text-sm disabled:opacity-40 flex items-center gap-1.5 shrink-0">
+            {loading ? <Spinner /> : <Send className="w-3.5 h-3.5" />}
             <span className="hidden sm:inline">Send</span>
           </button>
         </form>
         {history.length > 0 && (
-          <button
-            onClick={() => setHistory([])}
-            className="text-xs text-gray-400 hover:text-gray-600 mt-2 ml-1"
-          >
+          <button onClick={() => setHistory([])}
+            className="text-[11px] text-[#94A3B8] hover:text-[#64748B] mt-2 ml-1 transition-colors">
             Clear conversation
           </button>
         )}
@@ -228,7 +177,6 @@ function BriefingTab() {
   const [type, setType] = useState<"morning" | "evening">("morning");
   const [briefing, setBriefing] = useState("");
   const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   async function generate() {
     setLoading(true);
@@ -244,60 +192,52 @@ function BriefingTab() {
     }
   }
 
-  function copy() {
-    navigator.clipboard.writeText(briefing);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
   return (
-    <div className="flex-1 overflow-y-auto p-5 space-y-4">
+    <div className="flex-1 overflow-y-auto p-5 space-y-5">
+      {/* Controls */}
       <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex rounded-lg border border-gray-200 overflow-hidden">
-          {(["morning", "evening"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => { setType(t); setBriefing(""); }}
-              className={`px-4 py-2 text-sm font-medium transition-colors capitalize ${
-                type === t
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-gray-600 hover:bg-gray-50"
-              }`}
-            >
-              {t === "morning" ? "☀️ Morning" : "🌙 Evening"}
+        {/* Toggle */}
+        <div className="flex rounded-[10px] border border-[#E2E8F0] overflow-hidden shrink-0">
+          {(["morning", "evening"] as const).map(t => (
+            <button key={t} onClick={() => { setType(t); setBriefing(""); }}
+              className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors capitalize
+                ${type === t
+                  ? "bg-[#2563EB] text-white"
+                  : "bg-white text-[#64748B] hover:bg-[#F8FAFC]"
+                }`}>
+              {t === "morning" ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+              {t === "morning" ? "Morning" : "Evening"}
             </button>
           ))}
         </div>
-        <button
-          onClick={generate}
-          disabled={loading}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
-        >
-          {loading ? <Spinner /> : <Icon name="spark" />}
+
+        <button onClick={generate} disabled={loading}
+          className="ff-btn-primary flex items-center gap-2 text-sm px-4 py-2 disabled:opacity-50">
+          {loading ? <Spinner /> : <Sparkles className="w-3.5 h-3.5" />}
           {loading ? "Generating…" : "Generate Briefing"}
         </button>
       </div>
 
-      {briefing && (
-        <div className="relative bg-gray-50 rounded-xl border border-gray-200 p-5">
-          <button
-            onClick={copy}
-            className="absolute top-3 right-3 flex items-center gap-1 text-xs text-gray-400 hover:text-gray-700 bg-white border border-gray-200 rounded-md px-2 py-1"
-          >
-            <Icon name="copy" />
-            {copied ? "Copied!" : "Copy"}
-          </button>
-          <pre className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed font-sans pr-16">
+      {/* Output */}
+      {briefing ? (
+        <div className="relative bg-[#F8FAFC] rounded-[14px] border border-[#E2E8F0] p-5">
+          <div className="absolute top-3.5 right-3.5">
+            <CopyButton text={briefing}
+              className="text-[#94A3B8] hover:text-[#64748B] bg-white border border-[#E2E8F0] rounded-[8px] px-2.5 py-1.5" />
+          </div>
+          <pre className="text-sm text-[#334155] whitespace-pre-wrap leading-relaxed font-sans pr-20">
             {briefing}
           </pre>
         </div>
-      )}
-
-      {!briefing && !loading && (
-        <p className="text-sm text-gray-400 text-center py-8">
-          Generate a {type} briefing from your live business data.
-        </p>
-      )}
+      ) : !loading ? (
+        <div className="text-center py-12">
+          <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto mb-3">
+            {type === "morning" ? <Sun className="w-6 h-6 text-amber-500" /> : <Moon className="w-6 h-6 text-indigo-500" />}
+          </div>
+          <p className="text-sm text-[#475569] font-medium">Generate a {type} briefing</p>
+          <p className="text-xs text-[#94A3B8] mt-1">Pulled from your live business data right now.</p>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -306,7 +246,6 @@ function BriefingTab() {
 function FollowUpsTab() {
   const [followups, setFollowups] = useState<FollowUp[]>([]);
   const [loading, setLoading] = useState(false);
-  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
 
   async function generate() {
     setLoading(true);
@@ -322,70 +261,70 @@ function FollowUpsTab() {
     }
   }
 
-  function copy(text: string, idx: number) {
-    navigator.clipboard.writeText(text);
-    setCopiedIdx(idx);
-    setTimeout(() => setCopiedIdx(null), 2000);
-  }
+  const priorityConfig: Record<string, { border: string; bg: string; text: string; dot: string }> = {
+    HIGH:   { border: "border-red-200",   bg: "bg-red-50",   text: "text-[#DC2626]", dot: "bg-[#DC2626]"  },
+    MEDIUM: { border: "border-amber-200", bg: "bg-amber-50", text: "text-[#D97706]", dot: "bg-[#D97706]"  },
+    LOW:    { border: "border-blue-200",  bg: "bg-blue-50",  text: "text-[#2563EB]", dot: "bg-[#2563EB]"  },
+  };
 
   return (
     <div className="flex-1 overflow-y-auto p-5 space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500">
+      {/* Header row */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <p className="text-sm text-[#64748B] max-w-sm">
           AI identifies clients, jobs, and workers that need your attention today.
         </p>
-        <button
-          onClick={generate}
-          disabled={loading}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
-        >
-          {loading ? <Spinner /> : <Icon name="spark" />}
+        <button onClick={generate} disabled={loading}
+          className="ff-btn-primary flex items-center gap-2 text-sm px-4 py-2 disabled:opacity-50 whitespace-nowrap shrink-0">
+          {loading ? <Spinner /> : <Sparkles className="w-3.5 h-3.5" />}
           {loading ? "Analysing…" : "Find Follow-ups"}
         </button>
       </div>
 
+      {/* Cards */}
       {followups.length > 0 && (
         <div className="space-y-3">
-          {followups.map((f, i) => (
-            <div
-              key={i}
-              className={`border rounded-xl p-4 space-y-2 ${PRIORITY_COLORS[f.priority] ?? "bg-gray-50 border-gray-200"}`}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <span className="text-xs font-semibold uppercase tracking-wide opacity-70">
-                    {f.type.replace(/_/g, " ")}
-                    {f.clientName && ` · ${f.clientName}`}
+          {followups.map((f, i) => {
+            const cfg = priorityConfig[f.priority] ?? { border: "border-[#E2E8F0]", bg: "bg-[#F8FAFC]", text: "text-[#64748B]", dot: "bg-[#94A3B8]" };
+            return (
+              <div key={i} className={`rounded-[14px] border p-4 space-y-3 ${cfg.bg} ${cfg.border}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-2.5 min-w-0">
+                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 mt-1.5 ${cfg.dot}`} />
+                    <div className="min-w-0">
+                      <p className={`text-[10px] font-bold uppercase tracking-wider ${cfg.text} opacity-70`}>
+                        {f.type.replace(/_/g, " ")}
+                        {f.clientName && <span className="normal-case"> · {f.clientName}</span>}
+                      </p>
+                      <p className="text-sm font-semibold text-[#0F172A] mt-0.5 leading-snug">{f.description}</p>
+                    </div>
+                  </div>
+                  <span className={`text-[10px] font-bold uppercase tracking-wider shrink-0 ${cfg.text}`}>
+                    {f.priority}
                   </span>
-                  <p className="text-sm font-medium mt-0.5">{f.description}</p>
                 </div>
-                <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">
-                  {f.priority}
-                </span>
+
+                {f.whatsappDraft && (
+                  <div className="bg-white/70 rounded-[10px] border border-white p-3 flex items-start justify-between gap-3">
+                    <p className="text-xs text-[#334155] leading-relaxed flex-1">{f.whatsappDraft}</p>
+                    <CopyButton text={f.whatsappDraft}
+                      className="text-[#94A3B8] hover:text-[#64748B] shrink-0" />
+                  </div>
+                )}
               </div>
-              {f.whatsappDraft && (
-                <div className="bg-white/60 rounded-lg p-3 flex items-start justify-between gap-3">
-                  <p className="text-xs text-gray-700 leading-relaxed flex-1">
-                    {f.whatsappDraft}
-                  </p>
-                  <button
-                    onClick={() => copy(f.whatsappDraft, i)}
-                    className="text-xs flex items-center gap-1 text-gray-500 hover:text-gray-900 whitespace-nowrap flex-shrink-0"
-                  >
-                    <Icon name="copy" />
-                    {copiedIdx === i ? "Copied!" : "Copy"}
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
       {!loading && followups.length === 0 && (
-        <p className="text-sm text-gray-400 text-center py-8">
-          Click &ldquo;Find Follow-ups&rdquo; to analyse your jobs and invoices.
-        </p>
+        <div className="text-center py-12">
+          <div className="w-12 h-12 rounded-2xl bg-[#F1F5F9] flex items-center justify-center mx-auto mb-3">
+            <Bell className="w-6 h-6 text-[#94A3B8]" />
+          </div>
+          <p className="text-sm text-[#475569] font-medium">No follow-ups yet</p>
+          <p className="text-xs text-[#94A3B8] mt-1">Click &ldquo;Find Follow-ups&rdquo; to analyse your jobs and invoices.</p>
+        </div>
       )}
     </div>
   );
@@ -416,69 +355,79 @@ function IntakeTab() {
     }
   }
 
-  const confColor =
-    !draft ? ""
-    : draft.confidence >= 0.8 ? "text-green-600"
-    : draft.confidence >= 0.5 ? "text-amber-600"
-    : "text-red-600";
+  const confColor = !draft ? ""
+    : draft.confidence >= 0.8 ? "text-[#16A34A]"
+    : draft.confidence >= 0.5 ? "text-[#D97706]"
+    : "text-[#DC2626]";
+
+  const confBg = !draft ? ""
+    : draft.confidence >= 0.8 ? "bg-green-50 border-green-200"
+    : draft.confidence >= 0.5 ? "bg-amber-50 border-amber-200"
+    : "bg-red-50 border-red-200";
 
   return (
-    <div className="flex-1 overflow-y-auto p-5 space-y-4">
-      <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">
+    <div className="flex-1 overflow-y-auto p-5 space-y-5">
+      {/* Input */}
+      <div className="space-y-2">
+        <label className="block text-xs font-semibold text-[#475569]">
           Paste the client&apos;s WhatsApp message
         </label>
         <textarea
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          onChange={e => setMessage(e.target.value)}
           rows={4}
-          placeholder={"e.g. My 5000L tank is leaking at our office in Syokimau. When can someone come?"}
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+          placeholder="e.g. My 5000L tank is leaking at our office in Syokimau. When can someone come?"
+          className="ff-input text-sm resize-none"
         />
-        <button
-          onClick={parse}
-          disabled={!message.trim() || loading}
-          className="mt-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
-        >
-          {loading ? <Spinner /> : <Icon name="spark" />}
+        <button onClick={parse} disabled={!message.trim() || loading}
+          className="ff-btn-primary flex items-center gap-2 text-sm px-4 py-2 disabled:opacity-50">
+          {loading ? <Spinner /> : <Zap className="w-3.5 h-3.5" />}
           {loading ? "Parsing…" : "Parse into Draft Job"}
         </button>
       </div>
 
+      {/* Draft output */}
       {draft && (
-        <div className="bg-gray-50 rounded-xl border border-gray-200 p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-gray-900 text-sm">Draft Job</h3>
-            <span className={`text-xs font-medium ${confColor}`}>
+        <div className="bg-[#F8FAFC] rounded-[14px] border border-[#E2E8F0] overflow-hidden">
+          {/* Draft header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-[#E2E8F0]">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-[#2563EB]" />
+              <span className="text-sm font-semibold text-[#0F172A]">Draft Job</span>
+            </div>
+            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${confBg} ${confColor}`}>
               {Math.round((draft.confidence ?? 0) * 100)}% confidence
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Fields grid */}
+          <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[
-              { label: "Job Type", value: draft.jobType },
-              { label: "Location", value: draft.location },
-              { label: "Client Name", value: draft.clientName },
-              { label: "Client Phone", value: draft.clientPhone },
+              { label: "Job Type",          value: draft.jobType },
+              { label: "Location",          value: draft.location },
+              { label: "Client Name",       value: draft.clientName },
+              { label: "Client Phone",      value: draft.clientPhone },
               { label: "Asset / Equipment", value: draft.assetDescription },
-              { label: "Notes", value: draft.notes },
-            ].map(({ label, value }) =>
-              value ? (
-                <div key={label}>
-                  <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">{label}</p>
-                  <p className="text-sm text-gray-800 mt-0.5">{value}</p>
-                </div>
-              ) : null
-            )}
+              { label: "Notes",             value: draft.notes },
+            ].filter(({ value }) => !!value).map(({ label, value }) => (
+              <div key={label} className="bg-white rounded-[10px] border border-[#E2E8F0] p-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">{label}</p>
+                <p className="text-sm text-[#0F172A] mt-0.5 font-medium">{value}</p>
+              </div>
+            ))}
           </div>
 
-          {draft.missingFields.length > 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-              <p className="text-xs font-semibold text-amber-700 mb-1.5">Missing information needed:</p>
+          {/* Missing fields */}
+          {draft.missingFields && draft.missingFields.length > 0 && (
+            <div className="mx-4 mb-4 bg-amber-50 border border-amber-200 rounded-[10px] p-3">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                <p className="text-xs font-semibold text-amber-700">Missing information needed:</p>
+              </div>
               <ul className="space-y-1">
-                {draft.missingFields.map((f) => (
+                {draft.missingFields.map(f => (
                   <li key={f} className="text-xs text-amber-700 flex items-center gap-1.5">
-                    <span className="w-1 h-1 rounded-full bg-amber-500 flex-shrink-0" />
+                    <span className="w-1 h-1 rounded-full bg-amber-500 shrink-0" />
                     {f}
                   </li>
                 ))}
@@ -486,19 +435,24 @@ function IntakeTab() {
             </div>
           )}
 
-          <a
-            href="/admin/jobs"
-            className="block text-center bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700"
-          >
-            Open Jobs → Create with this info
-          </a>
+          {/* CTA */}
+          <div className="px-4 pb-4">
+            <a href="/admin/jobs"
+              className="flex items-center justify-center gap-2 w-full ff-btn-primary text-sm py-2.5">
+              Open Jobs — Create with this info <ArrowRight className="w-3.5 h-3.5" />
+            </a>
+          </div>
         </div>
       )}
 
       {!draft && !loading && (
-        <p className="text-sm text-gray-400 text-center py-4">
-          AI will extract job type, location, client details, and flag missing fields.
-        </p>
+        <div className="text-center py-10">
+          <div className="w-12 h-12 rounded-2xl bg-[#F1F5F9] flex items-center justify-center mx-auto mb-3">
+            <Inbox className="w-6 h-6 text-[#94A3B8]" />
+          </div>
+          <p className="text-sm text-[#475569] font-medium">Paste a client message above</p>
+          <p className="text-xs text-[#94A3B8] mt-1">AI will extract job type, location, client details, and flag missing fields.</p>
+        </div>
       )}
     </div>
   );
@@ -509,45 +463,39 @@ export default function AICopilotClient() {
   const [activeTab, setActiveTab] = useState<Tab>("chat");
 
   return (
-    <div className="flex flex-col gap-4 h-full">
-      {/* Header row */}
+    <div className="flex flex-col gap-5 h-full max-w-3xl">
+      {/* Page header */}
       <div className="flex items-center gap-3 shrink-0">
-        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shrink-0">
-          <Icon name="spark" />
+        <div className="w-10 h-10 rounded-[10px] bg-gradient-to-br from-[#2563EB] to-[#7C3AED] flex items-center justify-center shrink-0">
+          <Sparkles className="w-5 h-5 text-white" />
         </div>
-        <div className="min-w-0">
-          <h1 className="text-xl font-bold text-gray-900 leading-tight">Operations Intelligence</h1>
-          <p className="text-xs text-gray-500 mt-0.5">AI assistant powered by your live business data</p>
+        <div>
+          <h1 className="ff-page-title">Operations Intelligence</h1>
+          <p className="ff-page-desc">AI assistant powered by your live business data</p>
         </div>
       </div>
 
-      {/* Card fills remaining height */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col flex-1 min-h-0">
-        {/* Tab bar — icon+label on sm+, icon-only on mobile */}
-        <div className="flex border-b border-gray-100 shrink-0">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setActiveTab(t.id)}
-              title={t.label}
-              className={`flex items-center justify-center gap-2 flex-1 sm:flex-none px-3 sm:px-5 py-3.5 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === t.id
-                  ? "border-blue-600 text-blue-700"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              <Icon name={t.icon} />
-              <span className="hidden sm:inline">{t.label}</span>
-            </button>
-          ))}
+      {/* Card */}
+      <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card overflow-hidden flex flex-col flex-1 min-h-0" style={{ minHeight: "560px" }}>
+        {/* Tab bar */}
+        <div className="border-b border-[#E2E8F0] px-4 shrink-0">
+          <div className="flex gap-0">
+            {TABS.map(tab => (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                className={`ff-tab ${activeTab === tab.id ? "ff-tab-active" : "ff-tab-inactive"}`}>
+                <tab.Icon className="w-3.5 h-3.5" />
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Tab body fills card */}
+        {/* Tab body */}
         <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-          {activeTab === "chat" && <ChatTab />}
-          {activeTab === "briefing" && <BriefingTab />}
+          {activeTab === "chat"      && <ChatTab />}
+          {activeTab === "briefing"  && <BriefingTab />}
           {activeTab === "followups" && <FollowUpsTab />}
-          {activeTab === "intake" && <IntakeTab />}
+          {activeTab === "intake"    && <IntakeTab />}
         </div>
       </div>
     </div>

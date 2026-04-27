@@ -30,8 +30,9 @@ export function AICopilotFloat() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Hide on the full copilot page — it has its own UI
-  const hidden = pathname.startsWith("/admin/ai");
+  // Hide on the full copilot page and settings — they have their own UIs
+  const hidden =
+    pathname.startsWith("/admin/ai") || pathname.startsWith("/admin/settings");
 
   // Scroll to bottom whenever messages change
   useEffect(() => {
