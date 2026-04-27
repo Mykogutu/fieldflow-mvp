@@ -12,6 +12,7 @@ import {
   Settings,
   UserCheck,
   FolderOpen,
+  Bell,
 } from "lucide-react";
 
 const NAV = [
@@ -22,9 +23,10 @@ const NAV = [
   { href: "/admin/documents",  label: "Documents",  Icon: FolderOpen                   },
   { href: "/admin/invoices",   label: "Invoices",   Icon: FileText                     },
   { href: "/admin/workers",    label: "Workers",    Icon: Users                        },
-  { href: "/admin/expenses",   label: "Expenses",   Icon: CreditCard                   },
-  { href: "/admin/ai",         label: "AI Copilot", Icon: Sparkles                     },
-  { href: "/admin/settings",   label: "Settings",   Icon: Settings                     },
+  { href: "/admin/expenses",       label: "Expenses",       Icon: CreditCard },
+  { href: "/admin/notifications",  label: "Notifications",  Icon: Bell       },
+  { href: "/admin/ai",             label: "AI Copilot",     Icon: Sparkles   },
+  { href: "/admin/settings",       label: "Settings",       Icon: Settings   },
 ];
 
 export function NavLinks() {

@@ -9,8 +9,9 @@ const PAGES: Record<string, { title: string; subtitle: string }> = {
   "/admin/documents":   { title: "Documents",  subtitle: "All generated documents and reports" },
   "/admin/invoices":    { title: "Invoices",   subtitle: "Billing, payments and receipts" },
   "/admin/workers":     { title: "Workers",    subtitle: "Manage your field team" },
-  "/admin/expenses":    { title: "Expenses",   subtitle: "Track costs and expenses" },
-  "/admin/ai":          { title: "AI Copilot", subtitle: "AI-powered operations intelligence" },
+  "/admin/expenses":       { title: "Expenses",       subtitle: "Track costs and expenses" },
+  "/admin/notifications":  { title: "Notifications",  subtitle: "Your activity feed and alerts" },
+  "/admin/ai":             { title: "AI Copilot",     subtitle: "AI-powered operations intelligence" },
   "/admin/settings":    { title: "Settings",   subtitle: "Configure your workspace" },
 };
 

@@ -87,6 +87,63 @@ interface Job {
   invoice: { id: string; invoiceNumber: string; status: string; amount: number } | null;
   asset: { id: string; name: string; assetType: string } | null;
 }
+interface ClientOption { id: string; name: string; phone: string }
+
+// ── Industry-specific optional fields ─────────────────────────────────────────
+const INDUSTRY_FIELDS: Record<string, { label: string; name: string; type?: string; placeholder?: string }[]> = {
+  TANK_SERVICES: [
+    { label: "Tank Capacity", name: "meta_tankCapacity", placeholder: "e.g. 5000L, 10000L" },
+    { label: "Tank Type", name: "meta_tankType", placeholder: "Plastic, Steel, Underground…" },
+    { label: "Tank Empty?", name: "meta_isEmptyConfirmed", placeholder: "Yes / No / Client will empty" },
+    { label: "Warranty Eligible?", name: "meta_warrantyEligible", placeholder: "Yes / No" },
+  ],
+  FUEL_TRACKER: [
+    { label: "Vehicle Registration", name: "meta_vehicleReg", placeholder: "KDA 123A" },
+    { label: "Tracker Serial No.", name: "meta_trackerSerial", placeholder: "TRK-XXXXXXXX" },
+    { label: "Fuel Sensor Serial", name: "meta_fuelSensorSerial", placeholder: "FS-XXXXXXXX" },
+    { label: "SIM Number", name: "meta_simNumber", placeholder: "254 7XX XXX XXX" },
+    { label: "Device Type", name: "meta_deviceType", placeholder: "GPS Tracker, Fuel Sensor…" },
+    { label: "Calibration Required?", name: "meta_calibrationRequired", placeholder: "Yes / No" },
+  ],
+  SOLAR: [
+    { label: "Site Name", name: "meta_siteName", placeholder: "e.g. Karen Residence" },
+    { label: "Inverter Model", name: "meta_inverterModel", placeholder: "e.g. Growatt 5kW" },
+    { label: "Battery Model", name: "meta_batteryModel", placeholder: "e.g. Pylontech US3000" },
+    { label: "Issue Description", name: "meta_panelIssue", placeholder: "Describe the problem" },
+  ],
+  CLEANING: [
+    { label: "Site / Area", name: "meta_siteArea", placeholder: "e.g. Office floor, 3 rooms" },
+    { label: "Cleaning Type", name: "meta_cleaningType", placeholder: "Deep clean, Regular, Carpet…" },
+    { label: "Frequency", name: "meta_frequency", placeholder: "Once-off, Weekly, Monthly" },
+  ],
+  PEST_CONTROL: [
+    { label: "Pest Type", name: "meta_pestType", placeholder: "Rats, Bedbugs, Cockroaches…" },
+    { label: "Treatment Method", name: "meta_treatmentMethod", placeholder: "Spray, Fumigation, Baiting…" },
+    { label: "Site / Area", name: "meta_siteArea", placeholder: "Kitchen, Bedroom, Full house…" },
+  ],
+  PLUMBING: [
+    { label: "Issue Type", name: "meta_issueType", placeholder: "Leaking pipe, Blocked drain…" },
+    { label: "Pipe Type", name: "meta_pipeType", placeholder: "PVC, Copper, Iron…" },
+  ],
+  ELECTRICAL: [
+    { label: "Issue Type", name: "meta_issueType", placeholder: "Power outage, Wiring fault…" },
+    { label: "Circuit / Area", name: "meta_circuitType", placeholder: "Main board, Kitchen sockets…" },
+  ],
+  HVAC: [
+    { label: "Unit Type", name: "meta_unitType", placeholder: "Split AC, Central, Duct…" },
+    { label: "Fault Description", name: "meta_faultDesc", placeholder: "Not cooling, Noise, Leaking…" },
+  ],
+  LOGISTICS: [
+    { label: "Vehicle Reg", name: "meta_vehicleReg", placeholder: "KDA 123A" },
+    { label: "Delivery Type", name: "meta_deliveryType", placeholder: "Express, Standard, Bulk…" },
+    { label: "PO / Reference", name: "meta_poNumber", placeholder: "Purchase order number" },
+  ],
+  SECURITY: [
+    { label: "Site Name", name: "meta_siteName", placeholder: "e.g. Westgate Mall" },
+    { label: "Deployment Type", name: "meta_deploymentType", placeholder: "Armed, Unarmed, Mobile patrol…" },
+    { label: "Shift Hours", name: "meta_shiftHours", placeholder: "e.g. 8am-6pm, Night shift" },
+  ],
+};
 
 const STATUS_TABS = [
   { label: "All",           value: "" },
@@ -99,25 +156,12 @@ const STATUS_TABS = [
 ];
 
 export default function JobsClient({
-  jobs,
-  total,
-  pages,
-  workers,
-  jobTypes,
-  zones,
-  assets,
-  currentStatus,
-  currentSearch,
+  jobs, total, pages, workers, jobTypes, zones, assets, industry, clients, currentStatus, currentSearch,
 }: {
-  jobs: Job[];
-  total: number;
-  pages: number;
-  workers: Worker[];
-  jobTypes: string[];
-  zones: string[];
-  assets: AssetOption[];
-  currentStatus?: string;
-  currentSearch?: string;
+  jobs: Job[]; total: number; pages: number;
+  workers: Worker[]; jobTypes: string[]; zones: string[];
+  assets: AssetOption[]; industry: string; clients: ClientOption[];
+  currentStatus?: string; currentSearch?: string;
 }) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
@@ -360,16 +404,16 @@ export default function JobsClient({
       {/* Create Job Modal */}
       {showCreate && (
         <Modal title="New Job" onClose={() => setShowCreate(false)}>
-          <form onSubmit={handleCreate} className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Client Name" name="clientName" required />
-              <Field
-                label="Client Phone"
-                name="clientPhone"
-                placeholder="+254..."
-                required
-              />
-            </div>
+          <form onSubmit={handleCreate} className="space-y-3 max-h-[75vh] overflow-y-auto pr-1">
+            {/* Client picker */}
+            {clients.length > 0 ? (
+              <ClientPicker clients={clients} />
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Client Name" name="clientName" required />
+                <Field label="Client Phone" name="clientPhone" placeholder="+254..." required />
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">
@@ -452,6 +496,25 @@ export default function JobsClient({
                 ))}
               </select>
             </div>
+            {/* Industry-specific optional fields */}
+            {INDUSTRY_FIELDS[industry] && (
+              <details className="group">
+                <summary className="cursor-pointer text-xs font-medium text-blue-600 hover:text-blue-700 py-1 flex items-center gap-1 select-none list-none">
+                  <span className="group-open:rotate-90 transition-transform inline-block">▶</span>
+                  Industry Details ({industry.replace(/_/g, " ").toLowerCase()})
+                </summary>
+                <div className="mt-2 grid grid-cols-2 gap-3 bg-blue-50/50 border border-blue-100 rounded-xl p-3">
+                  {INDUSTRY_FIELDS[industry].map((f) => (
+                    <div key={f.name}>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">{f.label}</label>
+                      <input name={f.name} type={f.type ?? "text"} placeholder={f.placeholder}
+                        className={inputCls} />
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
+
             <div className="flex gap-2 pt-2">
               <button
                 type="button"
@@ -594,6 +657,59 @@ export default function JobsClient({
             )}
           </div>
         </Modal>
+      )}
+    </div>
+  );
+}
+
+// ── Client Picker — select existing client or enter manually ──────────────────
+function ClientPicker({ clients }: { clients: ClientOption[] }) {
+  const [mode, setMode] = useState<"pick" | "manual">("pick");
+  const [selected, setSelected] = useState<ClientOption | null>(null);
+  const cls = "w-full bg-white border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500";
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <label className="block text-xs font-medium text-slate-700">Client</label>
+        <button type="button" onClick={() => { setMode(m => m === "pick" ? "manual" : "pick"); setSelected(null); }}
+          className="text-[10px] text-blue-600 hover:underline ml-auto">
+          {mode === "pick" ? "Enter manually instead" : "Pick from clients list"}
+        </button>
+      </div>
+      {mode === "pick" ? (
+        <>
+          <select className={cls} onChange={(e) => {
+            const c = clients.find(x => x.id === e.target.value) ?? null;
+            setSelected(c);
+          }}>
+            <option value="">Select a client…</option>
+            {clients.map(c => (
+              <option key={c.id} value={c.id}>{c.name} · {c.phone}</option>
+            ))}
+          </select>
+          {selected && (
+            <>
+              <input type="hidden" name="clientName" value={selected.name} />
+              <input type="hidden" name="clientPhone" value={selected.phone} />
+              <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-1.5">
+                {selected.name} · {selected.phone}
+              </p>
+            </>
+          )}
+          {!selected && <p className="text-xs text-slate-400">Select a client to auto-fill their details.</p>}
+        </>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-slate-700 mb-1">Client Name</label>
+            <input name="clientName" required className={cls} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-700 mb-1">Client Phone</label>
+            <input name="clientPhone" placeholder="+254..." required className={cls} />
+          </div>
+        </div>
       )}
     </div>
   );

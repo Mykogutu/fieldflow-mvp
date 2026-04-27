@@ -1,12 +1,29 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { currentWorkspaceId } from "@/lib/workspace";
 import LogoutButton from "@/components/admin/LogoutButton";
 import NotificationBell from "@/components/notifications/NotificationBell";
 import UserDropdown from "@/components/admin/UserDropdown";
 import { NavLinks } from "@/components/admin/NavLinks";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { Search } from "lucide-react";
+
+const INDUSTRY_LABELS: Record<string, string> = {
+  TANK_SERVICES:  "Water Tank Services",
+  FUEL_TRACKER:   "Fuel & Tracker Installation",
+  SOLAR:          "Solar & Energy",
+  CLEANING:       "Cleaning Services",
+  PEST_CONTROL:   "Pest Control",
+  PLUMBING:       "Plumbing Services",
+  ELECTRICAL:     "Electrical Services",
+  HVAC:           "HVAC Services",
+  LOGISTICS:      "Logistics & Delivery",
+  SECURITY:       "Security Services",
+  PROPERTY:       "Property Management",
+  HOME_REPAIR:    "Home Repair",
+  OTHER:          "Field Service Platform",
+};
 
 export default async function AdminLayout({
   children,
@@ -16,10 +33,13 @@ export default async function AdminLayout({
   const session = await getSession();
   if (!session || session.role !== "ADMIN") redirect("/login");
 
-  const adminUser = await prisma.user.findUnique({
-    where: { id: session.userId },
-    select: { name: true },
-  });
+  const workspaceId = await currentWorkspaceId();
+
+  const [adminUser, companyNameSetting, industrySetting] = await Promise.all([
+    prisma.user.findUnique({ where: { id: session.userId }, select: { name: true } }),
+    prisma.setting.findFirst({ where: { workspaceId, key: "company_name" } }),
+    prisma.setting.findFirst({ where: { workspaceId, key: "industry" } }),
+  ]);
 
   const name = adminUser?.name ?? "Admin";
   const initials = name
@@ -29,19 +49,24 @@ export default async function AdminLayout({
     .slice(0, 2)
     .toUpperCase();
 
+  const companyName = companyNameSetting?.value ?? "FieldFlow";
+  const industryLabel = INDUSTRY_LABELS[industrySetting?.value ?? ""] ?? "Field Service Platform";
+
   return (
     <div className="flex h-screen bg-slate-50">
       {/* Sidebar */}
       <aside className="w-56 bg-white border-r border-gray-100 flex flex-col shrink-0">
-        {/* Logo */}
+        {/* Workspace identity */}
         <div className="px-4 py-4 border-b border-gray-100">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center shrink-0">
-              <span className="text-white text-xs font-extrabold tracking-tight">F</span>
+              <span className="text-white text-xs font-extrabold tracking-tight">
+                {companyName.charAt(0).toUpperCase()}
+              </span>
             </div>
             <div className="min-w-0">
-              <p className="font-bold text-slate-900 text-sm leading-tight">FieldFlow</p>
-              <p className="text-[10px] text-slate-400 leading-tight">Field Service Platform</p>
+              <p className="font-bold text-slate-900 text-sm leading-tight truncate">{companyName}</p>
+              <p className="text-[10px] text-slate-400 leading-tight truncate">{industryLabel}</p>
             </div>
           </div>
         </div>

@@ -7,7 +7,83 @@ import { detectJobRisks, type JobRisk } from "@/lib/risk-detection";
 import {
   Wrench, Clock, AlertTriangle, TrendingUp,
   CheckCircle, Calendar, FileText, UserCheck, Sparkles,
+  CheckCircle2, Circle, ArrowRight,
 } from "lucide-react";
+
+// ── Onboarding Checklist ──────────────────────────────────────────────────────
+type OnboardingState = {
+  hasCompanyName: boolean;
+  hasIndustry: boolean;
+  hasJobTypes: boolean;
+  hasWorkers: boolean;
+  hasFirstJob: boolean;
+};
+
+function OnboardingChecklist({ state }: { state: OnboardingState }) {
+  const steps = [
+    { key: "hasCompanyName", done: state.hasCompanyName, label: "Set your company name",   href: "/admin/settings",  hint: "Workspace → General settings" },
+    { key: "hasIndustry",    done: state.hasIndustry,    label: "Choose your industry",     href: "/admin/settings",  hint: "Configures job types and documents" },
+    { key: "hasJobTypes",    done: state.hasJobTypes,    label: "Add job types",            href: "/admin/settings",  hint: "e.g. Tank Repair, Installation" },
+    { key: "hasWorkers",     done: state.hasWorkers,     label: "Add your first worker",    href: "/admin/workers",   hint: "Field technician who receives jobs" },
+    { key: "hasFirstJob",    done: state.hasFirstJob,    label: "Create your first job",    href: "/admin/jobs",      hint: "Assign a job to a worker" },
+  ];
+  const completedCount = steps.filter((s) => s.done).length;
+  const allDone = completedCount === steps.length;
+  if (allDone) return null;
+
+  const pct = Math.round((completedCount / steps.length) * 100);
+
+  return (
+    <div className="bg-white rounded-xl border border-blue-100 shadow-sm overflow-hidden">
+      <div className="px-5 py-4 border-b border-blue-50 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+            <Sparkles className="w-4.5 h-4.5 text-blue-600" style={{ width: 18, height: 18 }} />
+          </div>
+          <div>
+            <p className="font-semibold text-slate-900 text-sm">Get started with FieldFlow</p>
+            <p className="text-xs text-slate-400 mt-0.5">{completedCount} of {steps.length} steps complete</p>
+          </div>
+        </div>
+        {/* Progress bar */}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="w-28 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+          </div>
+          <span className="text-xs font-semibold text-blue-600">{pct}%</span>
+        </div>
+      </div>
+      <div className="px-5 py-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        {steps.map((step) => (
+          <Link
+            key={step.key}
+            href={step.done ? "#" : step.href}
+            className={`flex items-start gap-2.5 p-3 rounded-xl border transition-all ${
+              step.done
+                ? "border-green-100 bg-green-50/50 cursor-default"
+                : "border-gray-100 hover:border-blue-200 hover:bg-blue-50/30"
+            }`}
+          >
+            {step.done ? (
+              <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+            ) : (
+              <Circle className="w-4 h-4 text-slate-300 shrink-0 mt-0.5" />
+            )}
+            <div className="min-w-0">
+              <p className={`text-xs font-medium leading-tight ${step.done ? "text-green-700 line-through decoration-green-400" : "text-slate-700"}`}>
+                {step.label}
+              </p>
+              {!step.done && (
+                <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">{step.hint}</p>
+              )}
+            </div>
+            {!step.done && <ArrowRight className="w-3 h-3 text-slate-300 ml-auto mt-0.5 shrink-0" />}
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // ── Sparkline SVGs (decorative) ───────────────────────────────────────────────
 function SparkLine({ color }: { color: string }) {
@@ -172,6 +248,7 @@ async function getDashboardData(weekStart: Date) {
   const [
     activeJobs, pendingVerification, postponedJobs, monthRevenue,
     recentNotifications, recentJobs, workers, calendarJobs, risks,
+    companyNameSetting, industrySetting, jobTypesSetting, workerCount, jobCount,
   ] = await Promise.all([
     prisma.job.count({ where: { workspaceId, status: { in: ["ASSIGNED", "IN_PROGRESS"] } } }),
     prisma.job.count({ where: { workspaceId, status: "COMPLETED_PENDING_VERIFICATION" } }),
@@ -186,9 +263,25 @@ async function getDashboardData(weekStart: Date) {
       orderBy: { scheduledDate: "asc" },
     }),
     detectJobRisks(workspaceId),
+    // onboarding data
+    prisma.setting.findFirst({ where: { workspaceId, key: "company_name" } }),
+    prisma.setting.findFirst({ where: { workspaceId, key: "industry" } }),
+    prisma.setting.findFirst({ where: { workspaceId, key: "job_types" } }),
+    prisma.user.count({ where: { workspaceId, role: "TECHNICIAN" } }),
+    prisma.job.count({ where: { workspaceId } }),
   ]);
 
-  return { activeJobs, pendingVerification, postponedJobs, monthRevenue, recentNotifications, recentJobs, workers, calendarJobs, risks };
+  const jobTypesList: string[] = jobTypesSetting?.value ? JSON.parse(jobTypesSetting.value) : [];
+
+  const onboarding = {
+    hasCompanyName: !!(companyNameSetting?.value?.trim()),
+    hasIndustry: !!(industrySetting?.value?.trim()),
+    hasJobTypes: jobTypesList.length > 0,
+    hasWorkers: workerCount > 0,
+    hasFirstJob: jobCount > 0,
+  };
+
+  return { activeJobs, pendingVerification, postponedJobs, monthRevenue, recentNotifications, recentJobs, workers, calendarJobs, risks, onboarding };
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -247,6 +340,9 @@ export default async function DashboardPage({ searchParams }: { searchParams?: {
 
   return (
     <div className="space-y-5">
+      {/* Onboarding checklist — only shows until workspace is fully set up */}
+      <OnboardingChecklist state={data.onboarding} />
+
       {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((s) => (
@@ -306,7 +402,7 @@ export default async function DashboardPage({ searchParams }: { searchParams?: {
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
             <h2 className="font-semibold text-slate-900">Activity & Alerts</h2>
-            <Link href="/admin/ai" className="text-xs text-blue-600 hover:text-blue-700 font-medium">View all</Link>
+            <Link href="/admin/notifications" className="text-xs text-blue-600 hover:text-blue-700 font-medium">View all →</Link>
           </div>
           <div className="divide-y divide-gray-50">
             {data.recentNotifications.map((n) => (
@@ -328,7 +424,7 @@ export default async function DashboardPage({ searchParams }: { searchParams?: {
           </div>
           {data.recentNotifications.length > 0 && (
             <div className="px-5 py-2.5 border-t border-gray-100 text-center">
-              <Link href="/admin/ai" className="text-xs text-slate-500 hover:text-blue-600 font-medium transition-colors">View full activity log →</Link>
+              <Link href="/admin/notifications" className="text-xs text-slate-500 hover:text-blue-600 font-medium transition-colors">View full activity log →</Link>
             </div>
           )}
         </div>

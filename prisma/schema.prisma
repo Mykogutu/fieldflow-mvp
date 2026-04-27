@@ -67,6 +67,7 @@ model Job {
   completedAt    DateTime?
   verifiedAt     DateTime?
   lastActionAt   DateTime?
+  metadata       Json?                                          // industry-specific optional fields
 
   workers       User[]         @relation("JobWorkers")
   invoice       Invoice?
@@ -213,6 +214,8 @@ model Document {
   title        String?                                        // optional human-readable title
   pdfUrl       String?
   metadata     Json?                                          // type-specific fields
+  sentAt       DateTime?                                      // when sent to client
+  sentVia      String?                                        // WHATSAPP | EMAIL | MANUAL
   generatedAt  DateTime     @default(now())
 
   @@index([workspaceId])

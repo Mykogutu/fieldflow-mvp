@@ -34,6 +34,14 @@ export async function createJob(formData: FormData) {
   const clientPhone = normalizePhone(d.clientPhone);
   const workspaceId = await currentWorkspaceId();
 
+  // Collect any meta_* fields as structured metadata
+  const metadata: Record<string, string> = {};
+  formData.forEach((value, key) => {
+    if (key.startsWith("meta_") && typeof value === "string" && value.trim()) {
+      metadata[key.slice(5)] = value.trim(); // strip "meta_" prefix
+    }
+  });
+
   let workerId = d.workerId;
   if (!workerId) {
     workerId =
@@ -65,6 +73,7 @@ export async function createJob(formData: FormData) {
       status: workerId ? "ASSIGNED" : "ASSIGNED",
       workers: workerId ? { connect: [{ id: workerId }] } : undefined,
       assetId: d.assetId || undefined,
+      metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
     },
   });
 
@@ -93,7 +102,7 @@ export async function createJob(formData: FormData) {
     title: "New Job Created",
     message: `Job for ${d.clientName} (${d.jobType}) created.`,
     jobId: job.id,
-    link: `/admin/jobs?id=${job.id}`,
+    link: `/admin/jobs/${job.id}`,
   });
 
   revalidatePath("/admin/jobs");
