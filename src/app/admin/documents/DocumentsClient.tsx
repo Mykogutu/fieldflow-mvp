@@ -34,6 +34,9 @@ type Doc = {
   sentAt: Date | null;
   sentVia: string | null;
   generatedAt: Date;
+  // enriched from page.tsx
+  clientName?: string | null;
+  assetName?: string | null;
 };
 
 interface Props {
@@ -164,7 +167,7 @@ export default function DocumentsClient({ docs, total, typeCounts, typeFilter }:
               <thead className="bg-slate-50 border-b border-gray-100">
                 <tr>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Type</th>
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Title</th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Title / Client</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Job</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Generated</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Delivery</th>
@@ -190,6 +193,12 @@ export default function DocumentsClient({ docs, total, typeCounts, typeFilter }:
                         <p className="text-sm text-slate-700 truncate max-w-xs">
                           {doc.title ?? cfg.label}
                         </p>
+                        {doc.clientName && (
+                          <p className="text-xs text-slate-400 mt-0.5 truncate">{doc.clientName}</p>
+                        )}
+                        {doc.assetName && (
+                          <p className="text-xs text-slate-400 truncate">{doc.assetName}</p>
+                        )}
                       </td>
                       <td className="px-5 py-3.5">
                         {doc.jobId ? (

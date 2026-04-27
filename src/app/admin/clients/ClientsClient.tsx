@@ -2,13 +2,20 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, Plus, MapPin, Phone, Building2, User, X, ChevronRight } from "lucide-react";
+import {
+  Search, Plus, MapPin, Phone, Building2, User, X,
+  ChevronRight, Briefcase, AlertCircle, Calendar,
+} from "lucide-react";
 import { createClient, updateClient, deactivateClient } from "@/app/actions/client-actions";
+import { formatKES, formatDate } from "@/lib/utils";
 
 interface Client {
   id: string; name: string; phone: string; email: string | null;
   company: string | null; location: string | null; type: string; isActive: boolean;
   createdAt: Date | string;
+  jobCount: number;
+  outstanding: number;
+  lastJobDate: Date | null;
 }
 
 const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
@@ -16,6 +23,7 @@ const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm foc
 export default function ClientsClient({ clients, total }: { clients: Client[]; total: number }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const [activeFilter, setActiveFilter] = useState<"all" | "unpaid">("all");
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<Client | null>(null);
   const [feedback, setFeedback] = useState<{ type: "ok" | "error"; msg: string } | null>(null);
@@ -25,6 +33,15 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
     e.preventDefault();
     const sp = new URLSearchParams();
     if (search) sp.set("search", search);
+    if (activeFilter !== "all") sp.set("filter", activeFilter);
+    router.push(`/admin/clients?${sp.toString()}`);
+  }
+
+  function handleFilter(f: "all" | "unpaid") {
+    setActiveFilter(f);
+    const sp = new URLSearchParams();
+    if (search) sp.set("search", search);
+    if (f !== "all") sp.set("filter", f);
     router.push(`/admin/clients?${sp.toString()}`);
   }
 
@@ -57,38 +74,43 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
     startTransition(async () => { await deactivateClient(id); router.refresh(); });
   }
 
+  const unpaidCount = clients.filter(c => c.outstanding > 0).length;
+
   return (
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Clients</h1>
-          <p className="text-xs text-slate-400 mt-0.5">{total} total clients</p>
+          <p className="text-xs text-slate-400 mt-0.5">{total} total · {unpaidCount} with outstanding balance</p>
         </div>
-        <button
-          onClick={() => setShowAdd(true)}
-          className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Add Client
+        <button onClick={() => setShowAdd(true)}
+          className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors">
+          <Plus className="w-4 h-4" /> Add Client
         </button>
       </div>
 
-      {/* Search */}
-      <form onSubmit={handleSearch} className="flex gap-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search name, phone, company..."
-            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+      {/* Search + filters */}
+      <div className="flex flex-wrap items-center gap-3">
+        <form onSubmit={handleSearch} className="flex gap-2 flex-1 min-w-0">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Search name, phone, company..."
+              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <button type="submit" className="px-4 py-2 bg-white border border-gray-200 text-slate-600 text-sm rounded-xl hover:border-blue-400 transition-colors">Search</button>
+        </form>
+        <div className="flex gap-1.5">
+          {([["all", "All"], ["unpaid", "Unpaid"]] as const).map(([key, label]) => (
+            <button key={key} onClick={() => handleFilter(key)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${
+                activeFilter === key ? "bg-blue-600 text-white" : "bg-white border border-gray-200 text-slate-600 hover:border-blue-300"}`}>
+              {label}{key === "unpaid" && unpaidCount > 0 ? ` (${unpaidCount})` : ""}
+            </button>
+          ))}
         </div>
-        <button type="submit" className="px-4 py-2 bg-white border border-gray-200 text-slate-600 text-sm rounded-xl hover:border-blue-400 transition-colors">
-          Search
-        </button>
-      </form>
+      </div>
 
       {feedback && (
         <div className={`flex items-center justify-between text-sm px-4 py-2.5 rounded-xl ${feedback.type === "ok" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
@@ -99,8 +121,9 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
 
       {/* Clients grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {clients.map((c) => (
-          <div key={c.id} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow group">
+        {clients.map(c => (
+          <div key={c.id} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow">
+            {/* Top: name + type */}
             <div className="flex items-start justify-between gap-2 mb-3">
               <div className="min-w-0 flex-1">
                 <Link href={`/admin/clients/${c.id}`} className="font-semibold text-slate-900 hover:text-blue-600 truncate block">
@@ -117,22 +140,40 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
               </span>
             </div>
 
+            {/* Contact info */}
             <div className="space-y-1 text-xs text-slate-500">
               <p className="flex items-center gap-1.5"><Phone className="w-3 h-3 shrink-0 text-slate-400" />{c.phone}</p>
               {c.location && <p className="flex items-center gap-1.5 truncate"><MapPin className="w-3 h-3 shrink-0 text-slate-400" />{c.location}</p>}
             </div>
 
-            <div className="flex items-center gap-2 mt-4 pt-3 border-t border-gray-100">
-              <Link
-                href={`/admin/clients/${c.id}`}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs text-blue-600 font-medium hover:text-blue-700"
-              >
+            {/* Stats row */}
+            <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-gray-100">
+              <div className="text-center">
+                <p className="text-[10px] text-slate-400">Jobs</p>
+                <p className="text-sm font-bold text-slate-900">{c.jobCount}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] text-slate-400">Outstanding</p>
+                <p className={`text-sm font-bold ${c.outstanding > 0 ? "text-red-600" : "text-green-600"}`}>
+                  {c.outstanding > 0 ? formatKES(c.outstanding) : "Clear"}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] text-slate-400">Last Job</p>
+                <p className="text-xs font-medium text-slate-600">
+                  {c.lastJobDate ? formatDate(c.lastJobDate) : "—"}
+                </p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
+              <Link href={`/admin/clients/${c.id}`}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs text-blue-600 font-medium hover:text-blue-700">
                 View profile <ChevronRight className="w-3.5 h-3.5" />
               </Link>
-              <button
-                onClick={() => setEditing(c)}
-                className="text-xs text-slate-400 hover:text-slate-700 border border-gray-200 rounded-lg px-2.5 py-1.5 transition-colors"
-              >
+              <button onClick={() => setEditing(c)}
+                className="text-xs text-slate-400 hover:text-slate-700 border border-gray-200 rounded-lg px-2.5 py-1.5 transition-colors">
                 Edit
               </button>
             </div>
@@ -141,11 +182,9 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
         {clients.length === 0 && (
           <div className="col-span-3 bg-white rounded-xl border border-gray-200 py-16 flex flex-col items-center gap-3">
             <User className="w-10 h-10 text-slate-200" />
-            <p className="text-sm text-slate-400">No clients yet. Add your first client.</p>
-            <button
-              onClick={() => setShowAdd(true)}
-              className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700"
-            >
+            <p className="text-sm text-slate-400">No clients found.</p>
+            <button onClick={() => setShowAdd(true)}
+              className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700">
               <Plus className="w-4 h-4" /> Add Client
             </button>
           </div>
@@ -187,7 +226,8 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
               </button>
             </div>
             <div className="pt-2 border-t border-gray-100">
-              <button type="button" onClick={() => { setEditing(null); handleDeactivate(editing.id); }} className="w-full text-xs text-red-500 hover:text-red-600">
+              <button type="button" onClick={() => { setEditing(null); handleDeactivate(editing.id); }}
+                className="w-full text-xs text-red-500 hover:text-red-600">
                 Deactivate client
               </button>
             </div>
@@ -199,9 +239,7 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
 }
 
 function ClientForm({ isPending, onSubmit, onCancel }: {
-  isPending: boolean;
-  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
-  onCancel: () => void;
+  isPending: boolean; onSubmit: (e: React.FormEvent<HTMLFormElement>) => void; onCancel: () => void;
 }) {
   return (
     <form onSubmit={onSubmit} className="space-y-3">
@@ -238,8 +276,7 @@ function Field({ label, name, type = "text", placeholder, required, defaultValue
   return (
     <div>
       <label className="block text-xs font-medium text-gray-700 mb-1">{label}</label>
-      <input type={type} name={name} placeholder={placeholder} required={required} defaultValue={defaultValue}
-        className={inputCls} />
+      <input type={type} name={name} placeholder={placeholder} required={required} defaultValue={defaultValue} className={inputCls} />
     </div>
   );
 }

@@ -4,86 +4,13 @@ import { currentWorkspaceId } from "@/lib/workspace";
 import Link from "next/link";
 import WorkCalendar, { type CalendarJob, type CalendarWorker } from "./WorkCalendar";
 import { detectJobRisks, type JobRisk } from "@/lib/risk-detection";
+import OnboardingChecklist from "./OnboardingChecklist";
 import {
   Wrench, Clock, AlertTriangle, TrendingUp,
   CheckCircle, Calendar, FileText, UserCheck, Sparkles,
-  CheckCircle2, Circle, ArrowRight,
+  CheckCircle2, Circle, ArrowRight, X,
+  DollarSign, ReceiptText,
 } from "lucide-react";
-
-// ── Onboarding Checklist ──────────────────────────────────────────────────────
-type OnboardingState = {
-  hasCompanyName: boolean;
-  hasIndustry: boolean;
-  hasJobTypes: boolean;
-  hasWorkers: boolean;
-  hasFirstJob: boolean;
-};
-
-function OnboardingChecklist({ state }: { state: OnboardingState }) {
-  const steps = [
-    { key: "hasCompanyName", done: state.hasCompanyName, label: "Set your company name",   href: "/admin/settings",  hint: "Workspace → General settings" },
-    { key: "hasIndustry",    done: state.hasIndustry,    label: "Choose your industry",     href: "/admin/settings",  hint: "Configures job types and documents" },
-    { key: "hasJobTypes",    done: state.hasJobTypes,    label: "Add job types",            href: "/admin/settings",  hint: "e.g. Tank Repair, Installation" },
-    { key: "hasWorkers",     done: state.hasWorkers,     label: "Add your first worker",    href: "/admin/workers",   hint: "Field technician who receives jobs" },
-    { key: "hasFirstJob",    done: state.hasFirstJob,    label: "Create your first job",    href: "/admin/jobs",      hint: "Assign a job to a worker" },
-  ];
-  const completedCount = steps.filter((s) => s.done).length;
-  const allDone = completedCount === steps.length;
-  if (allDone) return null;
-
-  const pct = Math.round((completedCount / steps.length) * 100);
-
-  return (
-    <div className="bg-white rounded-xl border border-blue-100 shadow-sm overflow-hidden">
-      <div className="px-5 py-4 border-b border-blue-50 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
-            <Sparkles className="w-4.5 h-4.5 text-blue-600" style={{ width: 18, height: 18 }} />
-          </div>
-          <div>
-            <p className="font-semibold text-slate-900 text-sm">Get started with FieldFlow</p>
-            <p className="text-xs text-slate-400 mt-0.5">{completedCount} of {steps.length} steps complete</p>
-          </div>
-        </div>
-        {/* Progress bar */}
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="w-28 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-            <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
-          </div>
-          <span className="text-xs font-semibold text-blue-600">{pct}%</span>
-        </div>
-      </div>
-      <div className="px-5 py-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-        {steps.map((step) => (
-          <Link
-            key={step.key}
-            href={step.done ? "#" : step.href}
-            className={`flex items-start gap-2.5 p-3 rounded-xl border transition-all ${
-              step.done
-                ? "border-green-100 bg-green-50/50 cursor-default"
-                : "border-gray-100 hover:border-blue-200 hover:bg-blue-50/30"
-            }`}
-          >
-            {step.done ? (
-              <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
-            ) : (
-              <Circle className="w-4 h-4 text-slate-300 shrink-0 mt-0.5" />
-            )}
-            <div className="min-w-0">
-              <p className={`text-xs font-medium leading-tight ${step.done ? "text-green-700 line-through decoration-green-400" : "text-slate-700"}`}>
-                {step.label}
-              </p>
-              {!step.done && (
-                <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">{step.hint}</p>
-              )}
-            </div>
-            {!step.done && <ArrowRight className="w-3 h-3 text-slate-300 ml-auto mt-0.5 shrink-0" />}
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 // ── Sparkline SVGs (decorative) ───────────────────────────────────────────────
 function SparkLine({ color }: { color: string }) {
@@ -246,14 +173,21 @@ async function getDashboardData(weekStart: Date) {
   weekEnd.setDate(weekStart.getDate() + 7);
 
   const [
-    activeJobs, pendingVerification, postponedJobs, monthRevenue,
+    activeJobs, pendingVerification, postponedJobs,
+    monthRevenue, monthInvoiced, outstandingInvoices, overdueCount,
     recentNotifications, recentJobs, workers, calendarJobs, risks,
-    companyNameSetting, industrySetting, jobTypesSetting, workerCount, jobCount,
+    // onboarding fields
+    companyNameSetting, industrySetting, jobTypesSetting, zonesSetting, documentConfigSetting,
+    workerCount, clientCount, assetCount, jobCount, completedJobCount,
   ] = await Promise.all([
     prisma.job.count({ where: { workspaceId, status: { in: ["ASSIGNED", "IN_PROGRESS"] } } }),
     prisma.job.count({ where: { workspaceId, status: "COMPLETED_PENDING_VERIFICATION" } }),
     prisma.job.count({ where: { workspaceId, status: { in: ["POSTPONED", "ISSUE_REPORTED"] } } }),
+    // payment breakdown
     prisma.invoice.aggregate({ _sum: { amount: true }, where: { workspaceId, status: "PAID", paidAt: { gte: startOfMonth } } }),
+    prisma.invoice.aggregate({ _sum: { amount: true }, where: { workspaceId, status: { not: "CANCELLED" }, createdAt: { gte: startOfMonth } } }),
+    prisma.invoice.aggregate({ _sum: { amount: true }, where: { workspaceId, status: { in: ["PENDING", "PARTIALLY_PAID", "OVERDUE"] } } }),
+    prisma.invoice.count({ where: { workspaceId, status: "OVERDUE" } }),
     prisma.notification.findMany({ where: { workspaceId, isRead: false }, orderBy: { createdAt: "desc" }, take: 6 }),
     prisma.job.findMany({ where: { workspaceId }, orderBy: { updatedAt: "desc" }, take: 6, include: { workers: { select: { name: true } } } }),
     prisma.user.findMany({ where: { workspaceId, role: "TECHNICIAN" }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
@@ -263,25 +197,45 @@ async function getDashboardData(weekStart: Date) {
       orderBy: { scheduledDate: "asc" },
     }),
     detectJobRisks(workspaceId),
-    // onboarding data
+    // onboarding settings
     prisma.setting.findFirst({ where: { workspaceId, key: "company_name" } }),
     prisma.setting.findFirst({ where: { workspaceId, key: "industry" } }),
     prisma.setting.findFirst({ where: { workspaceId, key: "job_types" } }),
+    prisma.setting.findFirst({ where: { workspaceId, key: "zones" } }),
+    prisma.setting.findFirst({ where: { workspaceId, key: "document_types" } }),
+    // onboarding counts
     prisma.user.count({ where: { workspaceId, role: "TECHNICIAN" } }),
+    prisma.client.count({ where: { workspaceId } }),
+    prisma.asset.count({ where: { workspaceId } }),
     prisma.job.count({ where: { workspaceId } }),
+    prisma.job.count({ where: { workspaceId, status: { in: ["VERIFIED", "CLOSED"] } } }),
   ]);
 
   const jobTypesList: string[] = jobTypesSetting?.value ? JSON.parse(jobTypesSetting.value) : [];
+  const zonesList: string[] = zonesSetting?.value ? JSON.parse(zonesSetting.value) : [];
 
   const onboarding = {
-    hasCompanyName: !!(companyNameSetting?.value?.trim()),
-    hasIndustry: !!(industrySetting?.value?.trim()),
-    hasJobTypes: jobTypesList.length > 0,
-    hasWorkers: workerCount > 0,
-    hasFirstJob: jobCount > 0,
+    hasCompanyName:    !!(companyNameSetting?.value?.trim()),
+    hasIndustry:       !!(industrySetting?.value?.trim()),
+    hasJobTypes:       jobTypesList.length > 0,
+    hasZones:          zonesList.length > 0,
+    hasDocumentConfig: !!(documentConfigSetting?.value?.trim()),
+    hasWorkers:        workerCount > 0,
+    hasClients:        clientCount > 0,
+    hasAssets:         assetCount > 0,
+    hasFirstJob:       jobCount > 0,
+    hasCompletedJob:   completedJobCount > 0,
   };
 
-  return { activeJobs, pendingVerification, postponedJobs, monthRevenue, recentNotifications, recentJobs, workers, calendarJobs, risks, onboarding };
+  const outstanding = outstandingInvoices._sum.amount ?? 0;
+  const totalInvoicedMonth = monthInvoiced._sum.amount ?? 0;
+
+  return {
+    activeJobs, pendingVerification, postponedJobs,
+    monthRevenue, totalInvoicedMonth, outstanding, overdueCount,
+    recentNotifications, recentJobs, workers, calendarJobs, risks,
+    onboarding,
+  };
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -303,7 +257,7 @@ export default async function DashboardPage({ searchParams }: { searchParams?: {
     {
       label: "Awaiting Verification",
       value: data.pendingVerification,
-      desc: <span className="text-slate-400">Pending review</span>,
+      desc: <span className="text-slate-400">Pending OTP</span>,
       Icon: Clock,
       iconBg: "bg-amber-50", iconColor: "text-amber-500",
       spark: <SparkLine color="#f59e0b" />,
@@ -312,7 +266,7 @@ export default async function DashboardPage({ searchParams }: { searchParams?: {
     {
       label: "Need Attention",
       value: data.postponedJobs,
-      desc: <span className="text-slate-400">Requires action</span>,
+      desc: <span className="text-slate-400">Postponed / issues</span>,
       Icon: AlertTriangle,
       iconBg: "bg-red-50", iconColor: "text-red-500",
       spark: <SparkLineDown color="#ef4444" />,
@@ -321,8 +275,23 @@ export default async function DashboardPage({ searchParams }: { searchParams?: {
     {
       label: "Revenue This Month",
       value: formatKES(revenue),
-      desc: <span className="flex items-center gap-1 text-green-600 font-medium text-xs"><TrendingUp className="w-3 h-3" />18% vs last month</span>,
-      Icon: TrendingUp,
+      desc: (
+        <span className="flex flex-col gap-0.5">
+          <span className="text-slate-400 text-[10px]">{formatKES(data.totalInvoicedMonth)} invoiced</span>
+          {data.outstanding > 0 && (
+            <span className="flex items-center gap-1 text-red-500 text-[10px] font-medium">
+              <DollarSign className="w-2.5 h-2.5" />
+              {formatKES(data.outstanding)} outstanding{data.overdueCount > 0 ? ` · ${data.overdueCount} overdue` : ""}
+            </span>
+          )}
+          {data.outstanding === 0 && (
+            <span className="flex items-center gap-1 text-green-600 text-[10px] font-medium">
+              <TrendingUp className="w-2.5 h-2.5" />All invoices cleared
+            </span>
+          )}
+        </span>
+      ),
+      Icon: ReceiptText,
       iconBg: "bg-green-50", iconColor: "text-green-600",
       spark: <SparkBars color="#22c55e" />,
       link: "/admin/invoices",

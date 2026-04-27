@@ -15,7 +15,7 @@ export default async function DocumentsPage({
     ...(typeFilter ? { type: typeFilter as never } : {}),
   };
 
-  const [docs, total, typeCounts] = await Promise.all([
+  const [rawDocs, total, typeCounts] = await Promise.all([
     prisma.document.findMany({
       where,
       orderBy: { generatedAt: "desc" },
@@ -28,6 +28,23 @@ export default async function DocumentsPage({
       _count: { _all: true },
     }),
   ]);
+
+  // Enrich docs with client name and asset name from linked jobs
+  const jobIds = rawDocs.map(d => d.jobId).filter(Boolean) as string[];
+  const jobs = jobIds.length > 0
+    ? await prisma.job.findMany({
+        where: { id: { in: jobIds }, workspaceId },
+        select: { id: true, clientName: true, asset: { select: { name: true } } },
+      })
+    : [];
+
+  const jobMap = Object.fromEntries(jobs.map(j => [j.id, j]));
+
+  const docs = rawDocs.map(doc => ({
+    ...doc,
+    clientName: doc.jobId ? (jobMap[doc.jobId]?.clientName ?? null) : null,
+    assetName: doc.jobId ? (jobMap[doc.jobId]?.asset?.name ?? null) : null,
+  }));
 
   return (
     <DocumentsClient

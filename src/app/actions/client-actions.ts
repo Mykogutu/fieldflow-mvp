@@ -118,6 +118,65 @@ export async function getClients(search?: string) {
   });
 }
 
+export async function getClientsWithStats(search?: string, filter?: "unpaid" | "active" | "all") {
+  const workspaceId = await currentWorkspaceId();
+
+  const clients = await prisma.client.findMany({
+    where: {
+      workspaceId,
+      isActive: true,
+      ...(search
+        ? {
+            OR: [
+              { name: { contains: search, mode: "insensitive" } },
+              { phone: { contains: search } },
+              { company: { contains: search, mode: "insensitive" } },
+              { location: { contains: search, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+    },
+    orderBy: { name: "asc" },
+  });
+
+  if (clients.length === 0) return [];
+
+  const phones = clients.map(c => c.phone);
+
+  // Batch-fetch jobs and invoices for all clients in one query each
+  const [allJobs, allInvoices] = await Promise.all([
+    prisma.job.findMany({
+      where: { workspaceId, clientPhone: { in: phones } },
+      select: { clientPhone: true, status: true, createdAt: true },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.invoice.findMany({
+      where: { workspaceId, clientPhone: { in: phones } },
+      select: { clientPhone: true, amount: true, status: true },
+    }),
+  ]);
+
+  // Build stats maps
+  const jobsMap: Record<string, typeof allJobs> = {};
+  const invoicesMap: Record<string, typeof allInvoices> = {};
+  for (const j of allJobs) { (jobsMap[j.clientPhone] ??= []).push(j); }
+  for (const i of allInvoices) { (invoicesMap[i.clientPhone] ??= []).push(i); }
+
+  const result = clients.map(c => {
+    const jobs = jobsMap[c.phone] ?? [];
+    const invoices = invoicesMap[c.phone] ?? [];
+    const totalInvoiced = invoices.reduce((s, i) => s + i.amount, 0);
+    const totalPaid = invoices.filter(i => i.status === "PAID").reduce((s, i) => s + i.amount, 0);
+    const outstanding = totalInvoiced - totalPaid;
+    const lastJob = jobs[0]?.createdAt ?? null;
+
+    return { ...c, jobCount: jobs.length, outstanding, lastJobDate: lastJob };
+  });
+
+  if (filter === "unpaid") return result.filter(c => c.outstanding > 0);
+  return result;
+}
+
 export async function getClientWithDetails(id: string) {
   const workspaceId = await currentWorkspaceId();
   const client = await prisma.client.findFirst({ where: { id, workspaceId } });

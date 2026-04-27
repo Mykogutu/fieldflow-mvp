@@ -239,5 +239,60 @@ export async function deleteJob(jobId: string) {
   });
   if (result.count === 0) return { error: "Job not found" };
   revalidatePath("/admin/jobs");
+  revalidatePath(`/admin/jobs/${jobId}`);
   return { ok: true };
+}
+
+export async function closeJob(jobId: string) {
+  await requireAdmin();
+  const workspaceId = await currentWorkspaceId();
+  const result = await prisma.job.updateMany({
+    where: { id: jobId, workspaceId },
+    data: { status: "CLOSED", lastActionAt: new Date() },
+  });
+  if (result.count === 0) return { error: "Job not found" };
+  await prisma.jobEvent.create({
+    data: { workspaceId, jobId, type: "CLOSED", note: "Job closed by admin" },
+  });
+  revalidatePath(`/admin/jobs/${jobId}`);
+  revalidatePath("/admin/jobs");
+  return { ok: true };
+}
+
+export async function markJobPaid(jobId: string, method?: string, reference?: string) {
+  await requireAdmin();
+  const workspaceId = await currentWorkspaceId();
+  const job = await prisma.job.findFirst({ where: { id: jobId, workspaceId }, include: { invoice: true } });
+  if (!job) return { error: "Job not found" };
+  if (job.invoice) {
+    await prisma.invoice.update({
+      where: { id: job.invoice.id },
+      data: {
+        status: "PAID",
+        paidAt: new Date(),
+        paymentMethod: method ?? null,
+        paymentReference: reference ?? null,
+      },
+    });
+    await prisma.jobEvent.create({
+      data: { workspaceId, jobId, type: "PAYMENT_RECORDED", note: `Marked paid${method ? ` via ${method}` : ""}${reference ? ` · ${reference}` : ""}` },
+    });
+  }
+  revalidatePath(`/admin/jobs/${jobId}`);
+  revalidatePath("/admin/invoices");
+  return { ok: true };
+}
+
+export async function getJobById(jobId: string) {
+  await requireAdmin();
+  const workspaceId = await currentWorkspaceId();
+  return prisma.job.findFirst({
+    where: { id: jobId, workspaceId },
+    include: {
+      workers: { select: { id: true, name: true, phone: true } },
+      invoice: true,
+      events: { orderBy: { createdAt: "asc" } },
+      asset: true,
+    },
+  });
 }
