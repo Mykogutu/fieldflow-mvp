@@ -10,17 +10,21 @@ import {
   CreditCard,
   Sparkles,
   Settings,
+  UserCheck,
+  FolderOpen,
 } from "lucide-react";
 
 const NAV = [
-  { href: "/admin",          label: "Dashboard", Icon: LayoutDashboard, exact: true },
-  { href: "/admin/jobs",     label: "Jobs",       Icon: Wrench                       },
-  { href: "/admin/assets",   label: "Assets",     Icon: Tag                          },
-  { href: "/admin/invoices", label: "Invoices",   Icon: FileText                     },
-  { href: "/admin/workers",  label: "Workers",    Icon: Users                        },
-  { href: "/admin/expenses", label: "Expenses",   Icon: CreditCard                   },
-  { href: "/admin/ai",       label: "AI Copilot", Icon: Sparkles                     },
-  { href: "/admin/settings", label: "Settings",   Icon: Settings                     },
+  { href: "/admin",            label: "Dashboard", Icon: LayoutDashboard, exact: true },
+  { href: "/admin/jobs",       label: "Jobs",       Icon: Wrench                       },
+  { href: "/admin/clients",    label: "Clients",    Icon: UserCheck                    },
+  { href: "/admin/assets",     label: "Assets",     Icon: Tag                          },
+  { href: "/admin/documents",  label: "Documents",  Icon: FolderOpen                   },
+  { href: "/admin/invoices",   label: "Invoices",   Icon: FileText                     },
+  { href: "/admin/workers",    label: "Workers",    Icon: Users                        },
+  { href: "/admin/expenses",   label: "Expenses",   Icon: CreditCard                   },
+  { href: "/admin/ai",         label: "AI Copilot", Icon: Sparkles                     },
+  { href: "/admin/settings",   label: "Settings",   Icon: Settings                     },
 ];
 
 export function NavLinks() {

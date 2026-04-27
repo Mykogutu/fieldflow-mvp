@@ -282,14 +282,14 @@ export default async function DashboardPage({ searchParams }: { searchParams?: {
           </div>
           <div className="divide-y divide-gray-50">
             {data.recentJobs.map((job) => (
-              <div key={job.id} className="px-5 py-3 flex items-center gap-3 hover:bg-slate-50 transition-colors">
+              <Link key={job.id} href={`/admin/jobs/${job.id}`} className="px-5 py-3 flex items-center gap-3 hover:bg-slate-50 transition-colors">
                 <JobIcon status={job.status} />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-slate-900 truncate">{job.clientName}</p>
                   <p className="text-xs text-slate-400 truncate mt-0.5">{job.jobType} · {formatDate(job.updatedAt)}</p>
                 </div>
                 <StatusBadge status={job.status} />
-              </div>
+              </Link>
             ))}
             {data.recentJobs.length === 0 && (
               <p className="px-5 py-10 text-center text-sm text-slate-400">No jobs yet</p>

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { createJob, reassignJob, rescheduleJob, updateJobStatus } from "@/app/actions/job-actions";
 import { formatKES, formatDate } from "@/lib/utils";
 import { Plus, X, ExternalLink, Minus, Download, Search } from "lucide-react";
+import Link from "next/link";
 
 // Shorten raw CUID job numbers; keep proper JC-YYYY-NNNN format intact
 function shortJobNum(num: string) {
@@ -315,14 +316,22 @@ export default function JobsClient({
                       : <span className="text-slate-400 font-normal">—</span>}
                   </td>
                   <td className="px-4 py-4">
-                    <button
-                      onClick={() => setSelectedJob(job)}
-                      title="Manage job"
-                      className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 font-medium hover:underline transition-colors"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      Manage
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/admin/jobs/${job.id}`}
+                        className="inline-flex items-center gap-1 text-xs text-slate-600 hover:text-blue-600 font-medium bg-slate-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-200 px-2.5 py-1 rounded-lg transition-colors"
+                      >
+                        View
+                      </Link>
+                      <button
+                        onClick={() => setSelectedJob(job)}
+                        title="Manage job"
+                        className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2.5 py-1 rounded-lg transition-colors"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        Manage
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

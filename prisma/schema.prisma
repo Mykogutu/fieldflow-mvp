@@ -96,21 +96,25 @@ model JobEvent {
 }
 
 model Invoice {
-  id            String        @id @default(cuid())
-  workspaceId   String
-  invoiceNumber String        @unique
-  jobId         String        @unique
-  job           Job           @relation(fields: [jobId], references: [id])
-  amount        Float
-  status        InvoiceStatus @default(PENDING)
-  items         Json?
-  pdfUrl        String?
-  clientName    String
-  clientPhone   String
-  workerName    String?
-  paidAt        DateTime?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id               String        @id @default(cuid())
+  workspaceId      String
+  invoiceNumber    String        @unique
+  jobId            String        @unique
+  job              Job           @relation(fields: [jobId], references: [id])
+  amount           Float
+  status           InvoiceStatus @default(PENDING)
+  items            Json?
+  pdfUrl           String?
+  clientName       String
+  clientPhone      String
+  workerName       String?
+  paidAt           DateTime?
+  paymentMethod    String?       // CASH | MPESA | BANK | CHEQUE | OTHER
+  paymentReference String?       // M-Pesa code, bank ref, cheque number
+  paymentNotes     String?
+  partialAmount    Float?        // amount paid if PARTIALLY_PAID
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 
   @@index([workspaceId])
   @@index([workspaceId, status])
@@ -230,6 +234,31 @@ enum DocumentType {
   OTHER
 }
 
+// Client — first-class entity linking jobs, assets, invoices, documents
+model Client {
+  id          String     @id @default(cuid())
+  workspaceId String
+  name        String
+  phone       String
+  email       String?
+  company     String?
+  location    String?
+  address     String?
+  type        ClientType @default(INDIVIDUAL)
+  notes       String?
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([workspaceId])
+  @@index([workspaceId, phone])
+}
+
+enum ClientType {
+  INDIVIDUAL
+  COMPANY
+}
+
 // MVP-STRATEGY v2.0 §10 — Partner Strategy & Product Ownership
 //
 // Resellers / pilot clients / introducers get capped commissions and zero IP.
@@ -314,7 +343,9 @@ enum Priority {
 
 enum InvoiceStatus {
   PENDING
+  PARTIALLY_PAID
   PAID
+  OVERDUE
   CANCELLED
 }
 
