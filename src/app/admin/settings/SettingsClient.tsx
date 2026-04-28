@@ -1024,7 +1024,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
               <div className="space-y-5">
                 <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-[#86EFAC] rounded-[16px] p-5">
                   <div className="flex items-start gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-[10px] bg-[#F0FDF4]0 flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 rounded-[10px] bg-[#22C55E] flex items-center justify-center shrink-0">
                       <MessageCircle className="w-5 h-5 text-white" />
                     </div>
                     <div>
@@ -1259,9 +1259,9 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                   <div className="space-y-3">
                     {[
                       { label: "Jobs created",  used: 24,  total: 100,  color: "bg-[#2563EB]" },
-                      { label: "Workers",        used: 2,   total: 3,    color: "bg-[#F0FDF4]0" },
-                      { label: "PDFs generated", used: 38,  total: 100,  color: "bg-[#F5F3FF]0" },
-                      { label: "WhatsApp msgs",  used: 142, total: 500,  color: "bg-[#FFFBEB]0" },
+                      { label: "Workers",        used: 2,   total: 3,    color: "bg-[#22C55E]" },
+                      { label: "PDFs generated", used: 38,  total: 100,  color: "bg-[#8B5CF6]" },
+                      { label: "WhatsApp msgs",  used: 142, total: 500,  color: "bg-[#F59E0B]" },
                     ].map(({ label, used, total, color }) => (
                       <div key={label}>
                         <div className="flex justify-between text-xs mb-1">
@@ -1341,7 +1341,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                       <AlertTriangle className="w-4 h-4 text-[#DC2626]" />
                       <h3 className="text-sm font-semibold text-[#DC2626]">Danger Zone</h3>
                     </div>
-                    <p className="text-xs text-red-500/80 mt-0.5">These actions are permanent and cannot be undone.</p>
+                    <p className="text-xs text-[#EF4444]/80 mt-0.5">These actions are permanent and cannot be undone.</p>
                   </div>
                   <div className="px-5 py-4 space-y-3">
                     {[

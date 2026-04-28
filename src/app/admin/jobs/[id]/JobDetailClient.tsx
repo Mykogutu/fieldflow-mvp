@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useTransition, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -21,41 +21,41 @@ import {
 
 // ── Event config ───────────────────────────────────────────────────────────────
 const EVENT_CONFIG: Record<string, { label: string; color: string; dot: string; Icon: React.ElementType }> = {
-  CREATED:            { label: "Job created",                  color: "bg-blue-50 text-blue-600",    dot: "bg-blue-500",    Icon: FileText      },
-  ASSIGNED:           { label: "Worker assigned",              color: "bg-blue-50 text-blue-600",    dot: "bg-blue-500",    Icon: User          },
-  WHATSAPP_SENT:      { label: "Assignment sent via WhatsApp", color: "bg-green-50 text-green-600",  dot: "bg-green-500",   Icon: MessageCircle },
-  ACCEPTED:           { label: "Worker accepted",              color: "bg-green-50 text-green-600",  dot: "bg-green-500",   Icon: CheckCircle2  },
-  DECLINED:           { label: "Worker declined",              color: "bg-red-50 text-red-600",      dot: "bg-red-500",     Icon: AlertTriangle },
-  CHECKED_IN:         { label: "Worker arrived on-site",       color: "bg-indigo-50 text-indigo-600",dot: "bg-indigo-500",  Icon: Navigation    },
-  COMPLETED:          { label: "Worker marked job done",       color: "bg-purple-50 text-purple-700",dot: "bg-purple-500",  Icon: CheckCircle2  },
-  OTP_SENT:           { label: "OTP sent to client",           color: "bg-amber-50 text-amber-600",  dot: "bg-amber-500",   Icon: Phone         },
-  OTP_VERIFIED:       { label: "Client verified OTP",          color: "bg-green-50 text-green-600",  dot: "bg-green-500",   Icon: CheckCircle2  },
-  VERIFIED:           { label: "Job verified",                 color: "bg-green-50 text-green-700",  dot: "bg-green-600",   Icon: CheckCircle2  },
-  INVOICE_GENERATED:  { label: "Invoice generated",            color: "bg-slate-50 text-slate-600",  dot: "bg-slate-400",   Icon: FileText      },
-  JOB_CARD_GENERATED: { label: "Job card generated",           color: "bg-slate-50 text-slate-600",  dot: "bg-slate-400",   Icon: Clipboard     },
-  WARRANTY_GENERATED: { label: "Warranty generated",           color: "bg-slate-50 text-slate-600",  dot: "bg-slate-400",   Icon: ShieldCheck   },
-  POSTPONED:          { label: "Job postponed",                color: "bg-amber-50 text-amber-700",  dot: "bg-amber-500",   Icon: Clock         },
-  RESCHEDULED:        { label: "Job rescheduled",              color: "bg-blue-50 text-blue-600",    dot: "bg-blue-500",    Icon: Calendar      },
-  REASSIGNED:         { label: "Reassigned to new worker",     color: "bg-blue-50 text-blue-600",    dot: "bg-blue-500",    Icon: RefreshCw     },
-  STATUS_CHANGE:      { label: "Status updated",               color: "bg-slate-50 text-slate-500",  dot: "bg-slate-400",   Icon: CheckCircle   },
-  CLOSED:             { label: "Job closed",                   color: "bg-slate-50 text-slate-500",  dot: "bg-slate-400",   Icon: CheckCircle   },
-  CANCELLED:          { label: "Job cancelled",                color: "bg-red-50 text-red-600",      dot: "bg-red-500",     Icon: XCircle       },
-  ISSUE_REPORTED:     { label: "Issue reported",               color: "bg-red-50 text-red-600",      dot: "bg-red-500",     Icon: AlertTriangle },
-  PAYMENT_RECORDED:   { label: "Payment recorded",             color: "bg-green-50 text-green-600",  dot: "bg-green-500",   Icon: Banknote      },
-  NOTE_ADDED:         { label: "Note added",                   color: "bg-slate-50 text-slate-600",  dot: "bg-slate-400",   Icon: Edit3         },
+  CREATED:            { label: "Job created",                  color: "bg-[#EFF6FF] text-[#2563EB]",    dot: "bg-[#3B82F6]",    Icon: FileText      },
+  ASSIGNED:           { label: "Worker assigned",              color: "bg-[#EFF6FF] text-[#2563EB]",    dot: "bg-[#3B82F6]",    Icon: User          },
+  WHATSAPP_SENT:      { label: "Assignment sent via WhatsApp", color: "bg-[#F0FDF4] text-[#16A34A]",  dot: "bg-[#22C55E]",   Icon: MessageCircle },
+  ACCEPTED:           { label: "Worker accepted",              color: "bg-[#F0FDF4] text-[#16A34A]",  dot: "bg-[#22C55E]",   Icon: CheckCircle2  },
+  DECLINED:           { label: "Worker declined",              color: "bg-[#FFF1F2] text-[#DC2626]",      dot: "bg-[#EF4444]",     Icon: AlertTriangle },
+  CHECKED_IN:         { label: "Worker arrived on-site",       color: "bg-[#EEF2FF] text-[#4F46E5]",dot: "bg-[#6366F1]",  Icon: Navigation    },
+  COMPLETED:          { label: "Worker marked job done",       color: "bg-[#F5F3FF] text-[#7C3AED]",dot: "bg-[#8B5CF6]",  Icon: CheckCircle2  },
+  OTP_SENT:           { label: "OTP sent to client",           color: "bg-[#FFFBEB] text-[#D97706]",  dot: "bg-[#F59E0B]",   Icon: Phone         },
+  OTP_VERIFIED:       { label: "Client verified OTP",          color: "bg-[#F0FDF4] text-[#16A34A]",  dot: "bg-[#22C55E]",   Icon: CheckCircle2  },
+  VERIFIED:           { label: "Job verified",                 color: "bg-[#F0FDF4] text-[#15803D]",  dot: "bg-green-600",   Icon: CheckCircle2  },
+  INVOICE_GENERATED:  { label: "Invoice generated",            color: "bg-[#F8FAFC] text-[#475569]",  dot: "bg-slate-400",   Icon: FileText      },
+  JOB_CARD_GENERATED: { label: "Job card generated",           color: "bg-[#F8FAFC] text-[#475569]",  dot: "bg-slate-400",   Icon: Clipboard     },
+  WARRANTY_GENERATED: { label: "Warranty generated",           color: "bg-[#F8FAFC] text-[#475569]",  dot: "bg-slate-400",   Icon: ShieldCheck   },
+  POSTPONED:          { label: "Job postponed",                color: "bg-[#FFFBEB] text-[#B45309]",  dot: "bg-[#F59E0B]",   Icon: Clock         },
+  RESCHEDULED:        { label: "Job rescheduled",              color: "bg-[#EFF6FF] text-[#2563EB]",    dot: "bg-[#3B82F6]",    Icon: Calendar      },
+  REASSIGNED:         { label: "Reassigned to new worker",     color: "bg-[#EFF6FF] text-[#2563EB]",    dot: "bg-[#3B82F6]",    Icon: RefreshCw     },
+  STATUS_CHANGE:      { label: "Status updated",               color: "bg-[#F8FAFC] text-[#64748B]",  dot: "bg-slate-400",   Icon: CheckCircle   },
+  CLOSED:             { label: "Job closed",                   color: "bg-[#F8FAFC] text-[#64748B]",  dot: "bg-slate-400",   Icon: CheckCircle   },
+  CANCELLED:          { label: "Job cancelled",                color: "bg-[#FFF1F2] text-[#DC2626]",      dot: "bg-[#EF4444]",     Icon: XCircle       },
+  ISSUE_REPORTED:     { label: "Issue reported",               color: "bg-[#FFF1F2] text-[#DC2626]",      dot: "bg-[#EF4444]",     Icon: AlertTriangle },
+  PAYMENT_RECORDED:   { label: "Payment recorded",             color: "bg-[#F0FDF4] text-[#16A34A]",  dot: "bg-[#22C55E]",   Icon: Banknote      },
+  NOTE_ADDED:         { label: "Note added",                   color: "bg-[#F8FAFC] text-[#475569]",  dot: "bg-slate-400",   Icon: Edit3         },
 };
 
 const DOC_CONFIG: Record<string, { label: string; Icon: React.ElementType; color: string; bg: string }> = {
-  INVOICE:                     { label: "Invoice",              Icon: FileText,    color: "text-blue-600",   bg: "bg-blue-50"   },
-  JOB_CARD:                    { label: "Job Card",             Icon: Clipboard,   color: "text-slate-600",  bg: "bg-slate-100" },
-  WARRANTY_CERTIFICATE:        { label: "Warranty",             Icon: ShieldCheck, color: "text-green-600",  bg: "bg-green-50"  },
-  INSTALLATION_REPORT:         { label: "Installation Report",  Icon: FileCheck,   color: "text-indigo-600", bg: "bg-indigo-50" },
-  SERVICE_REPORT:               { label: "Service Report",       Icon: Award,       color: "text-purple-600", bg: "bg-purple-50" },
-  FUEL_CALIBRATION_REPORT:     { label: "Fuel Calibration",     Icon: Package,     color: "text-amber-600",  bg: "bg-amber-50"  },
-  DEVICE_REPLACEMENT_REPORT:   { label: "Device Replacement",   Icon: Package,     color: "text-orange-600", bg: "bg-orange-50" },
-  CLIENT_CONFIRMATION_RECEIPT: { label: "Client Confirmation",  Icon: CheckCircle2,color: "text-green-600",  bg: "bg-green-50"  },
-  DELIVERY_NOTE:               { label: "Delivery Note",        Icon: Truck,       color: "text-cyan-600",   bg: "bg-cyan-50"   },
-  OTHER:                       { label: "Document",             Icon: FileText,    color: "text-slate-500",  bg: "bg-slate-100" },
+  INVOICE:                     { label: "Invoice",              Icon: FileText,    color: "text-[#2563EB]",   bg: "bg-[#EFF6FF]"   },
+  JOB_CARD:                    { label: "Job Card",             Icon: Clipboard,   color: "text-[#475569]",  bg: "bg-[#F1F5F9]" },
+  WARRANTY_CERTIFICATE:        { label: "Warranty",             Icon: ShieldCheck, color: "text-[#16A34A]",  bg: "bg-[#F0FDF4]"  },
+  INSTALLATION_REPORT:         { label: "Installation Report",  Icon: FileCheck,   color: "text-[#4F46E5]", bg: "bg-[#EEF2FF]" },
+  SERVICE_REPORT:               { label: "Service Report",       Icon: Award,       color: "text-[#9333EA]", bg: "bg-[#F5F3FF]" },
+  FUEL_CALIBRATION_REPORT:     { label: "Fuel Calibration",     Icon: Package,     color: "text-[#D97706]",  bg: "bg-[#FFFBEB]"  },
+  DEVICE_REPLACEMENT_REPORT:   { label: "Device Replacement",   Icon: Package,     color: "text-[#EA580C]", bg: "bg-[#FFF7ED]" },
+  CLIENT_CONFIRMATION_RECEIPT: { label: "Client Confirmation",  Icon: CheckCircle2,color: "text-[#16A34A]",  bg: "bg-[#F0FDF4]"  },
+  DELIVERY_NOTE:               { label: "Delivery Note",        Icon: Truck,       color: "text-[#0891B2]",   bg: "bg-[#ECFEFF]"   },
+  OTHER:                       { label: "Document",             Icon: FileText,    color: "text-[#64748B]",  bg: "bg-[#F1F5F9]" },
 };
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -80,9 +80,9 @@ type TabId = "timeline" | "documents" | "details" | "notes" | "photos" | "paymen
 
 // ── Small helpers ──────────────────────────────────────────────────────────────
 function priorityBadge(priority: string) {
-  if (priority === "EMERGENCY") return "bg-red-50 text-red-700 border border-red-200";
-  if (priority === "HIGH")      return "bg-orange-50 text-orange-700 border border-orange-200";
-  if (priority === "LOW")       return "bg-slate-50 text-slate-500 border border-slate-200";
+  if (priority === "EMERGENCY") return "bg-[#FFF1F2] text-red-700 border border-[#FECACA]";
+  if (priority === "HIGH")      return "bg-[#FFF7ED] text-[#C2410C] border border-orange-200";
+  if (priority === "LOW")       return "bg-[#F8FAFC] text-[#64748B] border border-slate-200";
   return "";
 }
 
@@ -105,18 +105,18 @@ function MarkPaidModal({ jobId, onClose }: { jobId: string; onClose: () => void 
       <div className="bg-white rounded-[16px] shadow-2xl w-full max-w-sm p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-bold text-slate-900">Record Payment</h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[#F1F5F9] text-[#94A3B8]"><X className="w-4 h-4" /></button>
         </div>
         <div className="space-y-3">
           <div>
-            <label className="text-xs font-medium text-slate-600 block mb-1.5">Payment Method</label>
+            <label className="text-xs font-medium text-[#475569] block mb-1.5">Payment Method</label>
             <select value={method} onChange={e => setMethod(e.target.value)} className="ff-input text-sm">
               {["MPESA", "CASH", "BANK", "CHEQUE", "OTHER"].map(m => <option key={m}>{m}</option>)}
             </select>
           </div>
           {method === "MPESA" && (
             <div>
-              <label className="text-xs font-medium text-slate-600 block mb-1.5">M-Pesa Reference</label>
+              <label className="text-xs font-medium text-[#475569] block mb-1.5">M-Pesa Reference</label>
               <input value={reference} onChange={e => setReference(e.target.value)}
                 placeholder="e.g. QJ7F8K2L" maxLength={20} className="ff-input text-sm" />
             </div>
@@ -153,10 +153,10 @@ function RescheduleModal({ jobId, onClose }: { jobId: string; onClose: () => voi
       <div className="bg-white rounded-[16px] shadow-2xl w-full max-w-sm p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-bold text-slate-900">Reschedule Job</h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[#F1F5F9] text-[#94A3B8]"><X className="w-4 h-4" /></button>
         </div>
         <div>
-          <label className="text-xs font-medium text-slate-600 block mb-1.5">New Date & Time</label>
+          <label className="text-xs font-medium text-[#475569] block mb-1.5">New Date & Time</label>
           <input type="datetime-local" value={date} onChange={e => setDate(e.target.value)} className="ff-input text-sm" />
         </div>
         <div className="flex gap-2 pt-2">
@@ -191,10 +191,10 @@ function ReassignModal({ jobId, allWorkers, currentWorkerId, onClose }: {
       <div className="bg-white rounded-[16px] shadow-2xl w-full max-w-sm p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-bold text-slate-900">Reassign Worker</h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[#F1F5F9] text-[#94A3B8]"><X className="w-4 h-4" /></button>
         </div>
         <div>
-          <label className="text-xs font-medium text-slate-600 block mb-1.5">Select Worker</label>
+          <label className="text-xs font-medium text-[#475569] block mb-1.5">Select Worker</label>
           <select value={workerId} onChange={e => setWorkerId(e.target.value)} className="ff-input text-sm">
             <option value="">Choose worker…</option>
             {allWorkers.map(w => <option key={w.id} value={w.id}>{w.name} · {w.phone}</option>)}
@@ -248,7 +248,7 @@ function EditJobModal({ job, onClose }: { job: JobDetailData; onClose: () => voi
         </div>
         <form onSubmit={submit} className="p-6 overflow-y-auto flex-1 space-y-4">
           {error && (
-            <p className="text-xs text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-[8px]">{error}</p>
+            <p className="text-xs text-[#DC2626] bg-[#FFF1F2] border border-[#FECACA] px-3 py-2 rounded-[8px]">{error}</p>
           )}
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -309,7 +309,7 @@ function CancelJobButton({ job }: { job: JobDetailData }) {
   }
   return (
     <button onClick={handle} disabled={pending}
-      className="inline-flex items-center gap-1.5 text-sm px-3 py-2 rounded-[10px] border border-[#FCA5A5] text-[#DC2626] hover:bg-red-50 transition-colors font-semibold disabled:opacity-50">
+      className="inline-flex items-center gap-1.5 text-sm px-3 py-2 rounded-[10px] border border-[#FCA5A5] text-[#DC2626] hover:bg-[#FFF1F2] transition-colors font-semibold disabled:opacity-50">
       <X className="w-4 h-4" /> Cancel Job
     </button>
   );
@@ -345,14 +345,14 @@ function MoreActionsMenu({ job }: { job: JobDetailData }) {
   }
 
   const items = [
-    { label: "Message Client", icon: MessageCircle, action: () => { setOpen(false); window.open(`https://wa.me/${job.clientPhone.replace("+", "")}?text=${encodeURIComponent(`Hi ${job.clientName}, following up on your ${job.jobType}.`)}`, "_blank"); }, color: "text-green-700" },
-    ...(inv && !isPaid ? [{ label: "Mark as Paid", icon: Banknote, action: () => { setModal("paid"); setOpen(false); }, color: "text-green-700" }] : []),
-    ...(!isDone ? [{ label: "Reschedule Job", icon: Calendar, action: () => { setModal("reschedule"); setOpen(false); }, color: "text-blue-700" }] : []),
-    ...(!isDone ? [{ label: "Reassign Worker", icon: RefreshCw, action: () => { setModal("reassign"); setOpen(false); }, color: "text-slate-700" }] : []),
-    { label: "Duplicate Job", icon: Copy, action: () => setOpen(false), color: "text-slate-700" },
+    { label: "Message Client", icon: MessageCircle, action: () => { setOpen(false); window.open(`https://wa.me/${job.clientPhone.replace("+", "")}?text=${encodeURIComponent(`Hi ${job.clientName}, following up on your ${job.jobType}.`)}`, "_blank"); }, color: "text-[#15803D]" },
+    ...(inv && !isPaid ? [{ label: "Mark as Paid", icon: Banknote, action: () => { setModal("paid"); setOpen(false); }, color: "text-[#15803D]" }] : []),
+    ...(!isDone ? [{ label: "Reschedule Job", icon: Calendar, action: () => { setModal("reschedule"); setOpen(false); }, color: "text-[#1D4ED8]" }] : []),
+    ...(!isDone ? [{ label: "Reassign Worker", icon: RefreshCw, action: () => { setModal("reassign"); setOpen(false); }, color: "text-[#334155]" }] : []),
+    { label: "Duplicate Job", icon: Copy, action: () => setOpen(false), color: "text-[#334155]" },
     ...((!isDone && (job.status === "VERIFIED" || job.status === "COMPLETED_PENDING_VERIFICATION"))
-      ? [{ label: "Close Job", icon: CheckCircle2, action: () => { doClose(); setOpen(false); }, color: "text-slate-700" }] : []),
-    ...(!isDone ? [{ label: "Cancel Job", icon: XCircle, action: () => { doCancel(); setOpen(false); }, color: "text-red-600" }] : []),
+      ? [{ label: "Close Job", icon: CheckCircle2, action: () => { doClose(); setOpen(false); }, color: "text-[#334155]" }] : []),
+    ...(!isDone ? [{ label: "Cancel Job", icon: XCircle, action: () => { doCancel(); setOpen(false); }, color: "text-[#DC2626]" }] : []),
   ];
 
   return (
@@ -390,11 +390,11 @@ function TimelineTab({ events }: { events: JobEvent[] }) {
   if (events.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
-          <History className="w-5 h-5 text-slate-400" />
+        <div className="w-12 h-12 rounded-2xl bg-[#F1F5F9] flex items-center justify-center mb-3">
+          <History className="w-5 h-5 text-[#94A3B8]" />
         </div>
-        <p className="text-sm font-medium text-slate-500">No timeline events yet</p>
-        <p className="text-xs text-slate-400 mt-1">Events will appear here as the job progresses</p>
+        <p className="text-sm font-medium text-[#64748B]">No timeline events yet</p>
+        <p className="text-xs text-[#94A3B8] mt-1">Events will appear here as the job progresses</p>
       </div>
     );
   }
@@ -408,7 +408,7 @@ function TimelineTab({ events }: { events: JobEvent[] }) {
           {[...events].reverse().map((ev, i) => {
             const cfg = EVENT_CONFIG[ev.type] ?? {
               label: ev.type.replace(/_/g, " ").toLowerCase(),
-              color: "bg-slate-50 text-slate-500",
+              color: "bg-[#F8FAFC] text-[#64748B]",
               dot: "bg-slate-300",
               Icon: Clock,
             };
@@ -446,11 +446,11 @@ function DocumentsTab({ docs, clientPhone, clientName }: {
   if (docs.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
-          <FileText className="w-5 h-5 text-slate-400" />
+        <div className="w-12 h-12 rounded-2xl bg-[#F1F5F9] flex items-center justify-center mb-3">
+          <FileText className="w-5 h-5 text-[#94A3B8]" />
         </div>
-        <p className="text-sm font-medium text-slate-500">No documents yet</p>
-        <p className="text-xs text-slate-400 mt-1">Documents are auto-generated when the job is verified</p>
+        <p className="text-sm font-medium text-[#64748B]">No documents yet</p>
+        <p className="text-xs text-[#94A3B8] mt-1">Documents are auto-generated when the job is verified</p>
       </div>
     );
   }
@@ -462,7 +462,7 @@ function DocumentsTab({ docs, clientPhone, clientName }: {
         const waText = `Hi ${clientName}, please find your ${cfg.label} attached.`;
         return (
           <div key={doc.id}
-            className="flex items-center gap-3 p-3.5 rounded-[12px] border border-[#E2E8F0] hover:border-[#2563EB]/30 hover:bg-blue-50/30 transition-colors group">
+            className="flex items-center gap-3 p-3.5 rounded-[12px] border border-[#E2E8F0] hover:border-[#2563EB]/30 hover:bg-[#EFF6FF]/30 transition-colors group">
             <div className={`w-10 h-10 rounded-[10px] flex items-center justify-center shrink-0 ${cfg.bg}`}>
               <cfg.Icon className={`w-4.5 h-4.5 ${cfg.color}`} />
             </div>
@@ -476,13 +476,13 @@ function DocumentsTab({ docs, clientPhone, clientName }: {
             <div className="flex items-center gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
               {doc.pdfUrl && (
                 <a href={doc.pdfUrl} target="_blank" rel="noopener noreferrer"
-                  className="p-2 rounded-[8px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/50 hover:text-[#2563EB] hover:bg-blue-50 transition-colors" title="Download">
+                  className="p-2 rounded-[8px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/50 hover:text-[#2563EB] hover:bg-[#EFF6FF] transition-colors" title="Download">
                   <Download className="w-3.5 h-3.5" />
                 </a>
               )}
               <a href={`https://wa.me/${clientPhone.replace("+", "")}?text=${encodeURIComponent(waText)}`}
                 target="_blank" rel="noopener noreferrer"
-                className="p-2 rounded-[8px] border border-[#E2E8F0] text-[#64748B] hover:border-green-400 hover:text-green-600 hover:bg-green-50 transition-colors" title="Send via WhatsApp">
+                className="p-2 rounded-[8px] border border-[#E2E8F0] text-[#64748B] hover:border-[#4ADE80] hover:text-[#16A34A] hover:bg-[#F0FDF4] transition-colors" title="Send via WhatsApp">
                 <MessageCircle className="w-3.5 h-3.5" />
               </a>
               {doc.pdfUrl && (
@@ -535,11 +535,11 @@ function NotesTab({ job }: { job: JobDetailData }) {
   if (!hasNotes) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
-          <Edit3 className="w-5 h-5 text-slate-400" />
+        <div className="w-12 h-12 rounded-2xl bg-[#F1F5F9] flex items-center justify-center mb-3">
+          <Edit3 className="w-5 h-5 text-[#94A3B8]" />
         </div>
-        <p className="text-sm font-medium text-slate-500">No notes yet</p>
-        <p className="text-xs text-slate-400 mt-1">Job notes and postponement reasons appear here</p>
+        <p className="text-sm font-medium text-[#64748B]">No notes yet</p>
+        <p className="text-xs text-[#94A3B8] mt-1">Job notes and postponement reasons appear here</p>
       </div>
     );
   }
@@ -552,9 +552,9 @@ function NotesTab({ job }: { job: JobDetailData }) {
         </div>
       )}
       {job.postponeReason && (
-        <div className="p-4 rounded-[12px] bg-amber-50 border border-amber-200">
-          <p className="text-[10px] font-semibold text-amber-600 uppercase tracking-wide mb-2">Postponement Reason</p>
-          <p className="text-sm text-amber-800 leading-relaxed">{job.postponeReason}</p>
+        <div className="p-4 rounded-[12px] bg-[#FFFBEB] border border-[#FDE68A]">
+          <p className="text-[10px] font-semibold text-[#D97706] uppercase tracking-wide mb-2">Postponement Reason</p>
+          <p className="text-sm text-[#92400E] leading-relaxed">{job.postponeReason}</p>
         </div>
       )}
     </div>
@@ -565,11 +565,11 @@ function NotesTab({ job }: { job: JobDetailData }) {
 function PhotosTab() {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
-        <ImageIcon className="w-5 h-5 text-slate-400" />
+      <div className="w-12 h-12 rounded-2xl bg-[#F1F5F9] flex items-center justify-center mb-3">
+        <ImageIcon className="w-5 h-5 text-[#94A3B8]" />
       </div>
-      <p className="text-sm font-medium text-slate-500">No photos yet</p>
-      <p className="text-xs text-slate-400 mt-1">Workers can attach before/after photos via WhatsApp</p>
+      <p className="text-sm font-medium text-[#64748B]">No photos yet</p>
+      <p className="text-xs text-[#94A3B8] mt-1">Workers can attach before/after photos via WhatsApp</p>
     </div>
   );
 }
@@ -580,11 +580,11 @@ function PaymentsTab({ job }: { job: JobDetailData }) {
   if (!inv) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
-          <CreditCard className="w-5 h-5 text-slate-400" />
+        <div className="w-12 h-12 rounded-2xl bg-[#F1F5F9] flex items-center justify-center mb-3">
+          <CreditCard className="w-5 h-5 text-[#94A3B8]" />
         </div>
-        <p className="text-sm font-medium text-slate-500">No invoice yet</p>
-        <p className="text-xs text-slate-400 mt-1">Invoice is auto-generated when the worker reports completion</p>
+        <p className="text-sm font-medium text-[#64748B]">No invoice yet</p>
+        <p className="text-xs text-[#94A3B8] mt-1">Invoice is auto-generated when the worker reports completion</p>
       </div>
     );
   }
@@ -628,7 +628,7 @@ function PaymentsTab({ job }: { job: JobDetailData }) {
           <a href={`https://wa.me/${job.clientPhone.replace("+", "")}?text=${encodeURIComponent(
             `Hi ${job.clientName}, a gentle reminder that your invoice of ${formatKES(inv.amount)} (${inv.invoiceNumber}) is still pending. Thank you!`)}`}
             target="_blank" rel="noopener noreferrer"
-            className="ff-btn-secondary inline-flex items-center gap-1.5 text-sm px-3 py-2 text-amber-700 border-amber-300 hover:bg-amber-50">
+            className="ff-btn-secondary inline-flex items-center gap-1.5 text-sm px-3 py-2 text-[#B45309] border-[#FCD34D] hover:bg-[#FFFBEB]">
             <AlertTriangle className="w-3.5 h-3.5" /> Send Reminder
           </a>
         )}
@@ -656,55 +656,55 @@ function AdminQuickActions({ job, onTabChange }: { job: JobDetailData; onTabChan
 
   const actions: Action[] = [
     {
-      label: "Send Invoice", icon: FileText, color: "text-blue-700", bg: "bg-blue-50",
+      label: "Send Invoice", icon: FileText, color: "text-[#1D4ED8]", bg: "bg-[#EFF6FF]",
       ...(inv
         ? { href: `https://wa.me/${job.clientPhone.replace("+", "")}?text=${encodeURIComponent(`Hi ${job.clientName}, please find your invoice ${inv.invoiceNumber} of ${formatKES(inv.amount)} attached.`)}` }
         : { disabled: true, onClick: () => {} }),
     },
     {
-      label: "Send Job Card", icon: Clipboard, color: "text-slate-700", bg: "bg-slate-50",
+      label: "Send Job Card", icon: Clipboard, color: "text-[#334155]", bg: "bg-[#F8FAFC]",
       href: `https://wa.me/${job.clientPhone.replace("+", "")}?text=${encodeURIComponent(`Hi ${job.clientName}, your job card for ${job.jobType} is ready.`)}`,
     },
     {
-      label: "Send Warranty", icon: ShieldCheck, color: "text-green-700", bg: "bg-green-50",
+      label: "Send Warranty", icon: ShieldCheck, color: "text-[#15803D]", bg: "bg-[#F0FDF4]",
       href: `https://wa.me/${job.clientPhone.replace("+", "")}?text=${encodeURIComponent(`Hi ${job.clientName}, your warranty certificate is attached.`)}`,
     },
     {
-      label: "Send Service Report", icon: Award, color: "text-purple-700", bg: "bg-purple-50",
+      label: "Send Service Report", icon: Award, color: "text-[#7C3AED]", bg: "bg-[#F5F3FF]",
       href: `https://wa.me/${job.clientPhone.replace("+", "")}?text=${encodeURIComponent(`Hi ${job.clientName}, your service report is attached.`)}`,
     },
     {
-      label: "Send Payment Reminder", icon: Banknote, color: "text-amber-700", bg: "bg-amber-50",
+      label: "Send Payment Reminder", icon: Banknote, color: "text-[#B45309]", bg: "bg-[#FFFBEB]",
       ...(inv && !isPaid
         ? { href: `https://wa.me/${job.clientPhone.replace("+", "")}?text=${encodeURIComponent(`Hi ${job.clientName}, reminder: your invoice of ${formatKES(inv.amount)} is still pending. Ref: ${inv.invoiceNumber}.`)}` }
         : { disabled: true, onClick: () => {} }),
     },
     {
-      label: "Reschedule Job", icon: Calendar, color: "text-blue-700", bg: "bg-blue-50",
+      label: "Reschedule Job", icon: Calendar, color: "text-[#1D4ED8]", bg: "bg-[#EFF6FF]",
       ...(!isDone ? { onClick: () => setModal("reschedule") } : { disabled: true, onClick: () => {} }),
     },
     {
-      label: "Reassign Worker", icon: RefreshCw, color: "text-slate-700", bg: "bg-slate-50",
+      label: "Reassign Worker", icon: RefreshCw, color: "text-[#334155]", bg: "bg-[#F8FAFC]",
       ...(!isDone ? { onClick: () => setModal("reassign") } : { disabled: true, onClick: () => {} }),
     },
     {
-      label: "Add Note", icon: Edit3, color: "text-indigo-700", bg: "bg-indigo-50",
+      label: "Add Note", icon: Edit3, color: "text-[#4338CA]", bg: "bg-[#EEF2FF]",
       onClick: () => onTabChange?.("notes"),
     },
     {
-      label: "View Client", icon: Building2, color: "text-slate-700", bg: "bg-slate-50",
+      label: "View Client", icon: Building2, color: "text-[#334155]", bg: "bg-[#F8FAFC]",
       href: `/admin/clients?search=${encodeURIComponent(job.clientPhone)}`,
     },
     {
-      label: "View Asset", icon: Package, color: "text-slate-700", bg: "bg-slate-50",
+      label: "View Asset", icon: Package, color: "text-[#334155]", bg: "bg-[#F8FAFC]",
       ...(job.asset ? { href: `/admin/assets/${job.asset.id}` } : { disabled: true, onClick: () => {} }),
     },
     {
-      label: "Duplicate Job", icon: Copy, color: "text-slate-700", bg: "bg-slate-50",
+      label: "Duplicate Job", icon: Copy, color: "text-[#334155]", bg: "bg-[#F8FAFC]",
       onClick: () => {},
     },
     {
-      label: "Cancel Job", icon: XCircle, color: "text-red-600", bg: "bg-red-50",
+      label: "Cancel Job", icon: XCircle, color: "text-[#DC2626]", bg: "bg-[#FFF1F2]",
       ...(!isDone ? { onClick: doCancel } : { disabled: true, onClick: () => {} }),
     },
   ];
@@ -1080,7 +1080,7 @@ export default function JobDetailClient({ job }: { job: JobDetailData }) {
                           </td>
                           <td className="py-2 pr-2">
                             <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
-                              doc.sentAt ? "bg-green-50 text-green-700" : "bg-[#F1F5F9] text-[#64748B]"
+                              doc.sentAt ? "bg-[#F0FDF4] text-[#15803D]" : "bg-[#F1F5F9] text-[#64748B]"
                             }`}>
                               {doc.sentAt ? "Sent" : "Pending"}
                             </span>
@@ -1101,7 +1101,7 @@ export default function JobDetailClient({ job }: { job: JobDetailData }) {
                               )}
                               <a href={`https://wa.me/${job.clientPhone.replace("+", "")}?text=${encodeURIComponent(`Hi ${job.clientName}, here is your ${cfg.label}.`)}`}
                                 target="_blank" rel="noopener noreferrer"
-                                className="p-1 rounded hover:bg-green-50 text-[#94A3B8] hover:text-[#16A34A] transition-colors" title="Send via WhatsApp">
+                                className="p-1 rounded hover:bg-[#F0FDF4] text-[#94A3B8] hover:text-[#16A34A] transition-colors" title="Send via WhatsApp">
                                 <MessageCircle className="w-3 h-3" />
                               </a>
                             </div>
@@ -1158,10 +1158,10 @@ export default function JobDetailClient({ job }: { job: JobDetailData }) {
               )}
               {job.postponeReason && (
                 <div className="mt-3 pt-3 border-t border-[#F1F5F9]">
-                  <p className="text-[10px] font-semibold text-amber-600 uppercase tracking-wide mb-1.5">
+                  <p className="text-[10px] font-semibold text-[#D97706] uppercase tracking-wide mb-1.5">
                     Postponement Reason
                   </p>
-                  <p className="text-xs text-amber-800 leading-relaxed">{job.postponeReason}</p>
+                  <p className="text-xs text-[#92400E] leading-relaxed">{job.postponeReason}</p>
                 </div>
               )}
             </div>

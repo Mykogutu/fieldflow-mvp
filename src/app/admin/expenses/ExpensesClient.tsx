@@ -14,10 +14,10 @@ type Category = typeof CATEGORIES[number];
 const CATEGORY_META: Record<Category, { label: string; icon: React.ElementType; color: string; bg: string }> = {
   MATERIALS: { label: "Materials",  icon: Package,      color: "text-[#2563EB]",   bg: "bg-[#EFF6FF]"   },
   TRANSPORT: { label: "Transport",  icon: Truck,        color: "text-[#D97706]",  bg: "bg-[#FFFBEB]"  },
-  FUEL:      { label: "Fuel",       icon: Fuel,         color: "text-orange-600", bg: "bg-orange-50" },
+  FUEL:      { label: "Fuel",       icon: Fuel,         color: "text-[#EA580C]", bg: "bg-[#FFF7ED]" },
   TOOLS:     { label: "Tools",      icon: Wrench,       color: "text-[#9333EA]", bg: "bg-[#F5F3FF]" },
   LABOR:     { label: "Labor",      icon: Users,        color: "text-[#16A34A]",  bg: "bg-[#F0FDF4]"  },
-  OTHER:     { label: "Other",      icon: MoreHorizontal,color:"text-slate-600",  bg: "bg-slate-100" },
+  OTHER:     { label: "Other",      icon: MoreHorizontal,color:"text-[#475569]",  bg: "bg-[#F1F5F9]" },
 };
 
 interface Expense {
@@ -201,16 +201,16 @@ export default function ExpensesClient({ expenses, total, currentCategory }: {
             <div className="p-6">
               <form onSubmit={handleCreate} className="space-y-3">
                 <div>
-                  <label className="block text-xs font-semibold text-[#475569] mb-1.5">Description <span className="text-red-400">*</span></label>
+                  <label className="block text-xs font-semibold text-[#475569] mb-1.5">Description <span className="text-[#F87171]">*</span></label>
                   <input name="description" required className="ff-input text-sm" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-[#475569] mb-1.5">Amount (KES) <span className="text-red-400">*</span></label>
+                    <label className="block text-xs font-semibold text-[#475569] mb-1.5">Amount (KES) <span className="text-[#F87171]">*</span></label>
                     <input name="amount" type="number" required min="0" step="0.01" className="ff-input text-sm" />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-[#475569] mb-1.5">Category <span className="text-red-400">*</span></label>
+                    <label className="block text-xs font-semibold text-[#475569] mb-1.5">Category <span className="text-[#F87171]">*</span></label>
                     <select name="category" required className="ff-input text-sm">
                       {CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_META[c].label}</option>)}
                     </select>

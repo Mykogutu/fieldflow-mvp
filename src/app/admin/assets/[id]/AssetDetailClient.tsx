@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState } from "react";
 import Link from "next/link";
 import {
@@ -12,14 +12,14 @@ import { formatKES, formatDate, statusLabel } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 
 const DOC_CONFIG: Record<string, { label: string; Icon: React.ElementType; color: string; bg: string }> = {
-  INVOICE:               { label: "Invoice",              Icon: FileText,    color: "text-blue-600",   bg: "bg-blue-50"   },
-  JOB_CARD:              { label: "Job Card",             Icon: Clipboard,   color: "text-slate-600",  bg: "bg-slate-100" },
-  WARRANTY_CERTIFICATE:  { label: "Warranty Certificate", Icon: ShieldCheck, color: "text-green-600",  bg: "bg-green-50"  },
-  INSTALLATION_REPORT:   { label: "Installation Report",  Icon: FileText,    color: "text-indigo-600", bg: "bg-indigo-50" },
-  SERVICE_REPORT:        { label: "Service Report",       Icon: Award,       color: "text-purple-600", bg: "bg-purple-50" },
-  FUEL_CALIBRATION_REPORT: { label: "Fuel Calibration",  Icon: Package,     color: "text-amber-600",  bg: "bg-amber-50"  },
-  DELIVERY_NOTE:         { label: "Delivery Note",        Icon: Truck,       color: "text-cyan-600",   bg: "bg-cyan-50"   },
-  OTHER:                 { label: "Document",             Icon: FileText,    color: "text-slate-500",  bg: "bg-slate-100" },
+  INVOICE:               { label: "Invoice",              Icon: FileText,    color: "text-[#2563EB]",   bg: "bg-[#EFF6FF]"   },
+  JOB_CARD:              { label: "Job Card",             Icon: Clipboard,   color: "text-[#475569]",  bg: "bg-[#F1F5F9]" },
+  WARRANTY_CERTIFICATE:  { label: "Warranty Certificate", Icon: ShieldCheck, color: "text-[#16A34A]",  bg: "bg-[#F0FDF4]"  },
+  INSTALLATION_REPORT:   { label: "Installation Report",  Icon: FileText,    color: "text-[#4F46E5]", bg: "bg-[#EEF2FF]" },
+  SERVICE_REPORT:        { label: "Service Report",       Icon: Award,       color: "text-[#9333EA]", bg: "bg-[#F5F3FF]" },
+  FUEL_CALIBRATION_REPORT: { label: "Fuel Calibration",  Icon: Package,     color: "text-[#D97706]",  bg: "bg-[#FFFBEB]"  },
+  DELIVERY_NOTE:         { label: "Delivery Note",        Icon: Truck,       color: "text-[#0891B2]",   bg: "bg-[#ECFEFF]"   },
+  OTHER:                 { label: "Document",             Icon: FileText,    color: "text-[#64748B]",  bg: "bg-[#F1F5F9]" },
 };
 
 type Job = {
@@ -53,36 +53,36 @@ type Tab = "overview" | "jobs" | "documents" | "notes";
 function assetMeta(type: string): { icon: React.ElementType; color: string; bg: string } {
   const t = type.toLowerCase();
   if (t.includes("plastic tank") || t.includes("water tank") || t.includes("tank"))
-    return { icon: Container,  color: "text-blue-600",   bg: "bg-blue-50"   };
+    return { icon: Container,  color: "text-[#2563EB]",   bg: "bg-[#EFF6FF]"   };
   if (t.includes("underground"))
-    return { icon: Droplets,   color: "text-cyan-600",   bg: "bg-cyan-50"   };
+    return { icon: Droplets,   color: "text-[#0891B2]",   bg: "bg-[#ECFEFF]"   };
   if (t.includes("vehicle") || t.includes("car") || t.includes("truck"))
-    return { icon: Truck,      color: "text-amber-600",  bg: "bg-amber-50"  };
+    return { icon: Truck,      color: "text-[#D97706]",  bg: "bg-[#FFFBEB]"  };
   if (t.includes("tracker") || t.includes("gps"))
-    return { icon: Gauge,      color: "text-purple-600", bg: "bg-purple-50" };
+    return { icon: Gauge,      color: "text-[#9333EA]", bg: "bg-[#F5F3FF]" };
   if (t.includes("sensor") || t.includes("fuel sensor"))
-    return { icon: Gauge,      color: "text-orange-600", bg: "bg-orange-50" };
+    return { icon: Gauge,      color: "text-[#EA580C]", bg: "bg-[#FFF7ED]" };
   if (t.includes("device") || t.includes("sim"))
-    return { icon: Cpu,        color: "text-indigo-600", bg: "bg-indigo-50" };
+    return { icon: Cpu,        color: "text-[#4F46E5]", bg: "bg-[#EEF2FF]" };
   if (t.includes("solar") || t.includes("panel"))
-    return { icon: Sun,        color: "text-yellow-600", bg: "bg-yellow-50" };
+    return { icon: Sun,        color: "text-[#CA8A04]", bg: "bg-[#FEFCE8]" };
   if (t.includes("inverter") || t.includes("battery"))
-    return { icon: Zap,        color: "text-green-600",  bg: "bg-green-50"  };
+    return { icon: Zap,        color: "text-[#16A34A]",  bg: "bg-[#F0FDF4]"  };
   if (t.includes("building") || t.includes("site") || t.includes("office"))
-    return { icon: Building2,  color: "text-slate-600",  bg: "bg-slate-100" };
+    return { icon: Building2,  color: "text-[#475569]",  bg: "bg-[#F1F5F9]" };
   if (t.includes("equipment") || t.includes("tool"))
-    return { icon: Wrench,     color: "text-slate-600",  bg: "bg-slate-100" };
+    return { icon: Wrench,     color: "text-[#475569]",  bg: "bg-[#F1F5F9]" };
   if (t.includes("server") || t.includes("computer"))
-    return { icon: HardDrive,  color: "text-blue-500",   bg: "bg-blue-50"   };
-  return { icon: Package, color: "text-slate-500", bg: "bg-slate-100" };
+    return { icon: HardDrive,  color: "text-[#3B82F6]",   bg: "bg-[#EFF6FF]"   };
+  return { icon: Package, color: "text-[#64748B]", bg: "bg-[#F1F5F9]" };
 }
 
 function warrantyBadge(date: Date | null) {
   if (!date) return null;
   const days = Math.floor((new Date(date).getTime() - Date.now()) / 86400000);
-  if (days < 0)  return { label: "Warranty Expired", color: "text-[#DC2626]", bg: "bg-red-50", border: "border-red-200" };
-  if (days < 30) return { label: `Warranty: ${days}d left`, color: "text-[#D97706]", bg: "bg-amber-50", border: "border-amber-200" };
-  return { label: "Under Warranty", color: "text-[#16A34A]", bg: "bg-green-50", border: "border-green-200" };
+  if (days < 0)  return { label: "Warranty Expired", color: "text-[#DC2626]", bg: "bg-[#FFF1F2]", border: "border-[#FECACA]" };
+  if (days < 30) return { label: `Warranty: ${days}d left`, color: "text-[#D97706]", bg: "bg-[#FFFBEB]", border: "border-[#FDE68A]" };
+  return { label: "Under Warranty", color: "text-[#16A34A]", bg: "bg-[#F0FDF4]", border: "border-[#86EFAC]" };
 }
 
 // ── Info row ──────────────────────────────────────────────────────────────────
@@ -197,10 +197,10 @@ export default function AssetDetailClient({ asset }: { asset: AssetDetailData })
         {/* ── 4 Stat Cards ─────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-5 border-t border-[#E2E8F0]">
           {[
-            { label: "Total Jobs", value: asset.jobs.length.toString(), icon: Wrench, color: "text-[#2563EB]", bg: "bg-blue-50" },
-            { label: "Completed", value: completedJobs.length.toString(), icon: CheckCircle2, color: "text-[#16A34A]", bg: "bg-green-50" },
-            { label: "Revenue", value: formatKES(totalRevenue), icon: Package, color: "text-[#7C3AED]", bg: "bg-purple-50" },
-            { label: "Last Service", value: asset.lastServiceDate ? formatDate(asset.lastServiceDate) : "—", icon: History, color: "text-[#0891B2]", bg: "bg-cyan-50" },
+            { label: "Total Jobs", value: asset.jobs.length.toString(), icon: Wrench, color: "text-[#2563EB]", bg: "bg-[#EFF6FF]" },
+            { label: "Completed", value: completedJobs.length.toString(), icon: CheckCircle2, color: "text-[#16A34A]", bg: "bg-[#F0FDF4]" },
+            { label: "Revenue", value: formatKES(totalRevenue), icon: Package, color: "text-[#7C3AED]", bg: "bg-[#F5F3FF]" },
+            { label: "Last Service", value: asset.lastServiceDate ? formatDate(asset.lastServiceDate) : "—", icon: History, color: "text-[#0891B2]", bg: "bg-[#ECFEFF]" },
           ].map(({ label, value, icon: Icon, color, bg }) => (
             <div key={label} className="flex items-center gap-3 p-3 rounded-[12px] bg-[#F8FAFC] border border-[#E2E8F0]">
               <div className={`w-8 h-8 rounded-[8px] ${bg} flex items-center justify-center shrink-0`}>
@@ -366,7 +366,7 @@ export default function AssetDetailClient({ asset }: { asset: AssetDetailData })
                 const cfg = DOC_CONFIG[doc.type] ?? DOC_CONFIG.OTHER;
                 return (
                   <div key={doc.id}
-                    className="flex items-center gap-3 p-3.5 rounded-[12px] border border-[#E2E8F0] hover:border-[#2563EB]/30 hover:bg-blue-50/20 transition-colors group">
+                    className="flex items-center gap-3 p-3.5 rounded-[12px] border border-[#E2E8F0] hover:border-[#2563EB]/30 hover:bg-[#EFF6FF]/20 transition-colors group">
                     <div className={`w-10 h-10 rounded-[10px] flex items-center justify-center shrink-0 ${cfg.bg}`}>
                       <cfg.Icon className={`w-4.5 h-4.5 ${cfg.color}`} />
                     </div>

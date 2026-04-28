@@ -3,13 +3,13 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const PALETTE = [
-  { bg: "bg-[#DBEAFE]",    text: "text-[#1E40AF]",    dot: "bg-[#EFF6FF]0"    },
+  { bg: "bg-[#DBEAFE]",    text: "text-[#1E40AF]",    dot: "bg-[#3B82F6]"    },
   { bg: "bg-emerald-100", text: "text-emerald-800",  dot: "bg-emerald-500" },
-  { bg: "bg-[#FEF3C7]",   text: "text-[#92400E]",    dot: "bg-[#FFFBEB]0"   },
+  { bg: "bg-[#FEF3C7]",   text: "text-[#92400E]",    dot: "bg-[#F59E0B]"   },
   { bg: "bg-violet-100",  text: "text-violet-800",   dot: "bg-violet-500"  },
-  { bg: "bg-[#FFE4E6]",    text: "text-rose-800",     dot: "bg-[#FFF1F2]0"    },
-  { bg: "bg-cyan-100",    text: "text-cyan-800",     dot: "bg-cyan-500"    },
-  { bg: "bg-orange-100",  text: "text-orange-800",   dot: "bg-orange-500"  },
+  { bg: "bg-[#FFE4E6]",    text: "text-[#9F1239]",     dot: "bg-[#EF4444]"    },
+  { bg: "bg-[#CFFAFE]",    text: "text-[#155E75]",     dot: "bg-[#06B6D4]"    },
+  { bg: "bg-[#FFEDD5]",  text: "text-[#9A3412]",   dot: "bg-[#F97316]"  },
   { bg: "bg-pink-100",    text: "text-pink-800",     dot: "bg-pink-500"    },
   { bg: "bg-lime-100",    text: "text-lime-800",     dot: "bg-lime-600"    },
   { bg: "bg-teal-100",    text: "text-teal-800",     dot: "bg-teal-500"    },
@@ -68,25 +68,25 @@ export default function WorkCalendar({
         <div className="flex items-center gap-1 ml-auto">
           <button
             onClick={() => navigate(-1)}
-            className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 hover:text-slate-700"
+            className="p-1.5 hover:bg-[#F1F5F9] rounded-lg transition-colors text-[#94A3B8] hover:text-[#334155]"
             aria-label="Previous week"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
           <button
             onClick={() => router.push("/admin")}
-            className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors border border-gray-200 hover:border-gray-300"
+            className="px-3 py-1.5 text-xs font-medium text-[#475569] hover:bg-[#F1F5F9] rounded-lg transition-colors border border-gray-200 hover:border-gray-300"
           >
             Today
           </button>
           <button
             onClick={() => navigate(1)}
-            className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 hover:text-slate-700"
+            className="p-1.5 hover:bg-[#F1F5F9] rounded-lg transition-colors text-[#94A3B8] hover:text-[#334155]"
             aria-label="Next week"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
-          <span className="text-xs text-slate-400 font-medium ml-2 whitespace-nowrap">
+          <span className="text-xs text-[#94A3B8] font-medium ml-2 whitespace-nowrap">
             {label(weekStart, { day: "numeric", month: "short" })}
             {" – "}
             {label(days[6], { day: "numeric", month: "short", year: "numeric" })}
@@ -115,7 +115,7 @@ export default function WorkCalendar({
                   isToday
                     ? "bg-[#EFF6FF]/30"
                     : isWeekend
-                    ? "bg-slate-50/50"
+                    ? "bg-[#F8FAFC]/50"
                     : ""
                 }
               >
@@ -127,7 +127,7 @@ export default function WorkCalendar({
                 >
                   <p
                     className={`text-[10px] font-semibold uppercase tracking-widest ${
-                      isToday ? "text-blue-500" : "text-slate-400"
+                      isToday ? "text-[#3B82F6]" : "text-[#94A3B8]"
                     }`}
                   >
                     {DAY_NAMES[i]}
@@ -139,7 +139,7 @@ export default function WorkCalendar({
                   ) : (
                     <p
                       className={`text-sm font-semibold mt-0.5 ${
-                        isWeekend ? "text-slate-400" : "text-slate-700"
+                        isWeekend ? "text-[#94A3B8]" : "text-[#334155]"
                       }`}
                     >
                       {day.getDate()}
@@ -157,8 +157,8 @@ export default function WorkCalendar({
                     const color = wid
                       ? (colorMap.get(wid) ?? PALETTE[0])
                       : {
-                          bg: "bg-slate-100",
-                          text: "text-slate-500",
+                          bg: "bg-[#F1F5F9]",
+                          text: "text-[#64748B]",
                           dot: "bg-slate-400",
                         };
                     return (
@@ -191,13 +191,13 @@ export default function WorkCalendar({
                 <span
                   className={`w-2 h-2 rounded-full flex-shrink-0 ${c.dot}`}
                 />
-                <span className="text-xs text-slate-600">{w.name}</span>
+                <span className="text-xs text-[#475569]">{w.name}</span>
               </div>
             );
           })}
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-slate-300 flex-shrink-0" />
-            <span className="text-xs text-slate-400">Unassigned</span>
+            <span className="text-xs text-[#94A3B8]">Unassigned</span>
           </div>
         </div>
       )}

@@ -27,7 +27,7 @@ function Field({ label, name, type = "text", placeholder, required, defaultValue
   return (
     <div>
       <label className="block text-xs font-semibold text-[#475569] mb-1.5">
-        {label}{required && <span className="text-red-400 ml-0.5">*</span>}
+        {label}{required && <span className="text-[#F87171] ml-0.5">*</span>}
       </label>
       <input type={type} name={name} placeholder={placeholder} required={required} defaultValue={defaultValue}
         className="ff-input text-sm" />

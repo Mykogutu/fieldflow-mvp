@@ -1,4 +1,4 @@
-import { getClientWithDetails } from "@/app/actions/client-actions";
+﻿import { getClientWithDetails } from "@/app/actions/client-actions";
 import { formatKES, formatDate, statusLabel } from "@/lib/utils";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -13,9 +13,9 @@ import {
 function ClientAvatar({ name, size = "lg" }: { name: string; size?: "lg" | "md" }) {
   const initials = name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
   const colors = [
-    "bg-blue-100 text-blue-700", "bg-purple-100 text-purple-700",
-    "bg-green-100 text-green-700", "bg-amber-100 text-amber-700",
-    "bg-indigo-100 text-indigo-700", "bg-pink-100 text-pink-700",
+    "bg-blue-100 text-[#1D4ED8]", "bg-purple-100 text-[#7C3AED]",
+    "bg-green-100 text-[#15803D]", "bg-amber-100 text-[#B45309]",
+    "bg-indigo-100 text-[#4338CA]", "bg-pink-100 text-pink-700",
   ];
   const color = colors[name.charCodeAt(0) % colors.length];
   const sz = size === "lg" ? "w-16 h-16 text-xl" : "w-10 h-10 text-sm";
@@ -55,7 +55,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
               <h1 className="text-2xl font-bold text-[#0F172A]">{client.name}</h1>
               <span className={`text-xs px-2.5 py-1 rounded-[6px] font-semibold
                 ${client.type === "COMPANY"
-                  ? "bg-blue-50 text-blue-700 border border-blue-100"
+                  ? "bg-[#EFF6FF] text-[#1D4ED8] border border-blue-100"
                   : "bg-[#F1F5F9] text-[#64748B] border border-[#E2E8F0]"}`}>
                 {client.type === "COMPANY" ? "Company" : "Individual"}
               </span>
@@ -103,15 +103,15 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
         {/* ── 4 Stat Cards ─────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-5 pt-5 border-t border-[#E2E8F0]">
           {[
-            { label: "Total Jobs", value: client.jobs.length.toString(), icon: Briefcase, color: "text-[#2563EB]", bg: "bg-blue-50" },
-            { label: "Assets", value: client.assets.length.toString(), icon: Package, color: "text-[#7C3AED]", bg: "bg-purple-50" },
-            { label: "Total Invoiced", value: formatKES(totalInvoiced), icon: TrendingUp, color: "text-[#0891B2]", bg: "bg-cyan-50" },
+            { label: "Total Jobs", value: client.jobs.length.toString(), icon: Briefcase, color: "text-[#2563EB]", bg: "bg-[#EFF6FF]" },
+            { label: "Assets", value: client.assets.length.toString(), icon: Package, color: "text-[#7C3AED]", bg: "bg-[#F5F3FF]" },
+            { label: "Total Invoiced", value: formatKES(totalInvoiced), icon: TrendingUp, color: "text-[#0891B2]", bg: "bg-[#ECFEFF]" },
             {
               label: "Outstanding",
               value: outstanding > 0 ? formatKES(outstanding) : "Clear",
               icon: AlertCircle,
               color: outstanding > 0 ? "text-[#DC2626]" : "text-[#16A34A]",
-              bg: outstanding > 0 ? "bg-red-50" : "bg-green-50",
+              bg: outstanding > 0 ? "bg-[#FFF1F2]" : "bg-[#F0FDF4]",
             },
           ].map(({ label, value, icon: Icon, color, bg }) => (
             <div key={label} className="flex items-center gap-3 p-3.5 rounded-[12px] bg-[#F8FAFC] border border-[#E2E8F0]">
@@ -134,7 +134,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
         <div className="lg:col-span-2 bg-white rounded-[16px] border border-[#E2E8F0] shadow-card overflow-hidden">
           <div className="px-5 py-3.5 border-b border-[#E2E8F0] flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-[8px] bg-blue-50 flex items-center justify-center">
+              <div className="w-7 h-7 rounded-[8px] bg-[#EFF6FF] flex items-center justify-center">
                 <Briefcase className="w-3.5 h-3.5 text-[#2563EB]" />
               </div>
               <h2 className="font-semibold text-[#0F172A] text-sm">Jobs</h2>
@@ -202,7 +202,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
           {/* Assets */}
           <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card overflow-hidden">
             <div className="px-5 py-3.5 border-b border-[#E2E8F0] flex items-center gap-2">
-              <div className="w-7 h-7 rounded-[8px] bg-purple-50 flex items-center justify-center">
+              <div className="w-7 h-7 rounded-[8px] bg-[#F5F3FF] flex items-center justify-center">
                 <Package className="w-3.5 h-3.5 text-[#7C3AED]" />
               </div>
               <h2 className="font-semibold text-[#0F172A] text-sm">Assets</h2>
@@ -217,7 +217,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
                 {client.assets.map((a: { id: string; name: string; assetType: string }) => (
                   <Link key={a.id} href={`/admin/assets/${a.id}`}
                     className="flex items-center gap-3 px-5 py-3 hover:bg-[#F8FAFC] transition-colors group">
-                    <div className="w-7 h-7 rounded-[8px] bg-purple-50 flex items-center justify-center shrink-0">
+                    <div className="w-7 h-7 rounded-[8px] bg-[#F5F3FF] flex items-center justify-center shrink-0">
                       <Package className="w-3.5 h-3.5 text-[#7C3AED]" />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -234,7 +234,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
           {/* Invoices */}
           <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card overflow-hidden">
             <div className="px-5 py-3.5 border-b border-[#E2E8F0] flex items-center gap-2">
-              <div className="w-7 h-7 rounded-[8px] bg-blue-50 flex items-center justify-center">
+              <div className="w-7 h-7 rounded-[8px] bg-[#EFF6FF] flex items-center justify-center">
                 <FileText className="w-3.5 h-3.5 text-[#2563EB]" />
               </div>
               <h2 className="font-semibold text-[#0F172A] text-sm">Invoices</h2>
@@ -278,15 +278,15 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
             <div className="space-y-2">
               <a href={`https://wa.me/${client.phone.replace("+", "")}`}
                 target="_blank" rel="noopener noreferrer"
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-[10px] border border-[#E2E8F0] hover:border-green-300 hover:bg-green-50 transition-colors text-xs font-medium text-[#334155]">
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-[10px] border border-[#E2E8F0] hover:border-[#86EFAC] hover:bg-[#F0FDF4] transition-colors text-xs font-medium text-[#334155]">
                 <MessageCircle className="w-4 h-4 text-[#16A34A]" /> Message on WhatsApp
               </a>
               <Link href={`/admin/jobs?client=${encodeURIComponent(client.phone)}`}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-[10px] border border-[#E2E8F0] hover:border-[#2563EB]/30 hover:bg-blue-50/30 transition-colors text-xs font-medium text-[#334155]">
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-[10px] border border-[#E2E8F0] hover:border-[#2563EB]/30 hover:bg-[#EFF6FF]/30 transition-colors text-xs font-medium text-[#334155]">
                 <Briefcase className="w-4 h-4 text-[#2563EB]" /> View All Jobs
               </Link>
               <Link href={`/admin/invoices?client=${encodeURIComponent(client.phone)}`}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-[10px] border border-[#E2E8F0] hover:border-[#2563EB]/30 hover:bg-blue-50/30 transition-colors text-xs font-medium text-[#334155]">
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-[10px] border border-[#E2E8F0] hover:border-[#2563EB]/30 hover:bg-[#EFF6FF]/30 transition-colors text-xs font-medium text-[#334155]">
                 <FileText className="w-4 h-4 text-[#2563EB]" /> View Invoices
               </Link>
             </div>

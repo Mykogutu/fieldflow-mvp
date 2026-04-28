@@ -12,16 +12,16 @@ import { formatDate } from "@/lib/utils";
 
 const DOC_CONFIG: Record<string, { label: string; Icon: React.ElementType; color: string; bg: string }> = {
   INVOICE:                     { label: "Invoice",                   Icon: FileText,    color: "text-[#2563EB]",   bg: "bg-[#EFF6FF]"   },
-  JOB_CARD:                    { label: "Job Card",                  Icon: Clipboard,   color: "text-slate-600",  bg: "bg-slate-100" },
+  JOB_CARD:                    { label: "Job Card",                  Icon: Clipboard,   color: "text-[#475569]",  bg: "bg-[#F1F5F9]" },
   WARRANTY_CERTIFICATE:        { label: "Warranty Certificate",      Icon: ShieldCheck, color: "text-[#16A34A]",  bg: "bg-[#F0FDF4]"  },
   INSTALLATION_REPORT:         { label: "Installation Report",       Icon: FileCheck,   color: "text-[#4F46E5]", bg: "bg-[#EEF2FF]" },
   SERVICE_REPORT:              { label: "Service Report",            Icon: Award,       color: "text-[#9333EA]", bg: "bg-[#F5F3FF]" },
   FUEL_CALIBRATION_REPORT:     { label: "Fuel Calibration Report",   Icon: Package,     color: "text-[#D97706]",  bg: "bg-[#FFFBEB]"  },
-  DEVICE_REPLACEMENT_REPORT:   { label: "Device Replacement Report", Icon: Package,     color: "text-orange-600", bg: "bg-orange-50" },
+  DEVICE_REPLACEMENT_REPORT:   { label: "Device Replacement Report", Icon: Package,     color: "text-[#EA580C]", bg: "bg-[#FFF7ED]" },
   CLIENT_CONFIRMATION_RECEIPT: { label: "Client Confirmation",       Icon: CheckSquare, color: "text-[#16A34A]",  bg: "bg-[#F0FDF4]"  },
-  DELIVERY_NOTE:               { label: "Delivery Note",             Icon: Truck,       color: "text-cyan-600",   bg: "bg-cyan-50"   },
+  DELIVERY_NOTE:               { label: "Delivery Note",             Icon: Truck,       color: "text-[#0891B2]",   bg: "bg-[#ECFEFF]"   },
   COMPLIANCE_CERTIFICATE:      { label: "Compliance Certificate",    Icon: FileEdit,    color: "text-teal-600",   bg: "bg-teal-50"   },
-  OTHER:                       { label: "Document",                  Icon: FileText,    color: "text-slate-500",  bg: "bg-slate-100" },
+  OTHER:                       { label: "Document",                  Icon: FileText,    color: "text-[#64748B]",  bg: "bg-[#F1F5F9]" },
 };
 
 const ALL_TYPES = Object.keys(DOC_CONFIG);

@@ -36,26 +36,26 @@ function assetMeta(type: string): { icon: React.ElementType; color: string; bg: 
   if (t.includes("plastic tank") || t.includes("water tank") || t.includes("tank"))
     return { icon: Container,  color: "text-[#2563EB]",   bg: "bg-[#EFF6FF]"   };
   if (t.includes("underground"))
-    return { icon: Droplets,   color: "text-cyan-600",   bg: "bg-cyan-50"   };
+    return { icon: Droplets,   color: "text-[#0891B2]",   bg: "bg-[#ECFEFF]"   };
   if (t.includes("vehicle") || t.includes("car") || t.includes("truck"))
     return { icon: Truck,      color: "text-[#D97706]",  bg: "bg-[#FFFBEB]"  };
   if (t.includes("tracker") || t.includes("gps"))
     return { icon: Gauge,      color: "text-[#9333EA]", bg: "bg-[#F5F3FF]" };
   if (t.includes("sensor") || t.includes("fuel sensor"))
-    return { icon: Gauge,      color: "text-orange-600", bg: "bg-orange-50" };
+    return { icon: Gauge,      color: "text-[#EA580C]", bg: "bg-[#FFF7ED]" };
   if (t.includes("device") || t.includes("sim"))
     return { icon: Cpu,        color: "text-[#4F46E5]", bg: "bg-[#EEF2FF]" };
   if (t.includes("solar") || t.includes("panel"))
-    return { icon: Sun,        color: "text-yellow-600", bg: "bg-yellow-50" };
+    return { icon: Sun,        color: "text-[#CA8A04]", bg: "bg-[#FEFCE8]" };
   if (t.includes("inverter") || t.includes("battery"))
     return { icon: Zap,        color: "text-[#16A34A]",  bg: "bg-[#F0FDF4]"  };
   if (t.includes("building") || t.includes("site") || t.includes("office"))
-    return { icon: Building2,  color: "text-slate-600",  bg: "bg-slate-100" };
+    return { icon: Building2,  color: "text-[#475569]",  bg: "bg-[#F1F5F9]" };
   if (t.includes("equipment") || t.includes("tool") || t.includes("pump"))
-    return { icon: Wrench,     color: "text-slate-600",  bg: "bg-slate-100" };
+    return { icon: Wrench,     color: "text-[#475569]",  bg: "bg-[#F1F5F9]" };
   if (t.includes("server") || t.includes("computer") || t.includes("it"))
-    return { icon: HardDrive,  color: "text-blue-500",   bg: "bg-[#EFF6FF]"   };
-  return { icon: Package, color: "text-slate-500", bg: "bg-slate-100" };
+    return { icon: HardDrive,  color: "text-[#3B82F6]",   bg: "bg-[#EFF6FF]"   };
+  return { icon: Package, color: "text-[#64748B]", bg: "bg-[#F1F5F9]" };
 }
 
 function warrantyStatus(date: Date | string | null): { label: string; color: string; bg: string } | null {
@@ -74,7 +74,7 @@ function Field({ label, name, type = "text", placeholder, required, defaultValue
 }) {
   return (
     <div>
-      <label className="block text-xs font-semibold text-[#475569] mb-1.5">{label}{required && <span className="text-red-400 ml-0.5">*</span>}</label>
+      <label className="block text-xs font-semibold text-[#475569] mb-1.5">{label}{required && <span className="text-[#F87171] ml-0.5">*</span>}</label>
       <input type={type} name={name} placeholder={placeholder} required={required} defaultValue={defaultValue}
         className="ff-input text-sm" />
     </div>
@@ -116,7 +116,7 @@ function AssetForm({ zones, allTypes, isPending, initial, onSubmit, onCancel }: 
       <Field label="Asset Name" name="name" required defaultValue={initial?.name} placeholder="e.g. Mrs. Wanjiku's 5000L tank" />
 
       <div>
-        <label className="block text-xs font-semibold text-[#475569] mb-1.5">Asset Type <span className="text-red-400">*</span></label>
+        <label className="block text-xs font-semibold text-[#475569] mb-1.5">Asset Type <span className="text-[#F87171]">*</span></label>
         <input name="assetType" required list="asset-types" defaultValue={initial?.assetType}
           className="ff-input text-sm" placeholder="Plastic Tank, Vehicle, Inverter…" />
         <datalist id="asset-types">{allTypes.map(t => <option key={t} value={t} />)}</datalist>
