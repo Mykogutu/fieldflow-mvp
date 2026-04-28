@@ -162,18 +162,18 @@ export default function WorkersClient({ workers, zones }: { workers: Worker[]; z
       </div>
 
       {/* ── Summary metrics ──────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-3">
         {[
           { label: "Total Workers", value: workers.length.toString(), icon: Users,       color: "text-[#2563EB]", bg: "bg-blue-50" },
           { label: "Active",        value: activeCount.toString(),    icon: CheckCircle2, color: "text-[#16A34A]", bg: "bg-green-50" },
-          { label: "Inactive",      value: inactiveCount.toString(),  icon: XCircle,     color: inactiveCount > 0 ? "text-[#94A3B8]" : "text-[#94A3B8]", bg: "bg-[#F1F5F9]" },
+          { label: "Inactive",      value: inactiveCount.toString(),  icon: XCircle,     color: "text-[#94A3B8]", bg: "bg-[#F1F5F9]" },
         ].map(({ label, value, icon: Icon, color, bg }) => (
-          <div key={label} className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card p-4 flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-[10px] ${bg} flex items-center justify-center shrink-0`}>
-              <Icon className={`w-5 h-5 ${color}`} />
+          <div key={label} className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card p-3 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center gap-1.5 sm:gap-3">
+            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-[10px] ${bg} flex items-center justify-center shrink-0`}>
+              <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${color}`} />
             </div>
-            <div>
-              <p className="text-xs text-[#94A3B8] font-medium">{label}</p>
+            <div className="text-center sm:text-left min-w-0">
+              <p className="text-[10px] sm:text-xs text-[#94A3B8] font-medium leading-tight">{label}</p>
               <p className={`text-lg font-bold leading-tight ${color}`}>{value}</p>
             </div>
           </div>

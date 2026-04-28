@@ -68,13 +68,13 @@ export default function InvoicesClient({
           { label: "Total Paid", value: formatKES(totalRevenue), icon: TrendingUp, color: "text-[#16A34A]", bg: "bg-green-50" },
           { label: "Outstanding", value: totalOutstanding > 0 ? formatKES(totalOutstanding) : "Clear", icon: DollarSign, color: totalOutstanding > 0 ? "text-[#DC2626]" : "text-[#16A34A]", bg: totalOutstanding > 0 ? "bg-red-50" : "bg-green-50" },
         ].map(({ label, value, icon: Icon, color, bg }) => (
-          <div key={label} className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card p-4 flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-[10px] ${bg} flex items-center justify-center shrink-0`}>
-              <Icon className={`w-5 h-5 ${color}`} />
+          <div key={label} className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card p-3.5 sm:p-4 flex items-center gap-2.5 sm:gap-3">
+            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-[10px] ${bg} flex items-center justify-center shrink-0`}>
+              <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${color}`} />
             </div>
-            <div>
-              <p className="text-xs text-[#94A3B8] font-medium">{label}</p>
-              <p className={`text-lg font-bold leading-tight ${color}`}>{value}</p>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs text-[#94A3B8] font-medium leading-tight">{label}</p>
+              <p className={`text-base sm:text-lg font-bold leading-tight truncate ${color}`}>{value}</p>
             </div>
           </div>
         ))}
@@ -100,8 +100,8 @@ export default function InvoicesClient({
           </div>
         </div>
 
-        {/* Table */}
-        {invoices.length === 0 ? (
+        {/* Empty state */}
+        {invoices.length === 0 && (
           <div className="py-20 flex flex-col items-center gap-3 text-center">
             <div className="w-14 h-14 rounded-2xl bg-[#F1F5F9] flex items-center justify-center">
               <FileText className="w-6 h-6 text-[#94A3B8]" />
@@ -109,112 +109,148 @@ export default function InvoicesClient({
             <p className="text-sm font-semibold text-[#475569]">No invoices found</p>
             <p className="text-xs text-[#94A3B8]">Invoices are auto-generated when workers report job completion</p>
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="ff-table">
-              <thead>
-                <tr>
-                  <th>Invoice</th>
-                  <th>Client</th>
-                  <th>Job / Worker</th>
-                  <th>Amount</th>
-                  <th>Status</th>
-                  <th>Date</th>
-                  <th className="text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {invoices.map(inv => (
-                  <tr key={inv.id}>
-                    {/* Invoice # */}
-                    <td>
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-[8px] bg-blue-50 flex items-center justify-center shrink-0">
-                          <FileText className="w-4 h-4 text-[#2563EB]" />
+        )}
+
+        {invoices.length > 0 && (
+          <>
+            {/* ── Mobile card list (sm:hidden) ─────────────────────────── */}
+            <div className="sm:hidden divide-y divide-[#F1F5F9]">
+              {invoices.map(inv => (
+                <div key={inv.id} className="px-4 py-3.5">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-[10px] bg-blue-50 flex items-center justify-center shrink-0">
+                        <FileText className="w-4 h-4 text-[#2563EB]" />
+                      </div>
+                      <div>
+                        <p className="font-mono text-xs font-bold text-[#0F172A]">{inv.invoiceNumber}</p>
+                        <p className="text-[11px] text-[#94A3B8]">{formatDate(inv.createdAt)}</p>
+                      </div>
+                    </div>
+                    <StatusBadge status={inv.status} size="xs" />
+                  </div>
+                  <p className="text-sm font-semibold text-[#0F172A] truncate">{inv.clientName}</p>
+                  <p className="text-xs text-[#64748B] truncate">
+                    {inv.job.jobType}
+                    {(inv.workerName ?? inv.job.workers[0]?.name) ? ` · ${inv.workerName ?? inv.job.workers[0]?.name}` : ""}
+                  </p>
+                  <div className="flex items-center justify-between mt-2.5">
+                    <div>
+                      <p className="text-base font-bold text-[#0F172A]">{formatKES(inv.amount)}</p>
+                      {inv.paidAt && <p className="text-[11px] text-[#16A34A]">Paid {formatDate(inv.paidAt)}</p>}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {inv.status === "PENDING" && (
+                        <button onClick={() => markPaid(inv.id)} disabled={isPending}
+                          className="text-[11px] font-semibold text-[#16A34A] border border-green-200 hover:bg-green-50 px-2.5 py-1.5 rounded-[8px] transition-colors disabled:opacity-50">
+                          Mark Paid
+                        </button>
+                      )}
+                      <a href={`/api/invoices/${inv.id}/pdf`} target="_blank" rel="noopener noreferrer"
+                        className="p-1.5 rounded-[8px] border border-[#E2E8F0] text-[#64748B] hover:text-[#2563EB] hover:bg-blue-50 transition-colors" title="Download">
+                        <Download className="w-3.5 h-3.5" />
+                      </a>
+                      <a href={`https://wa.me/${inv.clientPhone.replace("+", "")}?text=${encodeURIComponent(
+                        `Hi ${inv.clientName}, your invoice ${inv.invoiceNumber} for ${formatKES(inv.amount)} is ready.`)}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="p-1.5 rounded-[8px] border border-[#E2E8F0] text-[#64748B] hover:text-green-600 hover:bg-green-50 transition-colors" title="WhatsApp">
+                        <Send className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* ── Desktop table (hidden sm:block) ──────────────────────── */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="ff-table">
+                <thead>
+                  <tr>
+                    <th>Invoice</th>
+                    <th>Client</th>
+                    <th>Job / Worker</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th className="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invoices.map(inv => (
+                    <tr key={inv.id}>
+                      {/* Invoice # */}
+                      <td>
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-[8px] bg-blue-50 flex items-center justify-center shrink-0">
+                            <FileText className="w-4 h-4 text-[#2563EB]" />
+                          </div>
+                          <div>
+                            <p className="font-mono text-xs font-bold text-[#0F172A]">{inv.invoiceNumber}</p>
+                            {inv.job.location && (
+                              <p className="text-[10px] text-[#94A3B8] mt-0.5 truncate max-w-[100px]">{inv.job.location}</p>
+                            )}
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-mono text-xs font-bold text-[#0F172A]">{inv.invoiceNumber}</p>
-                          {inv.job.location && (
-                            <p className="text-[10px] text-[#94A3B8] mt-0.5 truncate max-w-[100px]">{inv.job.location}</p>
+                      </td>
+                      {/* Client */}
+                      <td>
+                        <p className="font-semibold text-[#0F172A] text-sm truncate max-w-[140px]">{inv.clientName}</p>
+                        <a href={`https://wa.me/${inv.clientPhone.replace("+", "")}`}
+                          target="_blank" rel="noopener noreferrer"
+                          className="text-[11px] text-[#94A3B8] hover:text-[#16A34A] transition-colors flex items-center gap-1 mt-0.5">
+                          <Phone className="w-2.5 h-2.5" />{inv.clientPhone}
+                        </a>
+                      </td>
+                      {/* Job / Worker */}
+                      <td>
+                        <p className="text-sm text-[#334155] truncate max-w-[140px]">{inv.job.jobType}</p>
+                        <p className="text-[11px] text-[#94A3B8] mt-0.5 truncate">
+                          {inv.workerName ?? inv.job.workers[0]?.name ?? "—"}
+                        </p>
+                      </td>
+                      {/* Amount */}
+                      <td>
+                        <p className="text-sm font-bold text-[#0F172A]">{formatKES(inv.amount)}</p>
+                        {inv.paidAt && <p className="text-[10px] text-[#16A34A] mt-0.5">Paid {formatDate(inv.paidAt)}</p>}
+                      </td>
+                      {/* Status */}
+                      <td><StatusBadge status={inv.status} size="xs" /></td>
+                      {/* Date */}
+                      <td className="text-[#64748B] whitespace-nowrap text-xs">{formatDate(inv.createdAt)}</td>
+                      {/* Actions */}
+                      <td>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <a href={`/api/invoices/${inv.id}/pdf`} target="_blank" rel="noopener noreferrer"
+                            className="p-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/50 hover:text-[#2563EB] hover:bg-blue-50 transition-colors" title="Download PDF">
+                            <Download className="w-3.5 h-3.5" />
+                          </a>
+                          <a href={`https://wa.me/${inv.clientPhone.replace("+", "")}?text=${encodeURIComponent(
+                            `Hi ${inv.clientName}, your invoice ${inv.invoiceNumber} for ${formatKES(inv.amount)} is ready.`)}`}
+                            target="_blank" rel="noopener noreferrer"
+                            className="p-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-green-400 hover:text-green-600 hover:bg-green-50 transition-colors" title="Send via WhatsApp">
+                            <Send className="w-3.5 h-3.5" />
+                          </a>
+                          {inv.status === "PENDING" && (
+                            <button onClick={() => markPaid(inv.id)} disabled={isPending}
+                              className="text-[11px] font-semibold text-[#16A34A] hover:text-green-700 border border-green-200 hover:bg-green-50 px-3 py-1.5 rounded-[6px] transition-colors disabled:opacity-50 whitespace-nowrap">
+                              Mark Paid
+                            </button>
+                          )}
+                          {inv.job.id && (
+                            <Link href={`/admin/jobs/${inv.job.id}`}
+                              className="p-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/50 hover:text-[#2563EB] hover:bg-blue-50 transition-colors" title="View Job">
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </Link>
                           )}
                         </div>
-                      </div>
-                    </td>
-
-                    {/* Client */}
-                    <td>
-                      <p className="font-semibold text-[#0F172A] text-sm truncate max-w-[140px]">{inv.clientName}</p>
-                      <a href={`https://wa.me/${inv.clientPhone.replace("+", "")}`}
-                        target="_blank" rel="noopener noreferrer"
-                        className="text-[11px] text-[#94A3B8] hover:text-[#16A34A] transition-colors flex items-center gap-1 mt-0.5">
-                        <Phone className="w-2.5 h-2.5" />{inv.clientPhone}
-                      </a>
-                    </td>
-
-                    {/* Job / Worker */}
-                    <td>
-                      <p className="text-sm text-[#334155] truncate max-w-[140px]">{inv.job.jobType}</p>
-                      <p className="text-[11px] text-[#94A3B8] mt-0.5 truncate">
-                        {inv.workerName ?? inv.job.workers[0]?.name ?? "—"}
-                      </p>
-                    </td>
-
-                    {/* Amount */}
-                    <td>
-                      <p className="text-sm font-bold text-[#0F172A]">{formatKES(inv.amount)}</p>
-                      {inv.paidAt && (
-                        <p className="text-[10px] text-[#16A34A] mt-0.5">Paid {formatDate(inv.paidAt)}</p>
-                      )}
-                    </td>
-
-                    {/* Status */}
-                    <td><StatusBadge status={inv.status} size="xs" /></td>
-
-                    {/* Date */}
-                    <td className="text-[#64748B] whitespace-nowrap text-xs">{formatDate(inv.createdAt)}</td>
-
-                    {/* Actions */}
-                    <td>
-                      <div className="flex items-center justify-end gap-1.5">
-                        {/* PDF download */}
-                        <a href={`/api/invoices/${inv.id}/pdf`} target="_blank" rel="noopener noreferrer"
-                          className="p-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/50 hover:text-[#2563EB] hover:bg-blue-50 transition-colors"
-                          title="Download PDF">
-                          <Download className="w-3.5 h-3.5" />
-                        </a>
-
-                        {/* WhatsApp send */}
-                        <a href={`https://wa.me/${inv.clientPhone.replace("+", "")}?text=${encodeURIComponent(
-                          `Hi ${inv.clientName}, your invoice ${inv.invoiceNumber} for ${formatKES(inv.amount)} is ready.`)}`}
-                          target="_blank" rel="noopener noreferrer"
-                          className="p-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-green-400 hover:text-green-600 hover:bg-green-50 transition-colors"
-                          title="Send via WhatsApp">
-                          <Send className="w-3.5 h-3.5" />
-                        </a>
-
-                        {/* Mark Paid */}
-                        {inv.status === "PENDING" && (
-                          <button onClick={() => markPaid(inv.id)} disabled={isPending}
-                            className="text-[11px] font-semibold text-[#16A34A] hover:text-green-700 border border-green-200 hover:bg-green-50 px-2 py-1 rounded-[6px] transition-colors disabled:opacity-50 whitespace-nowrap">
-                            Mark Paid
-                          </button>
-                        )}
-
-                        {/* View Job */}
-                        {inv.job.id && (
-                          <Link href={`/admin/jobs/${inv.job.id}`}
-                            className="p-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/50 hover:text-[#2563EB] hover:bg-blue-50 transition-colors"
-                            title="View Job">
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </Link>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>

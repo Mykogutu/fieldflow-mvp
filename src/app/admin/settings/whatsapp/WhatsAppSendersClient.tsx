@@ -216,7 +216,7 @@ export default function WhatsAppSendersClient({ senders }: { senders: WhatsAppSe
                           <button
                             onClick={() => startTransition(async () => { await setDefaultSender(s.id); router.refresh(); })}
                             disabled={isPending}
-                            className="text-[11px] font-semibold text-[#2563EB] hover:text-[#1D4ED8] border border-blue-200 hover:bg-blue-50 px-2 py-1 rounded-[6px] transition-colors disabled:opacity-50">
+                            className="text-[11px] font-semibold text-[#2563EB] hover:text-[#1D4ED8] border border-blue-200 hover:bg-blue-50 px-3 py-1.5 rounded-[6px] transition-colors disabled:opacity-50">
                             Set Default
                           </button>
                         )}

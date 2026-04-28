@@ -75,7 +75,7 @@ export default function WorkCalendar({
           </button>
           <button
             onClick={() => router.push("/admin")}
-            className="px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors border border-gray-200 hover:border-gray-300"
+            className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors border border-gray-200 hover:border-gray-300"
           >
             Today
           </button>

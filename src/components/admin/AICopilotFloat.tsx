@@ -86,15 +86,15 @@ export function AICopilotFloat() {
     <>
       {/* ── Chat panel ── */}
       <div
-        className={`fixed z-50 right-4 left-4 sm:left-auto sm:w-[360px] lg:right-6
+        className={`fixed z-50 right-3 left-3 sm:left-auto sm:w-[360px] sm:right-4 lg:right-6
           bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col
           overflow-hidden transition-all duration-200 ease-out
-          bottom-[5.5rem] lg:bottom-[4.5rem]
+          bottom-[8.5rem] sm:bottom-[5.5rem] lg:bottom-[4.5rem]
           ${open
             ? "opacity-100 translate-y-0 pointer-events-auto"
             : "opacity-0 translate-y-4 pointer-events-none"
           }`}
-        style={{ maxHeight: "min(520px, 72dvh)" }}
+        style={{ maxHeight: "min(460px, 65dvh)" }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 shrink-0 bg-gradient-to-r from-blue-600 to-blue-500 rounded-t-2xl">
@@ -220,8 +220,8 @@ export function AICopilotFloat() {
       <button
         onClick={() => setOpen((v) => !v)}
         aria-label={open ? "Close AI Copilot" : "Open AI Copilot"}
-        className={`fixed z-50 bottom-20 right-4 lg:bottom-6 lg:right-6
-          w-13 h-13 w-[52px] h-[52px] rounded-2xl shadow-lg shadow-blue-500/25
+        className={`fixed z-50 bottom-[4.5rem] right-3 lg:bottom-6 lg:right-6
+          w-[46px] h-[46px] lg:w-[52px] lg:h-[52px] rounded-2xl shadow-lg shadow-blue-500/25
           flex items-center justify-center
           transition-all duration-200
           ${open
