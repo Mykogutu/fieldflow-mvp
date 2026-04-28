@@ -10,7 +10,7 @@ import {
   Wrench, Clock, AlertTriangle, TrendingUp,
   CheckCircle, Calendar, FileText, Users, Sparkles,
   ArrowRight, DollarSign, ReceiptText, X, ChevronRight,
-  Activity, CircleDollarSign,
+  Activity, CircleDollarSign, BarChart3,
 } from "lucide-react";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -131,6 +131,52 @@ function NeedsAttentionPanel({ risks }: { risks: JobRisk[] }) {
   );
 }
 
+// ── Top Services panel ────────────────────────────────────────────────────────
+
+function TopServicesPanel({ services }: { services: { jobType: string; count: number }[] }) {
+  const max = services[0]?.count ?? 1;
+  return (
+    <div className="ff-card overflow-hidden">
+      <div className="px-5 py-3.5 border-b border-[#F1F5F9] flex items-center justify-between">
+        <h2 className="ff-section-title flex items-center gap-2">
+          <BarChart3 className="w-4 h-4 text-[#94A3B8]" />
+          Top Services This Month
+        </h2>
+        <Link href="/admin/jobs" className="text-xs text-[#2563EB] hover:text-[#1D4ED8] font-medium flex items-center gap-1">
+          All jobs <ArrowRight className="w-3 h-3" />
+        </Link>
+      </div>
+      {services.length === 0 ? (
+        <div className="px-5 py-8 flex flex-col items-center gap-2 text-center">
+          <div className="w-10 h-10 rounded-[10px] bg-[#F1F5F9] flex items-center justify-center">
+            <BarChart3 className="w-4 h-4 text-[#94A3B8]" />
+          </div>
+          <p className="text-sm text-[#64748B]">No jobs this month yet</p>
+        </div>
+      ) : (
+        <div className="px-5 py-4 space-y-3">
+          {services.map((s) => (
+            <div key={s.jobType}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[13px] font-medium text-[#334155] truncate">{s.jobType}</span>
+                <span className="text-[13px] font-bold text-[#0F172A] shrink-0 ml-2">
+                  {s.count} {s.count === 1 ? "job" : "jobs"}
+                </span>
+              </div>
+              <div className="h-1.5 bg-[#F1F5F9] rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-[#2563EB] rounded-full transition-all"
+                  style={{ width: `${Math.round((s.count / max) * 100)}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Data ──────────────────────────────────────────────────────────────────────
 
 function getWeekStart(weekParam?: string): Date {
@@ -156,7 +202,7 @@ async function getDashboardData(weekStart: Date) {
   const [
     activeJobs, pendingVerification, postponedJobs,
     monthRevenue, monthInvoiced, outstandingInvoices, overdueCount,
-    recentJobs, workers, calendarJobs, risks,
+    recentJobs, workers, calendarJobs, risks, topServiceRows,
     companyNameSetting, industrySetting, jobTypesSetting, zonesSetting, documentConfigSetting,
     workerCount, clientCount, assetCount, jobCount, completedJobCount,
   ] = await Promise.all([
@@ -180,6 +226,13 @@ async function getDashboardData(weekStart: Date) {
       orderBy: { scheduledDate: "asc" },
     }),
     detectJobRisks(workspaceId),
+    prisma.job.groupBy({
+      by: ["jobType"],
+      where: { workspaceId, createdAt: { gte: startOfMonth } },
+      _count: { _all: true },
+      orderBy: { _count: { jobType: "desc" } },
+      take: 5,
+    }),
     prisma.setting.findFirst({ where: { workspaceId, key: "company_name" } }),
     prisma.setting.findFirst({ where: { workspaceId, key: "industry" } }),
     prisma.setting.findFirst({ where: { workspaceId, key: "job_types" } }),
@@ -208,10 +261,15 @@ async function getDashboardData(weekStart: Date) {
     hasCompletedJob:   completedJobCount > 0,
   };
 
+  const topServices = topServiceRows.map(r => ({
+    jobType: r.jobType,
+    count: r._count._all,
+  }));
+
   return {
     activeJobs, pendingVerification, postponedJobs,
     monthRevenue, monthInvoiced, outstandingInvoices, overdueCount,
-    recentJobs, workers, calendarJobs, risks, onboarding,
+    recentJobs, workers, calendarJobs, risks, onboarding, topServices,
     totalInvoicedMonth: monthInvoiced._sum.amount ?? 0,
     outstanding: outstandingInvoices._sum.amount ?? 0,
   };
@@ -333,8 +391,8 @@ export default async function DashboardPage({
         />
       </div>
 
-      {/* Bottom row: Recent Jobs + Invoice Summary */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+      {/* Bottom row: Recent Jobs + Invoice Summary + Top Services */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
         {/* Recent Jobs */}
         <div className="ff-card overflow-hidden">
           <div className="px-5 py-3.5 border-b border-[#F1F5F9] flex items-center justify-between">
@@ -381,8 +439,11 @@ export default async function DashboardPage({
           )}
         </div>
 
+        {/* Top Services */}
+        <TopServicesPanel services={data.topServices} />
+
         {/* Invoice Summary */}
-        <div className="ff-card overflow-hidden">
+        <div className="ff-card overflow-hidden xl:col-span-1">
           <div className="px-5 py-3.5 border-b border-[#F1F5F9] flex items-center justify-between">
             <h2 className="ff-section-title">Invoice Summary</h2>
             <Link href="/admin/invoices" className="text-xs text-[#2563EB] hover:text-[#1D4ED8] font-medium flex items-center gap-1">

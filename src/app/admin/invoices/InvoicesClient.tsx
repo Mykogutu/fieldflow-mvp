@@ -63,10 +63,10 @@ export default function InvoicesClient({
       {/* ── Summary metrics ──────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Total Invoices", value: total.toString(), icon: FileText, color: "text-[#2563EB]", bg: "bg-blue-50" },
-          { label: "Pending", value: pendingInvoices.length.toString(), icon: Clock, color: pendingInvoices.length > 0 ? "text-[#D97706]" : "text-[#94A3B8]", bg: pendingInvoices.length > 0 ? "bg-amber-50" : "bg-[#F1F5F9]" },
-          { label: "Total Paid", value: formatKES(totalRevenue), icon: TrendingUp, color: "text-[#16A34A]", bg: "bg-green-50" },
-          { label: "Outstanding", value: totalOutstanding > 0 ? formatKES(totalOutstanding) : "Clear", icon: DollarSign, color: totalOutstanding > 0 ? "text-[#DC2626]" : "text-[#16A34A]", bg: totalOutstanding > 0 ? "bg-red-50" : "bg-green-50" },
+          { label: "Total Invoices", value: total.toString(), icon: FileText, color: "text-[#2563EB]", bg: "bg-[#EFF6FF]" },
+          { label: "Pending", value: pendingInvoices.length.toString(), icon: Clock, color: pendingInvoices.length > 0 ? "text-[#D97706]" : "text-[#94A3B8]", bg: pendingInvoices.length > 0 ? "bg-[#FFFBEB]" : "bg-[#F1F5F9]" },
+          { label: "Total Paid", value: formatKES(totalRevenue), icon: TrendingUp, color: "text-[#16A34A]", bg: "bg-[#F0FDF4]" },
+          { label: "Outstanding", value: totalOutstanding > 0 ? formatKES(totalOutstanding) : "Clear", icon: DollarSign, color: totalOutstanding > 0 ? "text-[#DC2626]" : "text-[#16A34A]", bg: totalOutstanding > 0 ? "bg-[#FFF1F2]" : "bg-[#F0FDF4]" },
         ].map(({ label, value, icon: Icon, color, bg }) => (
           <div key={label} className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card p-3.5 sm:p-4 flex items-center gap-2.5 sm:gap-3">
             <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-[10px] ${bg} flex items-center justify-center shrink-0`}>
@@ -119,7 +119,7 @@ export default function InvoicesClient({
                 <div key={inv.id} className="px-4 py-3.5">
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-[10px] bg-blue-50 flex items-center justify-center shrink-0">
+                      <div className="w-9 h-9 rounded-[10px] bg-[#EFF6FF] flex items-center justify-center shrink-0">
                         <FileText className="w-4 h-4 text-[#2563EB]" />
                       </div>
                       <div>

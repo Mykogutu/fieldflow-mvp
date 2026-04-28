@@ -21,16 +21,16 @@ interface Props {
 }
 
 const TYPE_CONFIG: Record<string, { Icon: React.ElementType; color: string; bg: string }> = {
-  JOB_CREATED:    { Icon: Briefcase,     color: "text-[#2563EB]", bg: "bg-blue-50"   },
-  JOB_VERIFIED:   { Icon: CheckCircle2,  color: "text-[#16A34A]", bg: "bg-green-50"  },
-  JOB_COMPLETED:  { Icon: CheckCircle2,  color: "text-[#7C3AED]", bg: "bg-purple-50" },
-  JOB_DECLINED:   { Icon: UserX,         color: "text-[#DC2626]", bg: "bg-red-50"    },
-  JOB_POSTPONED:  { Icon: Clock,         color: "text-[#D97706]", bg: "bg-amber-50"  },
-  JOB_ISSUE:      { Icon: AlertTriangle, color: "text-[#DC2626]", bg: "bg-red-50"    },
-  JOB_REASSIGNED: { Icon: RefreshCw,     color: "text-indigo-600",bg: "bg-indigo-50" },
-  JOB_CANCELLED:  { Icon: XCircle,       color: "text-[#64748B]", bg: "bg-[#F1F5F9]" },
-  INVOICE_PAID:   { Icon: FileText,      color: "text-[#16A34A]", bg: "bg-green-50"  },
-  DEFAULT:        { Icon: Bell,          color: "text-[#64748B]", bg: "bg-[#F1F5F9]" },
+  JOB_CREATED:    { Icon: Briefcase,     color: "text-[#2563EB]", bg: "bg-[#EFF6FF]"  },
+  JOB_VERIFIED:   { Icon: CheckCircle2,  color: "text-[#16A34A]", bg: "bg-[#F0FDF4]"  },
+  JOB_COMPLETED:  { Icon: CheckCircle2,  color: "text-[#7C3AED]", bg: "bg-[#F5F3FF]"  },
+  JOB_DECLINED:   { Icon: UserX,         color: "text-[#DC2626]", bg: "bg-[#FFF1F2]"  },
+  JOB_POSTPONED:  { Icon: Clock,         color: "text-[#D97706]", bg: "bg-[#FFFBEB]"  },
+  JOB_ISSUE:      { Icon: AlertTriangle, color: "text-[#DC2626]", bg: "bg-[#FFF1F2]"  },
+  JOB_REASSIGNED: { Icon: RefreshCw,     color: "text-[#4F46E5]", bg: "bg-[#EEF2FF]"  },
+  JOB_CANCELLED:  { Icon: XCircle,       color: "text-[#64748B]", bg: "bg-[#F1F5F9]"  },
+  INVOICE_PAID:   { Icon: FileText,      color: "text-[#16A34A]", bg: "bg-[#F0FDF4]"  },
+  DEFAULT:        { Icon: Bell,          color: "text-[#64748B]", bg: "bg-[#F1F5F9]"  },
 };
 
 function getActionLabel(type: string): string {
@@ -281,7 +281,7 @@ export default function NotificationsClient({
                     <div
                       key={n.id}
                       className={`flex items-start gap-3.5 px-5 py-4 transition-colors
-                        ${!n.isRead ? "bg-blue-50/30" : "hover:bg-[#F8FAFC]"}`}
+                        ${!n.isRead ? "bg-[#EFF6FF]/60" : "hover:bg-[#F8FAFC]"}`}
                     >
                       {/* Unread dot */}
                       <div className="flex items-center justify-center pt-1.5 shrink-0 w-3">

@@ -21,6 +21,7 @@ const createSchema = z.object({
   installationDate: z.string().optional(),
   warrantyExpiryDate: z.string().optional(),
   notes: z.string().optional(),
+  imageUrl: z.string().url().optional().or(z.literal("")),
 });
 
 const updateSchema = createSchema.partial().extend({ id: z.string() });

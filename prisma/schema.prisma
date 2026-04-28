@@ -183,6 +183,7 @@ model Asset {
   registrationNumber  String?                                 // e.g. "KDA 123A" for vehicles
   deviceNumber        String?                                 // for trackers, sensors
   simNumber           String?                                 // for connected devices
+  imageUrl            String?                                 // optional asset photo
   clientName          String
   clientPhone         String?
   location            String?

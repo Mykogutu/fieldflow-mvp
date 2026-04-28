@@ -45,9 +45,9 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 function WorkerAvatar({ name }: { name: string }) {
   const initials = name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
   const colors = [
-    "bg-blue-100 text-blue-700", "bg-purple-100 text-purple-700",
-    "bg-amber-100 text-amber-700", "bg-green-100 text-green-700",
-    "bg-indigo-100 text-indigo-700", "bg-rose-100 text-rose-700",
+    "bg-[#DBEAFE] text-[#1D4ED8]", "bg-[#EDE9FE] text-[#6D28D9]",
+    "bg-[#FEF3C7] text-[#B45309]", "bg-[#DCFCE7] text-[#15803D]",
+    "bg-[#E0E7FF] text-[#4338CA]", "bg-[#FFE4E6] text-[#BE123C]",
   ];
   const color = colors[name.charCodeAt(0) % colors.length];
   return (
@@ -68,7 +68,7 @@ function WorkerCard({ w, onEdit, onDeactivate }: { w: Worker; onEdit: () => void
             <div className="flex items-center gap-2 mb-0.5">
               <p className="font-semibold text-[#0F172A] text-sm truncate">{w.name}</p>
               <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-[4px] shrink-0
-                ${w.isActive ? "bg-green-50 text-green-700 border border-green-100" : "bg-[#F1F5F9] text-[#94A3B8] border border-[#E2E8F0]"}`}>
+                ${w.isActive ? "bg-[#F0FDF4] text-[#16A34A] border border-[#BBF7D0]" : "bg-[#F1F5F9] text-[#94A3B8] border border-[#E2E8F0]"}`}>
                 {w.isActive ? "Active" : "Inactive"}
               </span>
             </div>
@@ -93,16 +93,16 @@ function WorkerCard({ w, onEdit, onDeactivate }: { w: Worker; onEdit: () => void
         <div className="flex gap-2 pt-4 border-t border-[#F1F5F9]">
           <a href={`https://wa.me/${w.phone.replace("+", "")}`}
             target="_blank" rel="noopener noreferrer"
-            className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-medium py-2 rounded-[8px] bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 transition-colors">
+            className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-medium py-2 rounded-[8px] bg-[#F0FDF4] text-[#16A34A] hover:bg-[#DCFCE7] border border-[#86EFAC] transition-colors">
             <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
           </a>
           <button onClick={onEdit}
-            className="flex-1 text-xs font-medium py-2 rounded-[8px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/40 hover:text-[#2563EB] hover:bg-blue-50/30 transition-colors">
+            className="flex-1 text-xs font-medium py-2 rounded-[8px] border border-[#E2E8F0] text-[#64748B] hover:border-[#BFDBFE] hover:text-[#2563EB] hover:bg-[#EFF6FF] transition-colors">
             Edit
           </button>
           {w.isActive && (
             <button onClick={onDeactivate}
-              className="text-xs font-medium py-2 px-3 rounded-[8px] border border-red-200 text-[#DC2626] hover:bg-red-50 transition-colors">
+              className="text-xs font-medium py-2 px-3 rounded-[8px] border border-[#FECACA] text-[#DC2626] hover:bg-[#FFF1F2] transition-colors">
               <XCircle className="w-3.5 h-3.5" />
             </button>
           )}
@@ -164,8 +164,8 @@ export default function WorkersClient({ workers, zones }: { workers: Worker[]; z
       {/* ── Summary metrics ──────────────────────────────────────────────── */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: "Total Workers", value: workers.length.toString(), icon: Users,       color: "text-[#2563EB]", bg: "bg-blue-50" },
-          { label: "Active",        value: activeCount.toString(),    icon: CheckCircle2, color: "text-[#16A34A]", bg: "bg-green-50" },
+          { label: "Total Workers", value: workers.length.toString(), icon: Users,       color: "text-[#2563EB]", bg: "bg-[#EFF6FF]" },
+          { label: "Active",        value: activeCount.toString(),    icon: CheckCircle2, color: "text-[#16A34A]", bg: "bg-[#F0FDF4]" },
           { label: "Inactive",      value: inactiveCount.toString(),  icon: XCircle,     color: "text-[#94A3B8]", bg: "bg-[#F1F5F9]" },
         ].map(({ label, value, icon: Icon, color, bg }) => (
           <div key={label} className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card p-3 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center gap-1.5 sm:gap-3">
@@ -182,7 +182,7 @@ export default function WorkersClient({ workers, zones }: { workers: Worker[]; z
 
       {/* Feedback */}
       {feedback && (
-        <div className="flex items-center justify-between text-sm px-4 py-3 rounded-[10px] bg-green-50 text-green-700 border border-green-200">
+        <div className="flex items-center justify-between text-sm px-4 py-3 rounded-[10px] bg-[#F0FDF4] text-[#16A34A] border border-[#86EFAC]">
           {feedback}
           <button onClick={() => setFeedback("")}><X className="w-4 h-4" /></button>
         </div>

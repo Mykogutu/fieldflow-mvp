@@ -9,6 +9,8 @@ import {
   Download, Upload, Check, ChevronRight, X, Plus,
   Droplets, Gauge, Wrench, Zap, Wind, Sparkles, Bug, Sun,
   Truck, Hammer, Leaf, Car, Monitor, MessageCircle,
+  FileText, Clipboard, ShieldCheck, Award, FileEdit,
+  UserPlus, Crown, AlertTriangle, RefreshCw, CheckCircle2,
   type LucideIcon,
 } from "lucide-react";
 import { INDUSTRY_LIST, INDUSTRY_TEMPLATES, type IndustryKey } from "@/lib/industry-templates";
@@ -33,15 +35,30 @@ const INDUSTRY_ICONS: Record<string, LucideIcon> = {
   OTHER:            HelpCircle,
 };
 
+const DOCUMENT_OPTIONS: {
+  key: string; label: string; Icon: LucideIcon;
+  iconBg: string; iconColor: string; description: string;
+}[] = [
+  { key: "invoice",     label: "Invoice",                Icon: FileText,    iconBg: "bg-blue-50",   iconColor: "text-blue-600",   description: "Auto-generated PDF sent to the client when a job is completed" },
+  { key: "job_card",    label: "Job Card",               Icon: Clipboard,   iconBg: "bg-[#F1F5F9]", iconColor: "text-[#64748B]",  description: "Full job record with timeline, worker details, and client verification" },
+  { key: "warranty",    label: "Warranty Certificate",   Icon: ShieldCheck, iconBg: "bg-blue-50",   iconColor: "text-[#2563EB]",  description: "Warranty document issued to the client after job verification" },
+  { key: "certificate", label: "Completion Certificate", Icon: Award,       iconBg: "bg-green-50",  iconColor: "text-[#16A34A]",  description: "Formal service completion certificate (e.g. for installation jobs)" },
+  { key: "quotation",   label: "Quotation",              Icon: FileEdit,    iconBg: "bg-amber-50",  iconColor: "text-[#D97706]",  description: "Price estimate sent to the client before work begins" },
+];
+
 // ── Tab config ────────────────────────────────────────────────────────────────
-type Tab = "general" | "company" | "users" | "billing" | "integrations" | "data";
+type Tab = "general" | "company" | "operations" | "documents" | "automations" | "branding" | "whatsapp" | "users" | "billing" | "data";
 const TABS: { id: Tab; label: string }[] = [
-  { id: "general",      label: "General"       },
-  { id: "company",      label: "Company"       },
-  { id: "users",        label: "Users & Roles" },
-  { id: "billing",      label: "Billing"       },
-  { id: "integrations", label: "Integrations"  },
-  { id: "data",         label: "Data & Privacy"},
+  { id: "general",     label: "General"        },
+  { id: "company",     label: "Company"        },
+  { id: "operations",  label: "Operations"     },
+  { id: "documents",   label: "Documents"      },
+  { id: "automations", label: "Automations"    },
+  { id: "branding",    label: "Branding"       },
+  { id: "whatsapp",    label: "WhatsApp"       },
+  { id: "users",       label: "Users & Roles"  },
+  { id: "billing",     label: "Billing"        },
+  { id: "data",        label: "Data & Privacy" },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -231,19 +248,6 @@ function StorageDonut({ used, total }: { used: number; total: number }) {
   );
 }
 
-// ── Coming soon ───────────────────────────────────────────────────────────────
-function ComingSoon({ icon: Icon, title, desc }: { icon: React.ElementType; title: string; desc: string }) {
-  return (
-    <div className="py-20 flex flex-col items-center gap-3 text-center">
-      <div className="w-14 h-14 rounded-2xl bg-[#F1F5F9] flex items-center justify-center">
-        <Icon className="w-6 h-6 text-[#94A3B8]" />
-      </div>
-      <p className="text-sm font-semibold text-[#475569]">{title}</p>
-      <p className="text-xs text-[#94A3B8]">{desc}</p>
-    </div>
-  );
-}
-
 // ── Edit modal ────────────────────────────────────────────────────────────────
 function EditModal({ label, value, onClose, onSave }: {
   label: string; value: string; onClose: () => void; onSave: (v: string) => void;
@@ -269,6 +273,13 @@ function EditModal({ label, value, onClose, onSave }: {
   );
 }
 
+// ── Integration status badge ──────────────────────────────────────────────────
+function StatusPill({ status }: { status: "connected" | "disconnected" | "optional" }) {
+  if (status === "connected")    return <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-100">Connected</span>;
+  if (status === "disconnected") return <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-red-50 text-[#DC2626] border border-red-100">Not connected</span>;
+  return <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#F1F5F9] text-[#94A3B8] border border-[#E2E8F0]">Optional</span>;
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function SettingsClient({ settings }: { settings: Record<string, string> }) {
   const router = useRouter();
@@ -276,7 +287,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
   const [saved, setSaved] = useState(false);
   const [tab, setTab] = useState<Tab>("general");
 
-  // ── General tab state ─────────────────────────────────────────────────────
+  // ── General tab ───────────────────────────────────────────────────────────
   const [companyName, setCompanyName]     = useState(settings.company_name ?? "FieldFlow Demo");
   const [businessEmail, setBusinessEmail] = useState(settings.support_email ?? "info@fieldflow.app");
   const [phone, setPhone]                 = useState(settings.company_phone ?? "+254 700 000 000");
@@ -286,18 +297,48 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
   const [dateFormat, setDateFormat]       = useState(settings.date_format ?? "DD/MM/YYYY");
   const [timeFormat, setTimeFormat]       = useState(settings.time_format ?? "12-hour");
 
-  // ── Company tab state ─────────────────────────────────────────────────────
+  // ── Company tab ───────────────────────────────────────────────────────────
+  const [companyDesc, setCompanyDesc]             = useState(settings.company_description ?? "");
+  const [companyWebsite, setCompanyWebsite]       = useState(settings.company_website ?? "");
+
+  // ── Operations tab ────────────────────────────────────────────────────────
   const [industry, setIndustry]                   = useState<IndustryKey>((settings.industry as IndustryKey) || "OTHER");
   const [workerTitle, setWorkerTitle]             = useState(settings.worker_title ?? "Technician");
   const [workerTitlePlural, setWorkerTitlePlural] = useState(settings.worker_title_plural ?? "Technicians");
   const [jobLabel, setJobLabel]                   = useState(settings.job_label ?? "Job");
   const [jobLabelPlural, setJobLabelPlural]       = useState(settings.job_label_plural ?? "Jobs");
-  const [brandColor, setBrandColor]               = useState(settings.brand_color ?? "#2563eb");
+  const [assetLabel, setAssetLabel]               = useState(settings.asset_label ?? "Asset");
+  const [assetLabelPlural, setAssetLabelPlural]   = useState(settings.asset_label_plural ?? "Assets");
+  const [clientLabel, setClientLabel]             = useState(settings.client_label ?? "Client");
+  const [clientLabelPlural, setClientLabelPlural] = useState(settings.client_label_plural ?? "Clients");
   const [jobTypes, setJobTypes]                   = useState<string[]>(safeJson<string[]>(settings.job_types, []));
   const [zones, setZones]                         = useState<string[]>(safeJson<string[]>(settings.zones, []));
   const [newJobType, setNewJobType]               = useState("");
   const [newZone, setNewZone]                     = useState("");
   const [defaultWarranty, setDefaultWarranty]     = useState(settings.default_warranty ?? "");
+
+  // ── Branding tab ──────────────────────────────────────────────────────────
+  const [brandColor, setBrandColor]               = useState(settings.brand_color ?? "#2563eb");
+  const [pdfFooter, setPdfFooter]                 = useState(settings.pdf_footer ?? "");
+  const [showLogoOnDocs, setShowLogoOnDocs]       = useState(settings.show_logo_on_docs !== "false");
+  const [brandColorHeader, setBrandColorHeader]   = useState(settings.brand_color_header !== "false");
+  const [showPoweredBy, setShowPoweredBy]         = useState(settings.show_powered_by !== "false");
+
+  // ── Automations tab ───────────────────────────────────────────────────────
+  const [briefingTime, setBriefingTime]           = useState(settings.briefing_time ?? "06:00");
+  const [briefingEnabled, setBriefingEnabled]     = useState(settings.briefing_enabled !== "false");
+  const [remindersEnabled, setRemindersEnabled]   = useState(settings.reminders_enabled !== "false");
+  const [slaAlerts, setSlaAlerts]                 = useState(settings.sla_alerts !== "false");
+  const [slaHours, setSlaHours]                   = useState(settings.sla_hours ?? "24");
+  const [weeklyEarnings, setWeeklyEarnings]       = useState(settings.weekly_earnings !== "false");
+  const [reviewRequests, setReviewRequests]       = useState(settings.review_requests !== "false");
+
+  // ── Documents tab ─────────────────────────────────────────────────────────
+  const DEFAULT_DOCS = ["invoice", "job_card", "warranty"];
+  const [enabledDocs, setEnabledDocs] = useState<string[]>(safeJson<string[]>(settings.enabled_documents, DEFAULT_DOCS));
+  function toggleDoc(key: string) {
+    setEnabledDocs(prev => prev.includes(key) ? prev.filter(d => d !== key) : [...prev, key]);
+  }
 
   // ── Edit modal ────────────────────────────────────────────────────────────
   const [editing, setEditing] = useState<{ label: string; value: string; onSave: (v: string) => void } | null>(null);
@@ -312,6 +353,19 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
     setJobTypes(t.jobTypes);
     setDefaultWarranty(t.defaultWarranty ?? "");
     if (t.currencyHint) setCurrency(t.currencyHint);
+    // Apply asset/client label hints per industry if available
+    const assetHints: Partial<Record<IndustryKey, [string, string]>> = {
+      TANK_SERVICES: ["Tank", "Tanks"],
+      FUEL_TRACKER:  ["Vehicle", "Vehicles"],
+      SOLAR:         ["Installation", "Installations"],
+      LOGISTICS:     ["Vehicle", "Vehicles"],
+    };
+    const clientHints: Partial<Record<IndustryKey, [string, string]>> = {
+      LOGISTICS:    ["Fleet Client", "Fleet Clients"],
+      FUEL_TRACKER: ["Fleet Client", "Fleet Clients"],
+    };
+    if (assetHints[key]) { setAssetLabel(assetHints[key]![0]); setAssetLabelPlural(assetHints[key]![1]); }
+    if (clientHints[key]) { setClientLabel(clientHints[key]![0]); setClientLabelPlural(clientHints[key]![1]); }
   }
 
   async function handleSave() {
@@ -320,26 +374,42 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          // General
-          company_name:      companyName,
-          support_email:     businessEmail,
-          company_phone:     phone,
-          business_location: address,
+          company_name:         companyName,
+          company_description:  companyDesc,
+          company_website:      companyWebsite,
+          support_email:        businessEmail,
+          company_phone:        phone,
+          business_location:    address,
           timezone,
           currency,
-          currency_symbol:   currency,
-          date_format:       dateFormat,
-          time_format:       timeFormat,
-          // Company
+          currency_symbol:      currency,
+          date_format:          dateFormat,
+          time_format:          timeFormat,
           industry,
-          worker_title:        workerTitle,
-          worker_title_plural: workerTitlePlural,
-          job_label:           jobLabel,
-          job_label_plural:    jobLabelPlural,
-          brand_color:         brandColor,
-          default_warranty:    defaultWarranty,
-          job_types:           JSON.stringify(jobTypes),
-          zones:               JSON.stringify(zones),
+          worker_title:         workerTitle,
+          worker_title_plural:  workerTitlePlural,
+          job_label:            jobLabel,
+          job_label_plural:     jobLabelPlural,
+          asset_label:          assetLabel,
+          asset_label_plural:   assetLabelPlural,
+          client_label:         clientLabel,
+          client_label_plural:  clientLabelPlural,
+          brand_color:          brandColor,
+          pdf_footer:           pdfFooter,
+          show_logo_on_docs:    String(showLogoOnDocs),
+          brand_color_header:   String(brandColorHeader),
+          show_powered_by:      String(showPoweredBy),
+          default_warranty:     defaultWarranty,
+          job_types:            JSON.stringify(jobTypes),
+          zones:                JSON.stringify(zones),
+          enabled_documents:    JSON.stringify(enabledDocs),
+          briefing_time:        briefingTime,
+          briefing_enabled:     String(briefingEnabled),
+          reminders_enabled:    String(remindersEnabled),
+          sla_alerts:           String(slaAlerts),
+          sla_hours:            slaHours,
+          weekly_earnings:      String(weeklyEarnings),
+          review_requests:      String(reviewRequests),
           emoji: (INDUSTRY_TEMPLATES[industry] ?? INDUSTRY_TEMPLATES.OTHER).emoji,
         }),
       });
@@ -390,13 +460,9 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
 
         <div className="p-5">
 
-          {/* ════════════════════════════════════════════════════════════
-              GENERAL TAB — 3-column layout
-          ═══════════════════════════════════════════════════════════════ */}
+          {/* ════════════════════════════ GENERAL ════════════════════════════ */}
           {tab === "general" && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
-
-              {/* Column 1: General Settings rows */}
               <SectionCard title="General Settings">
                 <SettingRow icon={Building2}  label="Company Name"     value={companyName}   onEdit={() => setEditing({ label: "Company Name",     value: companyName,   onSave: setCompanyName   })} />
                 <SettingRow icon={Mail}       label="Business Email"   value={businessEmail} onEdit={() => setEditing({ label: "Business Email",   value: businessEmail, onSave: setBusinessEmail })} />
@@ -408,7 +474,6 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                 <SettingRow icon={Clock}      label="Time Format"      value={timeFormat}    onEdit={() => setEditing({ label: "Time Format",      value: timeFormat,    onSave: setTimeFormat    })} />
               </SectionCard>
 
-              {/* Column 2: Security + Preferences */}
               <div className="space-y-5">
                 <SectionCard title="Security Settings">
                   <SecurityRow icon={Lock}       label="Password"        subtitle="Last changed 30 days ago"      action="Change" />
@@ -417,15 +482,14 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                   <SecurityRow icon={Activity}   label="Login Activity"  subtitle="View recent logins"             action="View"   />
                 </SectionCard>
                 <SectionCard title="Preferences">
-                  <SelectRow icon={Languages}  label="Language"            subtitle="Interface language"  options={["English", "Swahili", "French"]}  defaultValue="English" />
-                  <ToggleRow icon={Bell}        label="Email Notifications" subtitle="Receive email alerts" defaultOn={true}  />
-                  <ToggleRow icon={BellOff}     label="Push Notifications"  subtitle="Browser push alerts"  defaultOn={false} />
-                  <SelectRow icon={LayoutGrid}  label="Default View"        subtitle="Dashboard layout"    options={["Grid", "List", "Compact"]}       defaultValue="Grid"    />
-                  <SelectRow icon={List}        label="Items Per Page"      subtitle="Table pagination"    options={["10", "25", "50", "100"]}         defaultValue="25"      />
+                  <SelectRow icon={Languages} label="Language"            subtitle="Interface language"  options={["English", "Swahili", "French"]} defaultValue="English" />
+                  <ToggleRow icon={Bell}       label="Email Notifications" subtitle="Receive email alerts" defaultOn={true}  />
+                  <ToggleRow icon={BellOff}    label="Push Notifications"  subtitle="Browser push alerts"  defaultOn={false} />
+                  <SelectRow icon={LayoutGrid} label="Default View"        subtitle="Dashboard layout"    options={["Grid", "List", "Compact"]}     defaultValue="Grid"    />
+                  <SelectRow icon={List}       label="Items Per Page"      subtitle="Table pagination"    options={["10", "25", "50", "100"]}       defaultValue="25"      />
                 </SectionCard>
               </div>
 
-              {/* Column 3: Storage + Account Actions + Help */}
               <div className="space-y-4">
                 <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card p-4">
                   <h3 className="text-sm font-semibold text-[#0F172A] mb-4">Storage Usage</h3>
@@ -454,19 +518,14 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                   <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Account Actions</h3>
                   <div className="space-y-2">
                     {[
-                      { icon: Download, label: "Export Data",     danger: false },
-                      { icon: Upload,   label: "Import Data",     danger: false },
-                      { icon: Trash2,   label: "Delete Account",  danger: true  },
+                      { icon: Download, label: "Export Data",   danger: false },
+                      { icon: Upload,   label: "Import Data",   danger: false },
+                      { icon: Trash2,   label: "Delete Account",danger: true  },
                     ].map(({ icon: Icon, label, danger }) => (
                       <button key={label}
                         className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-[8px] border text-sm transition-colors
-                          ${danger
-                            ? "border-red-100 text-[#DC2626] hover:bg-red-50"
-                            : "border-[#E2E8F0] text-[#334155] hover:bg-[#F8FAFC] hover:border-[#CBD5E1]"}`}>
-                        <div className="flex items-center gap-2">
-                          <Icon className="w-4 h-4" />
-                          <span className="font-medium">{label}</span>
-                        </div>
+                          ${danger ? "border-red-100 text-[#DC2626] hover:bg-red-50" : "border-[#E2E8F0] text-[#334155] hover:bg-[#F8FAFC] hover:border-[#CBD5E1]"}`}>
+                        <div className="flex items-center gap-2"><Icon className="w-4 h-4" /><span className="font-medium">{label}</span></div>
                         <ChevronRight className={`w-4 h-4 ${danger ? "text-[#DC2626]/60" : "text-[#94A3B8]"}`} />
                       </button>
                     ))}
@@ -478,29 +537,58 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                     <HelpCircle className="w-4 h-4 text-[#64748B]" />
                     <h3 className="text-sm font-semibold text-[#0F172A]">Need Help?</h3>
                   </div>
-                  <p className="text-[11px] text-[#94A3B8] leading-relaxed mb-3">
-                    Browse our documentation or contact support for assistance.
-                  </p>
+                  <p className="text-[11px] text-[#94A3B8] leading-relaxed mb-3">Browse our documentation or contact support for assistance.</p>
                   <button className="w-full text-xs font-semibold py-2.5 rounded-[8px] border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#334155] transition-colors flex items-center justify-center gap-1.5">
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    Go to Help Center
+                    <ExternalLink className="w-3.5 h-3.5" /> Go to Help Center
                   </button>
                 </div>
               </div>
             </div>
           )}
 
-          {/* ════════════════════════════════════════════════════════════
-              COMPANY TAB — WhatsApp banner + Vocabulary + Industry +
-                            Jobs + Zones + Branding
-          ═══════════════════════════════════════════════════════════════ */}
+          {/* ════════════════════════════ COMPANY ════════════════════════════ */}
           {tab === "company" && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-
-              {/* ── Left column ── */}
               <div className="space-y-5">
+                <SectionCard title="Business Identity" subtitle="How your company appears to clients and on documents.">
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-[#475569] mb-1.5">Company Name</label>
+                      <input value={companyName} onChange={e => setCompanyName(e.target.value)} className="ff-input text-sm" placeholder="e.g. Restore Services Ltd" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-[#475569] mb-1.5">Short Description <span className="font-normal text-[#94A3B8]">(optional)</span></label>
+                      <input value={companyDesc} onChange={e => setCompanyDesc(e.target.value)} className="ff-input text-sm" placeholder="e.g. Water tank repair and cleaning specialists" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-[#475569] mb-1.5">Website <span className="font-normal text-[#94A3B8]">(optional)</span></label>
+                      <input value={companyWebsite} onChange={e => setCompanyWebsite(e.target.value)} className="ff-input text-sm" placeholder="https://yourcompany.co.ke" />
+                    </div>
+                  </div>
+                </SectionCard>
 
-                {/* WhatsApp Senders banner */}
+                <SectionCard title="Contact Details" subtitle="Used in documents, WhatsApp messages, and client communications.">
+                  <SettingRow icon={Mail}   label="Business Email"   value={businessEmail} onEdit={() => setEditing({ label: "Business Email",   value: businessEmail, onSave: setBusinessEmail })} />
+                  <SettingRow icon={Phone}  label="Phone Number"     value={phone}         onEdit={() => setEditing({ label: "Phone Number",     value: phone,         onSave: setPhone         })} />
+                  <SettingRow icon={MapPin} label="Business Address" value={address}       onEdit={() => setEditing({ label: "Business Address", value: address,       onSave: setAddress       })} />
+                </SectionCard>
+              </div>
+
+              <div className="space-y-5">
+                <SectionCard title="Industry" subtitle="Your selected industry preset.">
+                  <div className="flex items-center gap-3 p-3 rounded-[12px] border border-[#E2E8F0] bg-blue-50/40">
+                    {(() => { const Icon = INDUSTRY_ICONS[industry] ?? HelpCircle; return <div className="w-9 h-9 rounded-[10px] bg-white border border-[#E2E8F0] flex items-center justify-center shrink-0"><Icon className="w-4 h-4 text-[#2563EB]" /></div>; })()}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-[#0F172A]">{INDUSTRY_LIST.find(i => i.key === industry)?.displayName ?? "General Field Services"}</p>
+                      <p className="text-xs text-[#64748B] mt-0.5">{workerTitle} · {jobLabel} · {assetLabel}</p>
+                    </div>
+                    <button onClick={() => setTab("operations")} className="text-[11px] font-semibold text-[#2563EB] hover:text-[#1D4ED8] transition-colors whitespace-nowrap">
+                      Change →
+                    </button>
+                  </div>
+                  <p className="text-xs text-[#94A3B8] mt-3">Change your industry in the <button onClick={() => setTab("operations")} className="text-[#2563EB] font-medium hover:underline">Operations</button> tab.</p>
+                </SectionCard>
+
                 <a href="/admin/settings/whatsapp"
                   className="block bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-[14px] p-4 hover:shadow-sm transition-shadow">
                   <div className="flex items-start gap-3">
@@ -510,65 +598,68 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-0.5">
                         <h3 className="text-sm font-semibold text-green-900">WhatsApp Senders</h3>
-                        <span className="text-[10px] uppercase tracking-wide font-bold bg-green-200 text-green-800 px-1.5 py-0.5 rounded-[4px]">Branding</span>
+                        <span className="text-[10px] uppercase tracking-wide font-bold bg-green-200 text-green-800 px-1.5 py-0.5 rounded-[4px]">Connected</span>
                       </div>
-                      <p className="text-xs text-green-800/70 leading-relaxed">
-                        Use FieldFlow&apos;s shared number for free, or connect a dedicated WhatsApp Business number with your brand name.
-                      </p>
-                      <span className="text-xs text-green-700 font-semibold mt-2 inline-block">Set up sender →</span>
+                      <p className="text-xs text-green-800/70 leading-relaxed">Connect a dedicated WhatsApp Business number with your brand name.</p>
+                      <span className="text-xs text-green-700 font-semibold mt-2 inline-block">Manage senders →</span>
                     </div>
                   </div>
                 </a>
 
-                {/* Vocabulary */}
-                <SectionCard title="Vocabulary / Terminology" subtitle="Words used in WhatsApp messages and across the platform.">
+                <div className="bg-blue-50/50 border border-blue-100 rounded-[12px] p-4">
+                  <p className="text-xs font-semibold text-[#1D4ED8] mb-1">Need to configure your workspace?</p>
+                  <p className="text-[11px] text-[#64748B] leading-relaxed">Set up terminology, job types, and service zones in <button onClick={() => setTab("operations")} className="text-[#2563EB] font-semibold hover:underline">Operations</button>. Configure branding in <button onClick={() => setTab("branding")} className="text-[#2563EB] font-semibold hover:underline">Branding</button>.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ═══════════════════════════ OPERATIONS ══════════════════════════ */}
+          {tab === "operations" && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+              <div className="space-y-5">
+
+                <SectionCard title="Vocabulary / Terminology" subtitle="Words used in WhatsApp messages, documents, and across the platform.">
+                  <p className="text-xs text-[#94A3B8] mb-3 leading-relaxed">Rename things to match your industry. Changes apply to the UI and generated documents.</p>
                   <div className="grid grid-cols-2 gap-3">
                     {[
-                      { label: "Worker (singular)", value: workerTitle,       onChange: setWorkerTitle       },
-                      { label: "Worker (plural)",   value: workerTitlePlural, onChange: setWorkerTitlePlural },
-                      { label: "Job label (singular)", value: jobLabel,       onChange: setJobLabel          },
-                      { label: "Job label (plural)",   value: jobLabelPlural, onChange: setJobLabelPlural    },
-                    ].map(({ label, value, onChange }) => (
+                      { label: "Worker (singular)",    value: workerTitle,        onChange: setWorkerTitle,        placeholder: "e.g. Technician, Driver"     },
+                      { label: "Worker (plural)",      value: workerTitlePlural,  onChange: setWorkerTitlePlural,  placeholder: "e.g. Technicians, Drivers"   },
+                      { label: "Job (singular)",       value: jobLabel,           onChange: setJobLabel,           placeholder: "e.g. Job, Visit, Delivery"   },
+                      { label: "Job (plural)",         value: jobLabelPlural,     onChange: setJobLabelPlural,     placeholder: "e.g. Jobs, Visits, Deliveries"},
+                      { label: "Asset (singular)",     value: assetLabel,         onChange: setAssetLabel,         placeholder: "e.g. Asset, Tank, Vehicle"   },
+                      { label: "Asset (plural)",       value: assetLabelPlural,   onChange: setAssetLabelPlural,   placeholder: "e.g. Assets, Tanks, Vehicles"},
+                      { label: "Client (singular)",    value: clientLabel,        onChange: setClientLabel,        placeholder: "e.g. Client, Customer"       },
+                      { label: "Client (plural)",      value: clientLabelPlural,  onChange: setClientLabelPlural,  placeholder: "e.g. Clients, Customers"     },
+                    ].map(({ label, value, onChange, placeholder }) => (
                       <div key={label}>
                         <label className="block text-xs font-semibold text-[#475569] mb-1.5">{label}</label>
-                        <input value={value} onChange={e => onChange(e.target.value)} className="ff-input text-sm" />
+                        <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="ff-input text-sm" />
                       </div>
                     ))}
                   </div>
                 </SectionCard>
 
-                {/* Jobs You Offer */}
                 <SectionCard title={`${jobLabelPlural || "Jobs"} You Offer`} subtitle="Job types available when creating a new job.">
                   <TagList
-                    tags={jobTypes}
-                    onRemove={t => setJobTypes(jobTypes.filter(j => j !== t))}
-                    newValue={newJobType}
-                    onNewChange={setNewJobType}
+                    tags={jobTypes} onRemove={t => setJobTypes(jobTypes.filter(j => j !== t))}
+                    newValue={newJobType} onNewChange={setNewJobType}
                     onAdd={() => { if (newJobType.trim()) { setJobTypes([...jobTypes, newJobType.trim()]); setNewJobType(""); } }}
-                    placeholder={`Add a ${(jobLabel || "job").toLowerCase()} type…`}
-                    color="blue"
-                  />
+                    placeholder={`Add a ${(jobLabel || "job").toLowerCase()} type…`} color="blue" />
                 </SectionCard>
 
-                {/* Service Zones */}
-                <SectionCard title="Service Zones" subtitle="Geographic areas where your team operates.">
+                <SectionCard title="Service Zones" subtitle="Geographic areas where your team operates. Used for filtering and assignment.">
                   <TagList
-                    tags={zones}
-                    onRemove={z => setZones(zones.filter(z2 => z2 !== z))}
-                    newValue={newZone}
-                    onNewChange={setNewZone}
+                    tags={zones} onRemove={z => setZones(zones.filter(z2 => z2 !== z))}
+                    newValue={newZone} onNewChange={setNewZone}
                     onAdd={() => { if (newZone.trim()) { setZones([...zones, newZone.trim()]); setNewZone(""); } }}
-                    placeholder="Add a zone…"
-                    color="green"
-                  />
+                    placeholder="Add a zone (e.g. Kilimani, Westlands)…" color="green" />
                 </SectionCard>
+
               </div>
 
-              {/* ── Right column ── */}
               <div className="space-y-5">
-
-                {/* Industry Preset */}
-                <SectionCard title="Industry Preset" subtitle="Auto-fills labels, job types, and defaults for your industry.">
+                <SectionCard title="Industry Preset" subtitle="Auto-fills labels, job types, and defaults for your industry. You can edit all values after selecting.">
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {INDUSTRY_LIST.map(t => {
                       const Icon = INDUSTRY_ICONS[t.key] ?? HelpCircle;
@@ -576,9 +667,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                       return (
                         <button key={t.key} type="button" onClick={() => applyTemplate(t.key)}
                           className={`flex items-center gap-2 px-2.5 py-2.5 rounded-[10px] text-xs border transition-all text-left
-                            ${active
-                              ? "border-[#2563EB] bg-blue-50 text-[#2563EB] font-semibold"
-                              : "border-[#E2E8F0] bg-white text-[#64748B] hover:border-[#2563EB]/30 hover:bg-blue-50/30"}`}>
+                            ${active ? "border-[#2563EB] bg-blue-50 text-[#2563EB] font-semibold" : "border-[#E2E8F0] bg-white text-[#64748B] hover:border-[#2563EB]/30 hover:bg-blue-50/30"}`}>
                           <Icon className={`w-3.5 h-3.5 shrink-0 ${active ? "text-[#2563EB]" : "text-[#94A3B8]"}`} />
                           <span className="truncate">{t.displayName}</span>
                           {active && <span className="ml-auto w-2 h-2 rounded-full bg-[#2563EB] shrink-0" />}
@@ -586,68 +675,701 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                       );
                     })}
                   </div>
+                  {industry !== "OTHER" && (
+                    <div className="mt-3 p-3 bg-blue-50/60 border border-blue-100 rounded-[10px]">
+                      <p className="text-xs text-[#1D4ED8] font-semibold mb-1">Preset applied: {INDUSTRY_LIST.find(i => i.key === industry)?.displayName}</p>
+                      <p className="text-[11px] text-[#64748B]">Vocabulary, job types, and defaults have been filled in. You can edit any field above.</p>
+                    </div>
+                  )}
                 </SectionCard>
 
-                {/* Branding */}
-                <SectionCard title="Branding" subtitle="Brand color used on invoices, PDFs, and documents.">
+                <SectionCard title="Default Warranty Text" subtitle="Added to warranty certificates unless overridden per job.">
+                  <textarea value={defaultWarranty} onChange={e => setDefaultWarranty(e.target.value)}
+                    rows={3} placeholder="e.g. 1 year workmanship warranty on qualifying repair jobs. Does not cover physical damage or misuse."
+                    className="ff-input text-sm resize-none" />
+                  <p className="text-[11px] text-[#94A3B8] mt-2">Also configurable in the Documents tab.</p>
+                </SectionCard>
+              </div>
+            </div>
+          )}
+
+          {/* ════════════════════════════ DOCUMENTS ══════════════════════════ */}
+          {tab === "documents" && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+              <div className="space-y-5">
+                {/* Document toggles */}
+                <SectionCard title="Document Generation" subtitle="Choose which documents are auto-generated and delivered for completed jobs.">
+                  <div className="space-y-2 -mx-1">
+                    {DOCUMENT_OPTIONS.map(doc => {
+                      const on = enabledDocs.includes(doc.key);
+                      return (
+                        <div key={doc.key}
+                          className="flex items-center justify-between gap-3 py-3 px-4 rounded-[12px] border border-[#E2E8F0] hover:border-[#CBD5E1] transition-colors">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className={`w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0 ${doc.iconBg}`}>
+                              <doc.Icon className={`w-4 h-4 ${doc.iconColor}`} />
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-[#0F172A]">{doc.label}</p>
+                              <p className="text-xs text-[#94A3B8] mt-0.5 leading-snug">{doc.description}</p>
+                            </div>
+                          </div>
+                          <Toggle on={on} onToggle={() => toggleDoc(doc.key)} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </SectionCard>
+
+                {/* Delivery settings */}
+                <SectionCard title="Document Delivery" subtitle="How documents are sent after job completion.">
+                  <ToggleRow icon={MessageCircle} label="Send via WhatsApp"    subtitle="Deliver PDFs to clients through WhatsApp"  defaultOn={true}  />
+                  <ToggleRow icon={Mail}          label="Send via Email"       subtitle="Also email documents to the client"        defaultOn={false} />
+                  <ToggleRow icon={FileText}      label="Store in dashboard"   subtitle="Keep all documents accessible in FieldFlow" defaultOn={true} />
+                </SectionCard>
+              </div>
+
+              <div className="space-y-5">
+                {/* Warranty defaults */}
+                <SectionCard title="Warranty Defaults" subtitle="Applied to new jobs unless overridden per job.">
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-[#475569] mb-1.5">Default warranty duration</label>
+                      <select className="ff-input text-sm">
+                        {["30 days", "60 days", "90 days", "6 months", "12 months", "24 months", "None"].map(o => (
+                          <option key={o}>{o}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-[#475569] mb-1.5">Warranty terms text</label>
+                      <textarea value={defaultWarranty} onChange={e => setDefaultWarranty(e.target.value)}
+                        rows={3} placeholder="Covers workmanship defects. Does not cover physical damage or misuse."
+                        className="ff-input text-sm resize-none" />
+                    </div>
+                  </div>
+                </SectionCard>
+
+                {/* PDF branding */}
+                <SectionCard title="PDF Appearance" subtitle="How your documents look when sent to clients.">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-3 py-2.5 border-b border-[#F1F5F9]">
+                      <div>
+                        <p className="text-sm font-semibold text-[#0F172A]">Company logo on PDFs</p>
+                        <p className="text-[11px] text-[#94A3B8] mt-0.5">Show your logo at the top of every document</p>
+                      </div>
+                      <Toggle on={true} onToggle={() => {}} />
+                    </div>
+                    <div className="flex items-center justify-between gap-3 py-2.5 border-b border-[#F1F5F9]">
+                      <div>
+                        <p className="text-sm font-semibold text-[#0F172A]">Brand color header</p>
+                        <p className="text-[11px] text-[#94A3B8] mt-0.5">Use your brand color in document headers</p>
+                      </div>
+                      <Toggle on={true} onToggle={() => {}} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-[#475569] mb-1.5">PDF footer text <span className="font-normal text-[#94A3B8]">(optional)</span></label>
+                      <input placeholder={`${companyName} · ${phone}`} className="ff-input text-sm" />
+                    </div>
+                  </div>
+                </SectionCard>
+              </div>
+            </div>
+          )}
+
+          {/* ════════════════════════════ AUTOMATIONS ════════════════════════ */}
+          {tab === "automations" && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+              <div className="space-y-5">
+                <SectionCard title="Daily Briefing" subtitle="Automatic morning WhatsApp summary sent to each worker with their scheduled jobs.">
                   <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-3 pb-3 border-b border-[#F1F5F9]">
+                      <div>
+                        <p className="text-sm font-semibold text-[#0F172A]">Enable Daily Briefing</p>
+                        <p className="text-[11px] text-[#94A3B8] mt-0.5">Workers receive their job schedule every morning</p>
+                      </div>
+                      <Toggle on={briefingEnabled} onToggle={() => setBriefingEnabled(v => !v)} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-[#475569] mb-1.5">Send time</label>
+                      <input type="time" value={briefingTime} onChange={e => setBriefingTime(e.target.value)}
+                        className="ff-input text-sm w-40" disabled={!briefingEnabled} />
+                      <p className="text-[11px] text-[#94A3B8] mt-1">Uses your configured timezone ({timezone})</p>
+                    </div>
+                  </div>
+                </SectionCard>
+
+                <SectionCard title="Client Reminders" subtitle="Automatically remind clients about upcoming appointments.">
+                  <div className="flex items-center justify-between gap-3 py-2.5 border-b border-[#F1F5F9]">
+                    <div>
+                      <p className="text-sm font-semibold text-[#0F172A]">Appointment reminders</p>
+                      <p className="text-[11px] text-[#94A3B8] mt-0.5">Send reminder 1 day before scheduled job</p>
+                    </div>
+                    <Toggle on={remindersEnabled} onToggle={() => setRemindersEnabled(v => !v)} />
+                  </div>
+                  <div className="flex items-center justify-between gap-3 py-2.5 border-b border-[#F1F5F9]">
+                    <div>
+                      <p className="text-sm font-semibold text-[#0F172A]">Review requests</p>
+                      <p className="text-[11px] text-[#94A3B8] mt-0.5">Ask clients to rate service after job is verified</p>
+                    </div>
+                    <Toggle on={reviewRequests} onToggle={() => setReviewRequests(v => !v)} />
+                  </div>
+                  <div className="flex items-center justify-between gap-3 py-2.5">
+                    <div>
+                      <p className="text-sm font-semibold text-[#0F172A]">Quote follow-ups</p>
+                      <p className="text-[11px] text-[#94A3B8] mt-0.5">Follow up on unanswered quotations after 24h</p>
+                    </div>
+                    <Toggle on={false} onToggle={() => {}} />
+                  </div>
+                </SectionCard>
+
+                <SectionCard title="Worker Summaries" subtitle="Automated summaries sent directly to workers.">
+                  <div className="flex items-center justify-between gap-3 py-2.5">
+                    <div>
+                      <p className="text-sm font-semibold text-[#0F172A]">Weekly earnings recap</p>
+                      <p className="text-[11px] text-[#94A3B8] mt-0.5">Workers receive their weekly earnings every Monday</p>
+                    </div>
+                    <Toggle on={weeklyEarnings} onToggle={() => setWeeklyEarnings(v => !v)} />
+                  </div>
+                </SectionCard>
+              </div>
+
+              <div className="space-y-5">
+                <SectionCard title="SLA Alerts" subtitle="Get alerted when jobs exceed time thresholds.">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-3 pb-3 border-b border-[#F1F5F9]">
+                      <div>
+                        <p className="text-sm font-semibold text-[#0F172A]">Enable SLA monitoring</p>
+                        <p className="text-[11px] text-[#94A3B8] mt-0.5">Flag overdue and stale jobs on the dashboard</p>
+                      </div>
+                      <Toggle on={slaAlerts} onToggle={() => setSlaAlerts(v => !v)} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-[#475569] mb-1.5">Alert threshold (hours)</label>
+                      <select value={slaHours} onChange={e => setSlaHours(e.target.value)}
+                        className="ff-input text-sm" disabled={!slaAlerts}>
+                        {["4", "8", "12", "24", "48", "72"].map(h => (
+                          <option key={h} value={h}>{h} hours</option>
+                        ))}
+                      </select>
+                      <p className="text-[11px] text-[#94A3B8] mt-1">Jobs older than this threshold will be flagged</p>
+                    </div>
+                  </div>
+                </SectionCard>
+
+                <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-[14px] p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-[8px] bg-[#EDE9FE] flex items-center justify-center shrink-0">
+                      <Sparkles className="w-4 h-4 text-[#7C3AED]" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-[#0F172A] mb-1">Recurring Jobs</p>
+                      <p className="text-[11px] text-[#64748B] leading-relaxed">Automatically schedule repeat visits — weekly, monthly, or quarterly. Available in the Growth plan.</p>
+                      <button className="mt-2 text-xs font-semibold text-[#7C3AED] hover:text-[#6D28D9] transition-colors">Upgrade to enable →</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-[14px] p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-[8px] bg-amber-50 flex items-center justify-center shrink-0">
+                      <Bell className="w-4 h-4 text-[#D97706]" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-[#0F172A] mb-1">Re-engagement Messages</p>
+                      <p className="text-[11px] text-[#64748B] leading-relaxed">Remind past clients about recurring services (e.g. annual tank cleaning). Available in the Growth plan.</p>
+                      <button className="mt-2 text-xs font-semibold text-[#D97706] hover:text-[#B45309] transition-colors">Upgrade to enable →</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ════════════════════════════ BRANDING ═══════════════════════════ */}
+          {tab === "branding" && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+              <div className="space-y-5">
+                <SectionCard title="Logo & Colors" subtitle="Appears on invoices, PDFs, certificates, and WhatsApp messages.">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-[#475569] mb-1.5">Company Logo</label>
+                      <div className="flex items-center gap-3 p-3.5 border border-[#E2E8F0] rounded-[12px] bg-[#F8FAFC]">
+                        <div className="w-12 h-12 rounded-[10px] flex items-center justify-center shrink-0 text-white font-extrabold text-base"
+                          style={{ backgroundColor: brandColor }}>
+                          {companyName.charAt(0).toUpperCase() || "F"}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-[#0F172A]">{companyName}</p>
+                          <p className="text-[11px] text-[#94A3B8]">No logo uploaded — showing initials</p>
+                          <button className="mt-1.5 text-xs text-[#2563EB] font-semibold hover:text-[#1D4ED8] transition-colors">Upload logo</button>
+                        </div>
+                        <div className="shrink-0">
+                          <span className="text-[10px] text-[#94A3B8]">PNG, JPG or SVG</span>
+                          <p className="text-[10px] text-[#94A3B8]">Max 2 MB</p>
+                        </div>
+                      </div>
+                    </div>
                     <div>
                       <label className="block text-xs font-semibold text-[#475569] mb-1.5">Brand Color</label>
                       <div className="flex items-center gap-3">
                         <input type="color" value={brandColor} onChange={e => setBrandColor(e.target.value)}
                           className="h-9 w-9 border border-[#E2E8F0] rounded-[8px] cursor-pointer p-0.5 shrink-0" />
                         <input value={brandColor} onChange={e => setBrandColor(e.target.value)}
-                          className="ff-input text-sm font-mono w-28" />
-                        <div className="w-9 h-9 rounded-[8px] border border-[#E2E8F0] shrink-0" style={{ backgroundColor: brandColor }} />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-[#475569] mb-1.5">Workspace Logo</label>
-                      <div className="flex items-center gap-3 p-3 border border-[#E2E8F0] rounded-[12px]">
-                        <div className="w-10 h-10 rounded-[10px] flex items-center justify-center shrink-0 text-white font-extrabold text-sm"
-                          style={{ backgroundColor: brandColor }}>
-                          {companyName.charAt(0).toUpperCase() || "F"}
-                        </div>
-                        <div>
-                          <button className="text-xs text-[#2563EB] font-semibold hover:text-[#1D4ED8] transition-colors">
-                            Change logo
-                          </button>
-                          <p className="text-[10px] text-[#94A3B8] mt-0.5">PNG, JPG or SVG. Max 2MB.</p>
+                          className="ff-input text-sm font-mono" style={{ maxWidth: "9rem" }} />
+                        <div className="flex gap-1.5 ml-2">
+                          {["#2563EB","#16A34A","#D97706","#DC2626","#7C3AED","#0F172A"].map(c => (
+                            <button key={c} onClick={() => setBrandColor(c)}
+                              className={`w-6 h-6 rounded-full border-2 transition-all ${brandColor === c ? "border-[#0F172A] scale-110" : "border-transparent"}`}
+                              style={{ backgroundColor: c }} />
+                          ))}
                         </div>
                       </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-[#475569] mb-1.5">
-                        Default Warranty Text <span className="font-normal text-[#94A3B8]">(optional)</span>
-                      </label>
-                      <textarea value={defaultWarranty} onChange={e => setDefaultWarranty(e.target.value)}
-                        rows={2} placeholder="Warranty applies as per device, installation, and service terms."
-                        className="ff-input text-sm resize-none" />
                     </div>
                   </div>
                 </SectionCard>
 
+                <SectionCard title="Document Appearance" subtitle="How your branding appears on generated PDFs.">
+                  <div className="space-y-0">
+                    <div className="flex items-center justify-between gap-3 py-3 border-b border-[#F1F5F9]">
+                      <div>
+                        <p className="text-sm font-semibold text-[#0F172A]">Show logo on documents</p>
+                        <p className="text-[11px] text-[#94A3B8] mt-0.5">Include your logo at the top of every PDF</p>
+                      </div>
+                      <Toggle on={showLogoOnDocs} onToggle={() => setShowLogoOnDocs(v => !v)} />
+                    </div>
+                    <div className="flex items-center justify-between gap-3 py-3 border-b border-[#F1F5F9]">
+                      <div>
+                        <p className="text-sm font-semibold text-[#0F172A]">Brand color header</p>
+                        <p className="text-[11px] text-[#94A3B8] mt-0.5">Use your brand color in document headers</p>
+                      </div>
+                      <Toggle on={brandColorHeader} onToggle={() => setBrandColorHeader(v => !v)} />
+                    </div>
+                    <div className="flex items-center justify-between gap-3 py-3">
+                      <div>
+                        <p className="text-sm font-semibold text-[#0F172A]">Include OTP verification stamp</p>
+                        <p className="text-[11px] text-[#94A3B8] mt-0.5">Show client signature block on job cards</p>
+                      </div>
+                      <Toggle on={true} onToggle={() => {}} />
+                    </div>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-[#F1F5F9]">
+                    <label className="block text-xs font-semibold text-[#475569] mb-1.5">PDF Footer Text <span className="font-normal text-[#94A3B8]">(optional)</span></label>
+                    <input value={pdfFooter} onChange={e => setPdfFooter(e.target.value)}
+                      placeholder={`${companyName} · ${phone}`}
+                      className="ff-input text-sm" />
+                    <p className="text-[11px] text-[#94A3B8] mt-1">Appears at the bottom of every generated document</p>
+                  </div>
+                </SectionCard>
+              </div>
+
+              <div className="space-y-5">
+                <SectionCard title="Live Preview" subtitle="How your brand color appears on documents.">
+                  <div className="border border-[#E2E8F0] rounded-[12px] overflow-hidden">
+                    <div className="p-4 text-white text-center" style={{ backgroundColor: brandColor }}>
+                      <div className="w-8 h-8 bg-white/20 rounded-[8px] flex items-center justify-center mx-auto mb-2">
+                        <span className="text-white font-extrabold text-sm">{companyName.charAt(0).toUpperCase()}</span>
+                      </div>
+                      <p className="font-bold text-sm">{companyName}</p>
+                      <p className="text-white/80 text-xs mt-0.5">INVOICE</p>
+                    </div>
+                    <div className="p-4 bg-white space-y-2">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-[#64748B]">Invoice #</span>
+                        <span className="font-semibold text-[#0F172A]">INV-0001</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-[#64748B]">Client</span>
+                        <span className="font-semibold text-[#0F172A]">Mrs. Wanjiku</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-[#64748B]">Amount</span>
+                        <span className="font-bold text-[#0F172A]">KES 8,000</span>
+                      </div>
+                      <div className="h-px bg-[#E2E8F0] my-2" />
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: brandColor }}>PAID</span>
+                        <span className="text-[10px] text-[#94A3B8]">{pdfFooter || `${companyName} · ${phone}`}</span>
+                      </div>
+                    </div>
+                  </div>
+                </SectionCard>
+
+                <SectionCard title="WhatsApp Message Signature" subtitle="Appended to outgoing WhatsApp messages where applicable.">
+                  <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-[12px] p-3.5">
+                    <p className="text-xs text-[#64748B] leading-relaxed font-mono whitespace-pre-line">{`Your service is complete.\nAmount: KES 8,000\nService Code: 847291\n\n— ${companyName}`}</p>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-3 py-2.5">
+                    <div>
+                      <p className="text-sm font-semibold text-[#0F172A]">Show company name in messages</p>
+                      <p className="text-[11px] text-[#94A3B8] mt-0.5">Append your name at the end of WhatsApp messages</p>
+                    </div>
+                    <Toggle on={true} onToggle={() => {}} />
+                  </div>
+                  <div className="flex items-center justify-between gap-3 py-2.5">
+                    <div>
+                      <p className="text-sm font-semibold text-[#0F172A]">Powered by FieldFlow</p>
+                      <p className="text-[11px] text-[#94A3B8] mt-0.5">Show FieldFlow branding in messages</p>
+                    </div>
+                    <Toggle on={showPoweredBy} onToggle={() => setShowPoweredBy(v => !v)} />
+                  </div>
+                </SectionCard>
               </div>
             </div>
           )}
 
-          {/* ── OTHER TABS ── */}
-          {tab === "users"        && <ComingSoon icon={Users}      title="Users & Roles"  desc="Team members, permission levels, and role management."          />}
-          {tab === "billing"      && <ComingSoon icon={CreditCard} title="Billing"         desc="Subscription plan, payment method, and invoices."               />}
-          {tab === "integrations" && <ComingSoon icon={Plug}       title="Integrations"    desc="Connect Twilio, Google AI, M-Pesa, and third-party tools."      />}
-          {tab === "data"         && <ComingSoon icon={Database}   title="Data & Privacy"  desc="Data export, retention policies, and GDPR settings."            />}
+          {/* ════════════════════════════ WHATSAPP ═══════════════════════════ */}
+          {tab === "whatsapp" && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+              <div className="space-y-5">
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-[16px] p-5">
+                  <div className="flex items-start gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-[10px] bg-green-500 flex items-center justify-center shrink-0">
+                      <MessageCircle className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-green-900">WhatsApp Business</p>
+                      <p className="text-xs text-green-700 mt-0.5">Powered by Twilio</p>
+                    </div>
+                    <span className="ml-auto text-[10px] font-bold bg-green-200 text-green-800 px-2 py-0.5 rounded-full">Connected</span>
+                  </div>
+                  <p className="text-xs text-green-800/80 leading-relaxed mb-4">Workers and clients interact with FieldFlow entirely through WhatsApp. Manage your senders, templates, and message configuration here.</p>
+                  <a href="/admin/settings/whatsapp"
+                    className="inline-flex items-center gap-2 text-sm font-semibold bg-green-600 text-white px-4 py-2.5 rounded-[10px] hover:bg-green-700 transition-colors">
+                    <MessageCircle className="w-4 h-4" /> Manage WhatsApp Senders
+                  </a>
+                </div>
+
+                <SectionCard title="Message Settings" subtitle="Configure how WhatsApp messages are sent.">
+                  <ToggleRow icon={Bell}          label="Job assignment notifications" subtitle="Notify worker via WhatsApp when a job is assigned" defaultOn={true}  />
+                  <ToggleRow icon={CheckCircle2}   label="OTP completion messages"     subtitle="Send OTP to client when worker reports done"       defaultOn={true}  />
+                  <ToggleRow icon={FileText}       label="Document delivery"            subtitle="Send PDFs to clients after job verification"       defaultOn={true}  />
+                  <ToggleRow icon={RefreshCw}      label="Reassignment alerts"          subtitle="Notify worker when a job is reassigned to them"    defaultOn={true}  />
+                  <ToggleRow icon={Clock}          label="Daily briefing"               subtitle="Morning job schedule sent to each worker"          defaultOn={briefingEnabled} />
+                </SectionCard>
+              </div>
+
+              <div className="space-y-5">
+                <SectionCard title="Message Templates" subtitle="Twilio-approved templates for outbound notifications.">
+                  <div className="space-y-2">
+                    {[
+                      { label: "Job Assignment",          status: "approved", desc: "Sent when admin assigns a job to a worker"          },
+                      { label: "Service Completion OTP",  status: "approved", desc: "Sent to client with OTP after worker reports done"  },
+                      { label: "Job Verified",            status: "approved", desc: "Sent to worker confirming OTP was accepted"         },
+                      { label: "Client Notification",     status: "approved", desc: "General client updates"                             },
+                      { label: "Quotation",               status: "pending",  desc: "Sent to client with a price quote"                  },
+                    ].map(({ label, status, desc }) => (
+                      <div key={label} className="flex items-center justify-between gap-3 py-3 border-b border-[#F1F5F9] last:border-0">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-[#0F172A]">{label}</p>
+                          <p className="text-[11px] text-[#94A3B8] mt-0.5">{desc}</p>
+                        </div>
+                        <span className={`shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full
+                          ${status === "approved" ? "bg-green-50 text-green-700 border border-green-100" : "bg-amber-50 text-[#D97706] border border-amber-100"}`}>
+                          {status === "approved" ? "Approved" : "Pending"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </SectionCard>
+
+                <SectionCard title="Test WhatsApp" subtitle="Send a test message to verify your connection.">
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-[#475569] mb-1.5">Phone number</label>
+                      <input className="ff-input text-sm" placeholder="+254 7XX XXX XXX" />
+                    </div>
+                    <button className="ff-btn-secondary w-full justify-center gap-2 text-sm">
+                      <MessageCircle className="w-4 h-4 text-green-600" /> Send test message
+                    </button>
+                  </div>
+                </SectionCard>
+              </div>
+            </div>
+          )}
+
+          {/* ════════════════════════════ USERS & ROLES ═══════════════════════ */}
+          {tab === "users" && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+              {/* Team list */}
+              <div className="lg:col-span-2 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold text-[#0F172A]">Team Members</h3>
+                    <p className="text-xs text-[#94A3B8] mt-0.5">Admins can manage everything. Workers access the WhatsApp interface.</p>
+                  </div>
+                  <button className="ff-btn-primary inline-flex items-center gap-1.5 text-sm px-3 py-2">
+                    <UserPlus className="w-3.5 h-3.5" /> Invite
+                  </button>
+                </div>
+
+                <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card overflow-hidden">
+                  {/* Header */}
+                  <div className="px-5 py-3 bg-[#F8FAFC] border-b border-[#E2E8F0] grid grid-cols-[1fr_auto_auto] gap-4">
+                    <p className="text-[11px] font-semibold text-[#64748B] uppercase tracking-wide">Member</p>
+                    <p className="text-[11px] font-semibold text-[#64748B] uppercase tracking-wide w-20 text-center">Role</p>
+                    <p className="text-[11px] font-semibold text-[#64748B] uppercase tracking-wide w-16 text-right">Actions</p>
+                  </div>
+                  {/* Rows */}
+                  {[
+                    { name: "You (Admin)", email: "admin@fieldflow.app", role: "ADMIN",      status: "Active",   initials: "AD", color: "bg-blue-100 text-blue-700"   },
+                    { name: "James Baraka", email: "+254 722 000 111",    role: "TECHNICIAN", status: "Active",   initials: "JB", color: "bg-green-100 text-green-700" },
+                    { name: "Peter Ouma",   email: "+254 733 000 222",    role: "TECHNICIAN", status: "Active",   initials: "PO", color: "bg-amber-100 text-amber-700" },
+                    { name: "Mary Wanjiku", email: "+254 711 000 333",    role: "TECHNICIAN", status: "Inactive", initials: "MW", color: "bg-rose-100 text-rose-700"   },
+                  ].map((m, i) => (
+                    <div key={i} className="px-5 py-3.5 border-b border-[#F8FAFC] last:border-0 grid grid-cols-[1fr_auto_auto] gap-4 items-center">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${m.color}`}>
+                          {m.initials}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-[#0F172A] truncate">{m.name}</p>
+                          <p className="text-[11px] text-[#94A3B8] truncate">{m.email}</p>
+                        </div>
+                      </div>
+                      <div className="w-20 flex justify-center">
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full
+                          ${m.role === "ADMIN" ? "bg-blue-50 text-[#2563EB] border border-blue-100" : "bg-[#F1F5F9] text-[#64748B] border border-[#E2E8F0]"}`}>
+                          {m.role === "ADMIN" ? "Admin" : "Worker"}
+                        </span>
+                      </div>
+                      <div className="w-16 flex justify-end">
+                        <button className="text-[11px] font-semibold px-2.5 py-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/40 hover:text-[#2563EB] hover:bg-blue-50/30 transition-colors">
+                          Edit
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Role info */}
+              <div className="space-y-4">
+                <SectionCard title="Roles & Permissions">
+                  <div className="space-y-3">
+                    {[
+                      { role: "Admin", icon: Crown, color: "text-[#2563EB]", bg: "bg-blue-50", perms: ["Full dashboard access", "Create & manage jobs", "View invoices & reports", "Manage workers & settings"] },
+                      { role: "Worker / Technician", icon: Wrench, color: "text-[#64748B]", bg: "bg-[#F1F5F9]", perms: ["WhatsApp interface only", "Accept & complete jobs", "View own job schedule", "Report completion via OTP"] },
+                    ].map(({ role, icon: Icon, color, bg, perms }) => (
+                      <div key={role} className="p-3.5 rounded-[12px] border border-[#E2E8F0]">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className={`w-7 h-7 rounded-[8px] ${bg} flex items-center justify-center shrink-0`}>
+                            <Icon className={`w-3.5 h-3.5 ${color}`} />
+                          </div>
+                          <p className="text-sm font-semibold text-[#0F172A]">{role}</p>
+                        </div>
+                        <ul className="space-y-1">
+                          {perms.map(p => (
+                            <li key={p} className="flex items-start gap-1.5 text-xs text-[#64748B]">
+                              <Check className="w-3 h-3 text-[#16A34A] shrink-0 mt-0.5" />{p}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </SectionCard>
+
+                <div className="bg-amber-50 border border-amber-200 rounded-[12px] p-4">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-[#D97706] shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-semibold text-[#92400E]">Workers use WhatsApp</p>
+                      <p className="text-[11px] text-amber-800/80 mt-0.5 leading-relaxed">
+                        Workers don&apos;t need dashboard access. They manage all jobs through WhatsApp messages.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ════════════════════════════ BILLING ════════════════════════════ */}
+          {tab === "billing" && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+              <div className="lg:col-span-2 space-y-5">
+                {/* Current plan */}
+                <div className="bg-gradient-to-br from-[#2563EB] to-[#7C3AED] rounded-[16px] p-5 text-white">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-semibold text-blue-200 uppercase tracking-wide mb-1">Current Plan</p>
+                      <p className="text-2xl font-bold">Starter</p>
+                      <p className="text-sm text-blue-200 mt-0.5">Up to 3 workers · 100 jobs/month</p>
+                    </div>
+                    <span className="text-[10px] font-bold bg-white/20 text-white px-2.5 py-1 rounded-full">Active</span>
+                  </div>
+                  <div className="mt-4 pt-4 border-t border-white/20 flex items-center justify-between">
+                    <div>
+                      <p className="text-2xl font-bold">$0<span className="text-sm font-normal text-blue-200">/mo</span></p>
+                      <p className="text-xs text-blue-200 mt-0.5">Free tier · no credit card required</p>
+                    </div>
+                    <button className="bg-white text-[#2563EB] text-sm font-semibold px-4 py-2 rounded-[10px] hover:bg-blue-50 transition-colors">
+                      Upgrade plan
+                    </button>
+                  </div>
+                </div>
+
+                {/* Plans comparison */}
+                <SectionCard title="Available Plans">
+                  <div className="space-y-3">
+                    {[
+                      { name: "Starter",      price: "Free",    workers: "3 workers",    jobs: "100 jobs/mo",  active: true  },
+                      { name: "Growth",       price: "$29/mo",  workers: "10 workers",   jobs: "500 jobs/mo",  active: false },
+                      { name: "Professional", price: "$79/mo",  workers: "Unlimited",    jobs: "Unlimited",    active: false },
+                      { name: "Enterprise",   price: "Custom",  workers: "Unlimited",    jobs: "Unlimited",    active: false },
+                    ].map(plan => (
+                      <div key={plan.name}
+                        className={`flex items-center justify-between gap-4 p-4 rounded-[12px] border transition-colors
+                          ${plan.active ? "border-[#2563EB] bg-blue-50/40" : "border-[#E2E8F0] hover:border-[#CBD5E1]"}`}>
+                        <div className="flex items-center gap-3">
+                          {plan.active && <span className="w-2 h-2 rounded-full bg-[#2563EB] shrink-0" />}
+                          <div>
+                            <p className="text-sm font-semibold text-[#0F172A]">{plan.name}</p>
+                            <p className="text-[11px] text-[#94A3B8] mt-0.5">{plan.workers} · {plan.jobs}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <p className="text-sm font-bold text-[#0F172A]">{plan.price}</p>
+                          {!plan.active && (
+                            <button className="text-[11px] font-semibold px-2.5 py-1.5 rounded-[6px] border border-[#2563EB]/30 text-[#2563EB] hover:bg-blue-50 transition-colors">
+                              Select
+                            </button>
+                          )}
+                          {plan.active && <span className="text-[11px] font-semibold text-[#2563EB]">Current</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </SectionCard>
+
+                {/* Billing history */}
+                <SectionCard title="Billing History">
+                  <div className="text-center py-8">
+                    <CreditCard className="w-8 h-8 text-[#E2E8F0] mx-auto mb-3" />
+                    <p className="text-sm font-semibold text-[#475569]">No billing history</p>
+                    <p className="text-xs text-[#94A3B8] mt-1">You&apos;re on the free plan — no charges yet.</p>
+                  </div>
+                </SectionCard>
+              </div>
+
+              {/* Right panel */}
+              <div className="space-y-4">
+                <SectionCard title="Usage This Month">
+                  <div className="space-y-3">
+                    {[
+                      { label: "Jobs created",  used: 24,  total: 100,  color: "bg-[#2563EB]" },
+                      { label: "Workers",        used: 2,   total: 3,    color: "bg-green-500" },
+                      { label: "PDFs generated", used: 38,  total: 100,  color: "bg-purple-500" },
+                      { label: "WhatsApp msgs",  used: 142, total: 500,  color: "bg-amber-500" },
+                    ].map(({ label, used, total, color }) => (
+                      <div key={label}>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="text-[#64748B]">{label}</span>
+                          <span className="font-semibold text-[#334155]">{used} / {total}</span>
+                        </div>
+                        <div className="h-1.5 bg-[#F1F5F9] rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full ${color}`} style={{ width: `${Math.min(100, (used / total) * 100)}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </SectionCard>
+
+                <SectionCard title="Payment Method">
+                  <div className="text-center py-6">
+                    <CreditCard className="w-7 h-7 text-[#E2E8F0] mx-auto mb-2" />
+                    <p className="text-xs text-[#94A3B8]">No payment method added</p>
+                    <button className="mt-3 text-xs font-semibold text-[#2563EB] hover:text-[#1D4ED8] transition-colors">
+                      + Add payment method
+                    </button>
+                  </div>
+                </SectionCard>
+              </div>
+            </div>
+          )}
+
+
+          {/* ════════════════════════════ DATA & PRIVACY ══════════════════════ */}
+          {tab === "data" && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+              <div className="space-y-5">
+                <SectionCard title="Export Your Data" subtitle="Download a complete copy of all your business data.">
+                  <div className="space-y-2">
+                    {[
+                      { icon: FileText, label: "Jobs & Job Cards",   desc: "All jobs, timelines, photos, and OTP records" },
+                      { icon: CreditCard, label: "Invoices & Expenses", desc: "Full financial history in CSV and PDF" },
+                      { icon: Users,    label: "Clients & Workers",  desc: "Contact list and worker profiles" },
+                      { icon: Database, label: "Full Data Export",   desc: "Everything in a single ZIP archive" },
+                    ].map(({ icon: Icon, label, desc }) => (
+                      <div key={label} className="flex items-center justify-between gap-3 py-3 border-b border-[#F1F5F9] last:border-0">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-[8px] bg-[#F1F5F9] flex items-center justify-center shrink-0">
+                            <Icon className="w-4 h-4 text-[#64748B]" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-[#0F172A]">{label}</p>
+                            <p className="text-[11px] text-[#94A3B8]">{desc}</p>
+                          </div>
+                        </div>
+                        <button className="shrink-0 inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/40 hover:text-[#2563EB] hover:bg-blue-50/30 transition-colors">
+                          <Download className="w-3 h-3" /> Export
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </SectionCard>
+
+                <SectionCard title="Data Retention" subtitle="Control how long your data is kept.">
+                  <SelectRow icon={FileText}   label="Completed jobs"     subtitle="Keep closed job records for"    options={["1 year", "2 years", "5 years", "Forever"]} defaultValue="2 years" />
+                  <SelectRow icon={CreditCard} label="Invoice records"    subtitle="Retain invoice history for"     options={["3 years", "5 years", "7 years", "Forever"]} defaultValue="5 years" />
+                  <SelectRow icon={Database}   label="Activity logs"      subtitle="System audit logs kept for"     options={["30 days", "90 days", "1 year"]}             defaultValue="90 days" />
+                </SectionCard>
+              </div>
+
+              <div className="space-y-5">
+                <SectionCard title="Privacy Settings" subtitle="Manage how data is used in your workspace.">
+                  <ToggleRow icon={Eye}        label="Analytics & Usage"         subtitle="Allow FieldFlow to improve the product using anonymised usage data" defaultOn={true}  />
+                  <ToggleRow icon={Bell}       label="Product updates by email"  subtitle="Receive release notes and feature announcements"                    defaultOn={true}  />
+                  <ToggleRow icon={Shield}     label="Two-factor auth required"  subtitle="Enforce 2FA for all admin accounts"                                 defaultOn={false} />
+                </SectionCard>
+
+                {/* Danger zone */}
+                <div className="bg-white rounded-[16px] border border-red-200 overflow-hidden">
+                  <div className="px-5 py-3.5 border-b border-red-100 bg-red-50/50">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-[#DC2626]" />
+                      <h3 className="text-sm font-semibold text-[#DC2626]">Danger Zone</h3>
+                    </div>
+                    <p className="text-xs text-red-500/80 mt-0.5">These actions are permanent and cannot be undone.</p>
+                  </div>
+                  <div className="px-5 py-4 space-y-3">
+                    {[
+                      { label: "Delete all job history",    desc: "Permanently remove all jobs, photos, and job cards",       action: "Delete jobs"    },
+                      { label: "Reset workspace settings",  desc: "Revert all settings to factory defaults",                   action: "Reset settings" },
+                      { label: "Delete workspace",          desc: "Permanently delete your workspace and all associated data",  action: "Delete workspace"},
+                    ].map(({ label, desc, action }) => (
+                      <div key={label} className="flex items-center justify-between gap-4 py-2.5 border-b border-red-50 last:border-0">
+                        <div>
+                          <p className="text-sm font-semibold text-[#0F172A]">{label}</p>
+                          <p className="text-[11px] text-[#94A3B8] mt-0.5">{desc}</p>
+                        </div>
+                        <button className="shrink-0 text-[11px] font-semibold px-2.5 py-1.5 rounded-[6px] border border-red-200 text-[#DC2626] hover:bg-red-50 transition-colors whitespace-nowrap">
+                          {action}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
         </div>
       </div>
 
-      {/* Edit modal */}
       {editing && (
-        <EditModal
-          label={editing.label}
-          value={editing.value}
-          onClose={() => setEditing(null)}
-          onSave={editing.onSave}
-        />
+        <EditModal label={editing.label} value={editing.value} onClose={() => setEditing(null)} onSave={editing.onSave} />
       )}
     </div>
   );

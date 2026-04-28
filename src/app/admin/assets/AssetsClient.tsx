@@ -5,7 +5,8 @@ import Link from "next/link";
 import {
   Search, Plus, MapPin, Package, X, ChevronRight,
   Truck, Zap, Droplets, Shield, MoreHorizontal,
-  Hash, Wrench, Filter,
+  Hash, Wrench, Filter, Sun, Building2, Cpu,
+  HardDrive, Container, Gauge,
 } from "lucide-react";
 import { createAsset, updateAsset, deleteAsset } from "@/app/actions/asset-actions";
 import { formatDate } from "@/lib/utils";
@@ -20,6 +21,7 @@ interface AssetRow {
   warrantyExpiryDate: Date | string | null;
   lastServiceDate: Date | string | null;
   notes: string | null;
+  imageUrl: string | null;
   _count: { jobs: number };
 }
 
@@ -31,13 +33,29 @@ const COMMON_ASSET_TYPES = [
 // ── Asset type icon/color map ─────────────────────────────────────────────────
 function assetMeta(type: string): { icon: React.ElementType; color: string; bg: string } {
   const t = type.toLowerCase();
-  if (t.includes("tank"))    return { icon: Droplets, color: "text-blue-600",   bg: "bg-blue-50" };
-  if (t.includes("vehicle")) return { icon: Truck,    color: "text-amber-600",  bg: "bg-amber-50" };
-  if (t.includes("tracker") || t.includes("device") || t.includes("sensor"))
-                             return { icon: Zap,      color: "text-purple-600", bg: "bg-purple-50" };
-  if (t.includes("solar") || t.includes("inverter"))
-                             return { icon: Zap,      color: "text-green-600",  bg: "bg-green-50" };
-  return { icon: Package, color: "text-slate-600", bg: "bg-slate-100" };
+  if (t.includes("plastic tank") || t.includes("water tank") || t.includes("tank"))
+    return { icon: Container,  color: "text-blue-600",   bg: "bg-blue-50"   };
+  if (t.includes("underground"))
+    return { icon: Droplets,   color: "text-cyan-600",   bg: "bg-cyan-50"   };
+  if (t.includes("vehicle") || t.includes("car") || t.includes("truck"))
+    return { icon: Truck,      color: "text-amber-600",  bg: "bg-amber-50"  };
+  if (t.includes("tracker") || t.includes("gps"))
+    return { icon: Gauge,      color: "text-purple-600", bg: "bg-purple-50" };
+  if (t.includes("sensor") || t.includes("fuel sensor"))
+    return { icon: Gauge,      color: "text-orange-600", bg: "bg-orange-50" };
+  if (t.includes("device") || t.includes("sim"))
+    return { icon: Cpu,        color: "text-indigo-600", bg: "bg-indigo-50" };
+  if (t.includes("solar") || t.includes("panel"))
+    return { icon: Sun,        color: "text-yellow-600", bg: "bg-yellow-50" };
+  if (t.includes("inverter") || t.includes("battery"))
+    return { icon: Zap,        color: "text-green-600",  bg: "bg-green-50"  };
+  if (t.includes("building") || t.includes("site") || t.includes("office"))
+    return { icon: Building2,  color: "text-slate-600",  bg: "bg-slate-100" };
+  if (t.includes("equipment") || t.includes("tool") || t.includes("pump"))
+    return { icon: Wrench,     color: "text-slate-600",  bg: "bg-slate-100" };
+  if (t.includes("server") || t.includes("computer") || t.includes("it"))
+    return { icon: HardDrive,  color: "text-blue-500",   bg: "bg-blue-50"   };
+  return { icon: Package, color: "text-slate-500", bg: "bg-slate-100" };
 }
 
 function warrantyStatus(date: Date | string | null): { label: string; color: string; bg: string } | null {
@@ -146,6 +164,14 @@ function AssetForm({ zones, allTypes, isPending, initial, onSubmit, onCancel }: 
             <textarea name="notes" defaultValue={initial?.notes ?? ""} rows={3}
               className="ff-input text-sm resize-none" />
           </div>
+          <div>
+            <label className="block text-xs font-semibold text-[#475569] mb-1.5">
+              Asset Image URL <span className="font-normal text-[#94A3B8]">(optional)</span>
+            </label>
+            <input type="url" name="imageUrl" defaultValue={initial?.imageUrl ?? ""}
+              placeholder="https://…" className="ff-input text-sm" />
+            <p className="text-[11px] text-[#94A3B8] mt-1">Paste a direct image link. Leave blank to use the auto-generated icon.</p>
+          </div>
         </div>
       </details>
 
@@ -159,6 +185,26 @@ function AssetForm({ zones, allTypes, isPending, initial, onSubmit, onCancel }: 
   );
 }
 
+// ── Asset thumbnail (image or icon placeholder) ───────────────────────────────
+function AssetThumbnail({ asset }: { asset: AssetRow }) {
+  const meta = assetMeta(asset.assetType);
+  if (asset.imageUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={asset.imageUrl}
+        alt={asset.name}
+        className="w-full aspect-square object-cover rounded-t-[16px]"
+      />
+    );
+  }
+  return (
+    <div className={`w-full aspect-square flex items-center justify-center rounded-t-[16px] ${meta.bg}`}>
+      <meta.icon className={`w-12 h-12 ${meta.color} opacity-60`} />
+    </div>
+  );
+}
+
 // ── Asset Card ────────────────────────────────────────────────────────────────
 function AssetCard({ a, onEdit, onDelete }: { a: AssetRow; onEdit: () => void; onDelete: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -166,58 +212,61 @@ function AssetCard({ a, onEdit, onDelete }: { a: AssetRow; onEdit: () => void; o
   const warrant = warrantyStatus(a.warrantyExpiryDate);
 
   return (
-    <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card hover:shadow-card-hover hover:border-[#2563EB]/20 transition-all group">
-      <div className="p-5">
-        {/* Header */}
-        <div className="flex items-start gap-3 mb-4">
-          <div className={`w-11 h-11 rounded-[12px] flex items-center justify-center shrink-0 ${meta.bg}`}>
-            <meta.icon className={`w-5 h-5 ${meta.color}`} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <Link href={`/admin/assets/${a.id}`}
-              className="font-semibold text-[#0F172A] hover:text-[#2563EB] text-sm truncate block transition-colors">
-              {a.name}
-            </Link>
-            <span className={`inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-[4px] mt-0.5 ${meta.bg} ${meta.color}`}>
-              {a.assetType}
-            </span>
-          </div>
-          {/* More menu */}
-          <div className="relative shrink-0">
-            <button onClick={() => setMenuOpen(v => !v)}
-              className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-[#F8FAFC] text-[#94A3B8] transition-all">
-              <MoreHorizontal className="w-4 h-4" />
-            </button>
-            {menuOpen && (
-              <div className="absolute right-0 top-full mt-1 bg-white rounded-[10px] border border-[#E2E8F0] shadow-card py-1 z-20 w-36">
-                <Link href={`/admin/assets/${a.id}`} onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-2 px-3 py-1.5 text-xs text-[#334155] hover:bg-[#F8FAFC]">
-                  <Package className="w-3.5 h-3.5" /> View
-                </Link>
-                <button onClick={() => { setMenuOpen(false); onEdit(); }}
-                  className="flex items-center gap-2 px-3 py-1.5 text-xs text-[#334155] hover:bg-[#F8FAFC] w-full text-left">
-                  <Wrench className="w-3.5 h-3.5" /> Edit
-                </button>
-                <button onClick={() => { setMenuOpen(false); onDelete(); }}
-                  className="flex items-center gap-2 px-3 py-1.5 text-xs text-[#DC2626] hover:bg-red-50 w-full text-left">
-                  <X className="w-3.5 h-3.5" /> Delete
-                </button>
-              </div>
-            )}
-          </div>
+    <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card hover:shadow-card-hover hover:border-[#2563EB]/20 transition-all group flex flex-col">
+
+      {/* Optional image / placeholder — click goes to detail */}
+      <Link href={`/admin/assets/${a.id}`} className="block relative overflow-hidden rounded-t-[16px]">
+        <AssetThumbnail asset={a} />
+        {/* More menu overlay */}
+        <div className="absolute top-2 right-2">
+          <button
+            onClick={e => { e.preventDefault(); setMenuOpen(v => !v); }}
+            className="p-1.5 rounded-[8px] bg-white/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 hover:bg-white text-[#64748B] shadow-sm transition-all">
+            <MoreHorizontal className="w-3.5 h-3.5" />
+          </button>
+          {menuOpen && (
+            <div className="absolute right-0 top-full mt-1 bg-white rounded-[10px] border border-[#E2E8F0] shadow-card py-1 z-20 w-36">
+              <Link href={`/admin/assets/${a.id}`} onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-2 px-3 py-1.5 text-xs text-[#334155] hover:bg-[#F8FAFC]">
+                <Package className="w-3.5 h-3.5" /> View Asset
+              </Link>
+              <button onClick={() => { setMenuOpen(false); onEdit(); }}
+                className="flex items-center gap-2 px-3 py-1.5 text-xs text-[#334155] hover:bg-[#F8FAFC] w-full text-left">
+                <Wrench className="w-3.5 h-3.5" /> Edit
+              </button>
+              <button onClick={() => { setMenuOpen(false); onDelete(); }}
+                className="flex items-center gap-2 px-3 py-1.5 text-xs text-[#DC2626] hover:bg-red-50 w-full text-left">
+                <X className="w-3.5 h-3.5" /> Delete
+              </button>
+            </div>
+          )}
+        </div>
+      </Link>
+
+      {/* Body */}
+      <div className="p-4 flex-1 flex flex-col">
+        {/* Name + type badge */}
+        <div className="mb-3">
+          <Link href={`/admin/assets/${a.id}`}
+            className="font-semibold text-[#0F172A] hover:text-[#2563EB] text-sm leading-snug block transition-colors line-clamp-1">
+            {a.name}
+          </Link>
+          <span className={`inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-[4px] mt-1 ${meta.bg} ${meta.color}`}>
+            {a.assetType}
+          </span>
         </div>
 
         {/* Client + location */}
-        <div className="space-y-1.5 mb-4">
+        <div className="space-y-1 mb-3 flex-1">
           <p className="text-xs text-[#64748B] font-medium truncate">{a.clientName}</p>
           {a.location && (
             <p className="text-xs text-[#94A3B8] flex items-center gap-1.5 truncate">
               <MapPin className="w-3 h-3 shrink-0" />{a.location}
             </p>
           )}
-          {a.serialNumber && (
-            <p className="text-xs text-[#94A3B8] flex items-center gap-1.5">
-              <Hash className="w-3 h-3 shrink-0" />SN: {a.serialNumber}
+          {(a.serialNumber ?? a.registrationNumber) && (
+            <p className="text-xs text-[#94A3B8] flex items-center gap-1.5 truncate">
+              <Hash className="w-3 h-3 shrink-0" />{a.serialNumber ?? a.registrationNumber}
             </p>
           )}
         </div>
@@ -242,14 +291,6 @@ function AssetCard({ a, onEdit, onDelete }: { a: AssetRow; onEdit: () => void; o
             </p>
           </div>
         </div>
-      </div>
-
-      {/* Footer */}
-      <div className="border-t border-[#F1F5F9] px-5 py-3 flex items-center justify-end bg-[#FAFBFC] rounded-b-[16px]">
-        <Link href={`/admin/assets/${a.id}`}
-          className="inline-flex items-center gap-1 text-xs text-[#2563EB] font-semibold hover:text-[#1D4ED8] transition-colors">
-          View <ChevronRight className="w-3.5 h-3.5" />
-        </Link>
       </div>
     </div>
   );

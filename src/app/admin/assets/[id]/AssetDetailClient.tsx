@@ -6,6 +6,7 @@ import {
   Wrench, FileText, StickyNote, Plus, Download,
   Clipboard, ShieldCheck, Award, Truck,
   CheckCircle2, Hash, Zap, Droplets, History,
+  Sun, Building2, Cpu, HardDrive, Container, Gauge,
 } from "lucide-react";
 import { formatKES, formatDate, statusLabel } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -41,7 +42,7 @@ export type AssetDetailData = {
   registrationNumber: string | null; deviceNumber: string | null;
   simNumber: string | null; installationDate: Date | null;
   warrantyExpiryDate: Date | null; lastServiceDate: Date | null;
-  notes: string | null;
+  notes: string | null; imageUrl: string | null;
   jobs: Job[];
   documents: Document[];
 };
@@ -51,13 +52,29 @@ type Tab = "overview" | "jobs" | "documents" | "notes";
 // ── Asset type icon ───────────────────────────────────────────────────────────
 function assetMeta(type: string): { icon: React.ElementType; color: string; bg: string } {
   const t = type.toLowerCase();
-  if (t.includes("tank"))    return { icon: Droplets, color: "text-blue-600",   bg: "bg-blue-50" };
-  if (t.includes("vehicle")) return { icon: Truck,    color: "text-amber-600",  bg: "bg-amber-50" };
-  if (t.includes("tracker") || t.includes("device") || t.includes("sensor"))
-    return { icon: Zap, color: "text-purple-600", bg: "bg-purple-50" };
-  if (t.includes("solar") || t.includes("inverter"))
-    return { icon: Zap, color: "text-green-600",  bg: "bg-green-50" };
-  return { icon: Package, color: "text-slate-600", bg: "bg-slate-100" };
+  if (t.includes("plastic tank") || t.includes("water tank") || t.includes("tank"))
+    return { icon: Container,  color: "text-blue-600",   bg: "bg-blue-50"   };
+  if (t.includes("underground"))
+    return { icon: Droplets,   color: "text-cyan-600",   bg: "bg-cyan-50"   };
+  if (t.includes("vehicle") || t.includes("car") || t.includes("truck"))
+    return { icon: Truck,      color: "text-amber-600",  bg: "bg-amber-50"  };
+  if (t.includes("tracker") || t.includes("gps"))
+    return { icon: Gauge,      color: "text-purple-600", bg: "bg-purple-50" };
+  if (t.includes("sensor") || t.includes("fuel sensor"))
+    return { icon: Gauge,      color: "text-orange-600", bg: "bg-orange-50" };
+  if (t.includes("device") || t.includes("sim"))
+    return { icon: Cpu,        color: "text-indigo-600", bg: "bg-indigo-50" };
+  if (t.includes("solar") || t.includes("panel"))
+    return { icon: Sun,        color: "text-yellow-600", bg: "bg-yellow-50" };
+  if (t.includes("inverter") || t.includes("battery"))
+    return { icon: Zap,        color: "text-green-600",  bg: "bg-green-50"  };
+  if (t.includes("building") || t.includes("site") || t.includes("office"))
+    return { icon: Building2,  color: "text-slate-600",  bg: "bg-slate-100" };
+  if (t.includes("equipment") || t.includes("tool"))
+    return { icon: Wrench,     color: "text-slate-600",  bg: "bg-slate-100" };
+  if (t.includes("server") || t.includes("computer"))
+    return { icon: HardDrive,  color: "text-blue-500",   bg: "bg-blue-50"   };
+  return { icon: Package, color: "text-slate-500", bg: "bg-slate-100" };
 }
 
 function warrantyBadge(date: Date | null) {
@@ -117,10 +134,19 @@ export default function AssetDetailClient({ asset }: { asset: AssetDetailData })
       {/* ── Header Card ────────────────────────────────────────────────────── */}
       <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card p-5 sm:p-6">
         <div className="flex items-start gap-4 flex-wrap">
-          {/* Icon */}
-          <div className={`w-14 h-14 rounded-[14px] flex items-center justify-center shrink-0 ${meta.bg}`}>
-            <meta.icon className={`w-7 h-7 ${meta.color}`} />
-          </div>
+          {/* Image or icon */}
+          {asset.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={asset.imageUrl}
+              alt={asset.name}
+              className="w-20 h-20 rounded-[14px] object-cover border border-[#E2E8F0] shrink-0"
+            />
+          ) : (
+            <div className={`w-14 h-14 rounded-[14px] flex items-center justify-center shrink-0 ${meta.bg}`}>
+              <meta.icon className={`w-7 h-7 ${meta.color}`} />
+            </div>
+          )}
 
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2.5 flex-wrap mb-1">
