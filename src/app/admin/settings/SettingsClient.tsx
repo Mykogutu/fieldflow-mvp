@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -39,11 +39,11 @@ const DOCUMENT_OPTIONS: {
   key: string; label: string; Icon: LucideIcon;
   iconBg: string; iconColor: string; description: string;
 }[] = [
-  { key: "invoice",     label: "Invoice",                Icon: FileText,    iconBg: "bg-blue-50",   iconColor: "text-blue-600",   description: "Auto-generated PDF sent to the client when a job is completed" },
+  { key: "invoice",     label: "Invoice",                Icon: FileText,    iconBg: "bg-[#EFF6FF]",   iconColor: "text-[#2563EB]",   description: "Auto-generated PDF sent to the client when a job is completed" },
   { key: "job_card",    label: "Job Card",               Icon: Clipboard,   iconBg: "bg-[#F1F5F9]", iconColor: "text-[#64748B]",  description: "Full job record with timeline, worker details, and client verification" },
-  { key: "warranty",    label: "Warranty Certificate",   Icon: ShieldCheck, iconBg: "bg-blue-50",   iconColor: "text-[#2563EB]",  description: "Warranty document issued to the client after job verification" },
-  { key: "certificate", label: "Completion Certificate", Icon: Award,       iconBg: "bg-green-50",  iconColor: "text-[#16A34A]",  description: "Formal service completion certificate (e.g. for installation jobs)" },
-  { key: "quotation",   label: "Quotation",              Icon: FileEdit,    iconBg: "bg-amber-50",  iconColor: "text-[#D97706]",  description: "Price estimate sent to the client before work begins" },
+  { key: "warranty",    label: "Warranty Certificate",   Icon: ShieldCheck, iconBg: "bg-[#EFF6FF]",   iconColor: "text-[#2563EB]",  description: "Warranty document issued to the client after job verification" },
+  { key: "certificate", label: "Completion Certificate", Icon: Award,       iconBg: "bg-[#F0FDF4]",  iconColor: "text-[#16A34A]",  description: "Formal service completion certificate (e.g. for installation jobs)" },
+  { key: "quotation",   label: "Quotation",              Icon: FileEdit,    iconBg: "bg-[#FFFBEB]",  iconColor: "text-[#D97706]",  description: "Price estimate sent to the client before work begins" },
 ];
 
 // ── Tab config ────────────────────────────────────────────────────────────────
@@ -96,7 +96,7 @@ function SettingRow({ icon: Icon, label, value, onEdit }: {
       </div>
       {onEdit && (
         <button onClick={onEdit}
-          className="shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/40 hover:text-[#2563EB] hover:bg-blue-50/30 transition-colors">
+          className="shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/40 hover:text-[#2563EB] hover:bg-[#EFF6FF]/30 transition-colors">
           <Edit2 className="w-3 h-3" /> Edit
         </button>
       )}
@@ -119,7 +119,7 @@ function SecurityRow({ icon: Icon, label, subtitle, action }: {
           <p className="text-[11px] text-[#94A3B8]">{subtitle}</p>
         </div>
       </div>
-      <button className="shrink-0 text-[11px] font-semibold px-2.5 py-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/40 hover:text-[#2563EB] hover:bg-blue-50/30 transition-colors whitespace-nowrap">
+      <button className="shrink-0 text-[11px] font-semibold px-2.5 py-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/40 hover:text-[#2563EB] hover:bg-[#EFF6FF]/30 transition-colors whitespace-nowrap">
         {action}
       </button>
     </div>
@@ -178,8 +178,8 @@ function TagList({ tags, onRemove, newValue, onNewChange, onAdd, placeholder, co
   onAdd: () => void; placeholder: string; color?: "blue" | "green";
 }) {
   const pill = color === "green"
-    ? "bg-green-50 text-green-700 border border-green-100"
-    : "bg-blue-50 text-[#2563EB] border border-blue-100";
+    ? "bg-[#F0FDF4] text-[#15803D] border border-[#BBF7D0]"
+    : "bg-[#EFF6FF] text-[#2563EB] border border-[#DBEAFE]";
   return (
     <div className="space-y-2.5">
       <div className="flex flex-wrap gap-2 min-h-[1.5rem]">
@@ -275,8 +275,8 @@ function EditModal({ label, value, onClose, onSave }: {
 
 // ── Integration status badge ──────────────────────────────────────────────────
 function StatusPill({ status }: { status: "connected" | "disconnected" | "optional" }) {
-  if (status === "connected")    return <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-100">Connected</span>;
-  if (status === "disconnected") return <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-red-50 text-[#DC2626] border border-red-100">Not connected</span>;
+  if (status === "connected")    return <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#F0FDF4] text-[#15803D] border border-[#BBF7D0]">Connected</span>;
+  if (status === "disconnected") return <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#FFF1F2] text-[#DC2626] border border-[#FEE2E2]">Not connected</span>;
   return <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#F1F5F9] text-[#94A3B8] border border-[#E2E8F0]">Optional</span>;
 }
 
@@ -437,7 +437,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
       </div>
 
       {saved && (
-        <div className="text-sm bg-green-50 border border-green-200 text-[#16A34A] px-4 py-2.5 rounded-[10px] flex items-center gap-2">
+        <div className="text-sm bg-[#F0FDF4] border border-[#86EFAC] text-[#16A34A] px-4 py-2.5 rounded-[10px] flex items-center gap-2">
           <Check className="w-4 h-4" /> Settings saved successfully
         </div>
       )}
@@ -524,7 +524,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                     ].map(({ icon: Icon, label, danger }) => (
                       <button key={label}
                         className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-[8px] border text-sm transition-colors
-                          ${danger ? "border-red-100 text-[#DC2626] hover:bg-red-50" : "border-[#E2E8F0] text-[#334155] hover:bg-[#F8FAFC] hover:border-[#CBD5E1]"}`}>
+                          ${danger ? "border-[#FEE2E2] text-[#DC2626] hover:bg-[#FFF1F2]" : "border-[#E2E8F0] text-[#334155] hover:bg-[#F8FAFC] hover:border-[#CBD5E1]"}`}>
                         <div className="flex items-center gap-2"><Icon className="w-4 h-4" /><span className="font-medium">{label}</span></div>
                         <ChevronRight className={`w-4 h-4 ${danger ? "text-[#DC2626]/60" : "text-[#94A3B8]"}`} />
                       </button>
@@ -576,7 +576,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
 
               <div className="space-y-5">
                 <SectionCard title="Industry" subtitle="Your selected industry preset.">
-                  <div className="flex items-center gap-3 p-3 rounded-[12px] border border-[#E2E8F0] bg-blue-50/40">
+                  <div className="flex items-center gap-3 p-3 rounded-[12px] border border-[#E2E8F0] bg-[#EFF6FF]/40">
                     {(() => { const Icon = INDUSTRY_ICONS[industry] ?? HelpCircle; return <div className="w-9 h-9 rounded-[10px] bg-white border border-[#E2E8F0] flex items-center justify-center shrink-0"><Icon className="w-4 h-4 text-[#2563EB]" /></div>; })()}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-[#0F172A]">{INDUSTRY_LIST.find(i => i.key === industry)?.displayName ?? "General Field Services"}</p>
@@ -590,23 +590,23 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                 </SectionCard>
 
                 <a href="/admin/settings/whatsapp"
-                  className="block bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-[14px] p-4 hover:shadow-sm transition-shadow">
+                  className="block bg-gradient-to-r from-green-50 to-emerald-50 border border-[#86EFAC] rounded-[14px] p-4 hover:shadow-sm transition-shadow">
                   <div className="flex items-start gap-3">
-                    <div className="w-9 h-9 rounded-[10px] bg-green-100 flex items-center justify-center shrink-0">
-                      <MessageCircle className="w-5 h-5 text-green-600" />
+                    <div className="w-9 h-9 rounded-[10px] bg-[#DCFCE7] flex items-center justify-center shrink-0">
+                      <MessageCircle className="w-5 h-5 text-[#16A34A]" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-0.5">
                         <h3 className="text-sm font-semibold text-green-900">WhatsApp Senders</h3>
-                        <span className="text-[10px] uppercase tracking-wide font-bold bg-green-200 text-green-800 px-1.5 py-0.5 rounded-[4px]">Connected</span>
+                        <span className="text-[10px] uppercase tracking-wide font-bold bg-green-200 text-[#166534] px-1.5 py-0.5 rounded-[4px]">Connected</span>
                       </div>
-                      <p className="text-xs text-green-800/70 leading-relaxed">Connect a dedicated WhatsApp Business number with your brand name.</p>
-                      <span className="text-xs text-green-700 font-semibold mt-2 inline-block">Manage senders →</span>
+                      <p className="text-xs text-[#166534]/70 leading-relaxed">Connect a dedicated WhatsApp Business number with your brand name.</p>
+                      <span className="text-xs text-[#15803D] font-semibold mt-2 inline-block">Manage senders →</span>
                     </div>
                   </div>
                 </a>
 
-                <div className="bg-blue-50/50 border border-blue-100 rounded-[12px] p-4">
+                <div className="bg-[#EFF6FF]/50 border border-[#DBEAFE] rounded-[12px] p-4">
                   <p className="text-xs font-semibold text-[#1D4ED8] mb-1">Need to configure your workspace?</p>
                   <p className="text-[11px] text-[#64748B] leading-relaxed">Set up terminology, job types, and service zones in <button onClick={() => setTab("operations")} className="text-[#2563EB] font-semibold hover:underline">Operations</button>. Configure branding in <button onClick={() => setTab("branding")} className="text-[#2563EB] font-semibold hover:underline">Branding</button>.</p>
                 </div>
@@ -667,7 +667,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                       return (
                         <button key={t.key} type="button" onClick={() => applyTemplate(t.key)}
                           className={`flex items-center gap-2 px-2.5 py-2.5 rounded-[10px] text-xs border transition-all text-left
-                            ${active ? "border-[#2563EB] bg-blue-50 text-[#2563EB] font-semibold" : "border-[#E2E8F0] bg-white text-[#64748B] hover:border-[#2563EB]/30 hover:bg-blue-50/30"}`}>
+                            ${active ? "border-[#2563EB] bg-[#EFF6FF] text-[#2563EB] font-semibold" : "border-[#E2E8F0] bg-white text-[#64748B] hover:border-[#2563EB]/30 hover:bg-[#EFF6FF]/30"}`}>
                           <Icon className={`w-3.5 h-3.5 shrink-0 ${active ? "text-[#2563EB]" : "text-[#94A3B8]"}`} />
                           <span className="truncate">{t.displayName}</span>
                           {active && <span className="ml-auto w-2 h-2 rounded-full bg-[#2563EB] shrink-0" />}
@@ -676,7 +676,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                     })}
                   </div>
                   {industry !== "OTHER" && (
-                    <div className="mt-3 p-3 bg-blue-50/60 border border-blue-100 rounded-[10px]">
+                    <div className="mt-3 p-3 bg-[#EFF6FF]/60 border border-[#DBEAFE] rounded-[10px]">
                       <p className="text-xs text-[#1D4ED8] font-semibold mb-1">Preset applied: {INDUSTRY_LIST.find(i => i.key === industry)?.displayName}</p>
                       <p className="text-[11px] text-[#64748B]">Vocabulary, job types, and defaults have been filled in. You can edit any field above.</p>
                     </div>
@@ -872,7 +872,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
 
                 <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-[14px] p-4">
                   <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-[8px] bg-amber-50 flex items-center justify-center shrink-0">
+                    <div className="w-8 h-8 rounded-[8px] bg-[#FFFBEB] flex items-center justify-center shrink-0">
                       <Bell className="w-4 h-4 text-[#D97706]" />
                     </div>
                     <div>
@@ -1022,18 +1022,18 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
           {tab === "whatsapp" && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
               <div className="space-y-5">
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-[16px] p-5">
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-[#86EFAC] rounded-[16px] p-5">
                   <div className="flex items-start gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-[10px] bg-green-500 flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 rounded-[10px] bg-[#F0FDF4]0 flex items-center justify-center shrink-0">
                       <MessageCircle className="w-5 h-5 text-white" />
                     </div>
                     <div>
                       <p className="text-sm font-bold text-green-900">WhatsApp Business</p>
-                      <p className="text-xs text-green-700 mt-0.5">Powered by Twilio</p>
+                      <p className="text-xs text-[#15803D] mt-0.5">Powered by Twilio</p>
                     </div>
-                    <span className="ml-auto text-[10px] font-bold bg-green-200 text-green-800 px-2 py-0.5 rounded-full">Connected</span>
+                    <span className="ml-auto text-[10px] font-bold bg-green-200 text-[#166534] px-2 py-0.5 rounded-full">Connected</span>
                   </div>
-                  <p className="text-xs text-green-800/80 leading-relaxed mb-4">Workers and clients interact with FieldFlow entirely through WhatsApp. Manage your senders, templates, and message configuration here.</p>
+                  <p className="text-xs text-[#166534]/80 leading-relaxed mb-4">Workers and clients interact with FieldFlow entirely through WhatsApp. Manage your senders, templates, and message configuration here.</p>
                   <a href="/admin/settings/whatsapp"
                     className="inline-flex items-center gap-2 text-sm font-semibold bg-green-600 text-white px-4 py-2.5 rounded-[10px] hover:bg-green-700 transition-colors">
                     <MessageCircle className="w-4 h-4" /> Manage WhatsApp Senders
@@ -1065,7 +1065,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                           <p className="text-[11px] text-[#94A3B8] mt-0.5">{desc}</p>
                         </div>
                         <span className={`shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full
-                          ${status === "approved" ? "bg-green-50 text-green-700 border border-green-100" : "bg-amber-50 text-[#D97706] border border-amber-100"}`}>
+                          ${status === "approved" ? "bg-[#F0FDF4] text-[#15803D] border border-[#BBF7D0]" : "bg-[#FFFBEB] text-[#D97706] border border-[#FEF3C7]"}`}>
                           {status === "approved" ? "Approved" : "Pending"}
                         </span>
                       </div>
@@ -1080,7 +1080,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                       <input className="ff-input text-sm" placeholder="+254 7XX XXX XXX" />
                     </div>
                     <button className="ff-btn-secondary w-full justify-center gap-2 text-sm">
-                      <MessageCircle className="w-4 h-4 text-green-600" /> Send test message
+                      <MessageCircle className="w-4 h-4 text-[#16A34A]" /> Send test message
                     </button>
                   </div>
                 </SectionCard>
@@ -1112,10 +1112,10 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                   </div>
                   {/* Rows */}
                   {[
-                    { name: "You (Admin)", email: "admin@fieldflow.app", role: "ADMIN",      status: "Active",   initials: "AD", color: "bg-blue-100 text-blue-700"   },
-                    { name: "James Baraka", email: "+254 722 000 111",    role: "TECHNICIAN", status: "Active",   initials: "JB", color: "bg-green-100 text-green-700" },
-                    { name: "Peter Ouma",   email: "+254 733 000 222",    role: "TECHNICIAN", status: "Active",   initials: "PO", color: "bg-amber-100 text-amber-700" },
-                    { name: "Mary Wanjiku", email: "+254 711 000 333",    role: "TECHNICIAN", status: "Inactive", initials: "MW", color: "bg-rose-100 text-rose-700"   },
+                    { name: "You (Admin)", email: "admin@fieldflow.app", role: "ADMIN",      status: "Active",   initials: "AD", color: "bg-[#DBEAFE] text-[#1D4ED8]"   },
+                    { name: "James Baraka", email: "+254 722 000 111",    role: "TECHNICIAN", status: "Active",   initials: "JB", color: "bg-[#DCFCE7] text-[#15803D]" },
+                    { name: "Peter Ouma",   email: "+254 733 000 222",    role: "TECHNICIAN", status: "Active",   initials: "PO", color: "bg-[#FEF3C7] text-[#B45309]" },
+                    { name: "Mary Wanjiku", email: "+254 711 000 333",    role: "TECHNICIAN", status: "Inactive", initials: "MW", color: "bg-[#FFE4E6] text-[#BE123C]"   },
                   ].map((m, i) => (
                     <div key={i} className="px-5 py-3.5 border-b border-[#F8FAFC] last:border-0 grid grid-cols-[1fr_auto_auto] gap-4 items-center">
                       <div className="flex items-center gap-3 min-w-0">
@@ -1129,12 +1129,12 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                       </div>
                       <div className="w-20 flex justify-center">
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full
-                          ${m.role === "ADMIN" ? "bg-blue-50 text-[#2563EB] border border-blue-100" : "bg-[#F1F5F9] text-[#64748B] border border-[#E2E8F0]"}`}>
+                          ${m.role === "ADMIN" ? "bg-[#EFF6FF] text-[#2563EB] border border-[#DBEAFE]" : "bg-[#F1F5F9] text-[#64748B] border border-[#E2E8F0]"}`}>
                           {m.role === "ADMIN" ? "Admin" : "Worker"}
                         </span>
                       </div>
                       <div className="w-16 flex justify-end">
-                        <button className="text-[11px] font-semibold px-2.5 py-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/40 hover:text-[#2563EB] hover:bg-blue-50/30 transition-colors">
+                        <button className="text-[11px] font-semibold px-2.5 py-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/40 hover:text-[#2563EB] hover:bg-[#EFF6FF]/30 transition-colors">
                           Edit
                         </button>
                       </div>
@@ -1148,7 +1148,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                 <SectionCard title="Roles & Permissions">
                   <div className="space-y-3">
                     {[
-                      { role: "Admin", icon: Crown, color: "text-[#2563EB]", bg: "bg-blue-50", perms: ["Full dashboard access", "Create & manage jobs", "View invoices & reports", "Manage workers & settings"] },
+                      { role: "Admin", icon: Crown, color: "text-[#2563EB]", bg: "bg-[#EFF6FF]", perms: ["Full dashboard access", "Create & manage jobs", "View invoices & reports", "Manage workers & settings"] },
                       { role: "Worker / Technician", icon: Wrench, color: "text-[#64748B]", bg: "bg-[#F1F5F9]", perms: ["WhatsApp interface only", "Accept & complete jobs", "View own job schedule", "Report completion via OTP"] },
                     ].map(({ role, icon: Icon, color, bg, perms }) => (
                       <div key={role} className="p-3.5 rounded-[12px] border border-[#E2E8F0]">
@@ -1170,12 +1170,12 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                   </div>
                 </SectionCard>
 
-                <div className="bg-amber-50 border border-amber-200 rounded-[12px] p-4">
+                <div className="bg-[#FFFBEB] border border-[#FDE68A] rounded-[12px] p-4">
                   <div className="flex items-start gap-2">
                     <AlertTriangle className="w-4 h-4 text-[#D97706] shrink-0 mt-0.5" />
                     <div>
                       <p className="text-xs font-semibold text-[#92400E]">Workers use WhatsApp</p>
-                      <p className="text-[11px] text-amber-800/80 mt-0.5 leading-relaxed">
+                      <p className="text-[11px] text-[#92400E]/80 mt-0.5 leading-relaxed">
                         Workers don&apos;t need dashboard access. They manage all jobs through WhatsApp messages.
                       </p>
                     </div>
@@ -1204,7 +1204,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                       <p className="text-2xl font-bold">$0<span className="text-sm font-normal text-blue-200">/mo</span></p>
                       <p className="text-xs text-blue-200 mt-0.5">Free tier · no credit card required</p>
                     </div>
-                    <button className="bg-white text-[#2563EB] text-sm font-semibold px-4 py-2 rounded-[10px] hover:bg-blue-50 transition-colors">
+                    <button className="bg-white text-[#2563EB] text-sm font-semibold px-4 py-2 rounded-[10px] hover:bg-[#EFF6FF] transition-colors">
                       Upgrade plan
                     </button>
                   </div>
@@ -1221,7 +1221,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                     ].map(plan => (
                       <div key={plan.name}
                         className={`flex items-center justify-between gap-4 p-4 rounded-[12px] border transition-colors
-                          ${plan.active ? "border-[#2563EB] bg-blue-50/40" : "border-[#E2E8F0] hover:border-[#CBD5E1]"}`}>
+                          ${plan.active ? "border-[#2563EB] bg-[#EFF6FF]/40" : "border-[#E2E8F0] hover:border-[#CBD5E1]"}`}>
                         <div className="flex items-center gap-3">
                           {plan.active && <span className="w-2 h-2 rounded-full bg-[#2563EB] shrink-0" />}
                           <div>
@@ -1232,7 +1232,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                         <div className="flex items-center gap-3">
                           <p className="text-sm font-bold text-[#0F172A]">{plan.price}</p>
                           {!plan.active && (
-                            <button className="text-[11px] font-semibold px-2.5 py-1.5 rounded-[6px] border border-[#2563EB]/30 text-[#2563EB] hover:bg-blue-50 transition-colors">
+                            <button className="text-[11px] font-semibold px-2.5 py-1.5 rounded-[6px] border border-[#2563EB]/30 text-[#2563EB] hover:bg-[#EFF6FF] transition-colors">
                               Select
                             </button>
                           )}
@@ -1259,9 +1259,9 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                   <div className="space-y-3">
                     {[
                       { label: "Jobs created",  used: 24,  total: 100,  color: "bg-[#2563EB]" },
-                      { label: "Workers",        used: 2,   total: 3,    color: "bg-green-500" },
-                      { label: "PDFs generated", used: 38,  total: 100,  color: "bg-purple-500" },
-                      { label: "WhatsApp msgs",  used: 142, total: 500,  color: "bg-amber-500" },
+                      { label: "Workers",        used: 2,   total: 3,    color: "bg-[#F0FDF4]0" },
+                      { label: "PDFs generated", used: 38,  total: 100,  color: "bg-[#F5F3FF]0" },
+                      { label: "WhatsApp msgs",  used: 142, total: 500,  color: "bg-[#FFFBEB]0" },
                     ].map(({ label, used, total, color }) => (
                       <div key={label}>
                         <div className="flex justify-between text-xs mb-1">
@@ -1312,7 +1312,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                             <p className="text-[11px] text-[#94A3B8]">{desc}</p>
                           </div>
                         </div>
-                        <button className="shrink-0 inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/40 hover:text-[#2563EB] hover:bg-blue-50/30 transition-colors">
+                        <button className="shrink-0 inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/40 hover:text-[#2563EB] hover:bg-[#EFF6FF]/30 transition-colors">
                           <Download className="w-3 h-3" /> Export
                         </button>
                       </div>
@@ -1335,8 +1335,8 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                 </SectionCard>
 
                 {/* Danger zone */}
-                <div className="bg-white rounded-[16px] border border-red-200 overflow-hidden">
-                  <div className="px-5 py-3.5 border-b border-red-100 bg-red-50/50">
+                <div className="bg-white rounded-[16px] border border-[#FECACA] overflow-hidden">
+                  <div className="px-5 py-3.5 border-b border-[#FEE2E2] bg-[#FFF1F2]/50">
                     <div className="flex items-center gap-2">
                       <AlertTriangle className="w-4 h-4 text-[#DC2626]" />
                       <h3 className="text-sm font-semibold text-[#DC2626]">Danger Zone</h3>
@@ -1354,7 +1354,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                           <p className="text-sm font-semibold text-[#0F172A]">{label}</p>
                           <p className="text-[11px] text-[#94A3B8] mt-0.5">{desc}</p>
                         </div>
-                        <button className="shrink-0 text-[11px] font-semibold px-2.5 py-1.5 rounded-[6px] border border-red-200 text-[#DC2626] hover:bg-red-50 transition-colors whitespace-nowrap">
+                        <button className="shrink-0 text-[11px] font-semibold px-2.5 py-1.5 rounded-[6px] border border-[#FECACA] text-[#DC2626] hover:bg-[#FFF1F2] transition-colors whitespace-nowrap">
                           {action}
                         </button>
                       </div>

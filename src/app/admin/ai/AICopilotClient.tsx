@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
@@ -43,22 +43,22 @@ const QUICK_CHIPS = [
 ];
 
 const TRY_QUESTIONS = [
-  { icon: TrendingUp,    color: "text-[#2563EB]", bg: "bg-blue-50",   text: "What is my revenue trend for the last 6 months?" },
-  { icon: AlertCircle,   color: "text-[#DC2626]", bg: "bg-red-50",    text: "Which jobs are delayed and why?" },
-  { icon: Users,         color: "text-[#16A34A]", bg: "bg-green-50",  text: "Show me top performing workers this month" },
-  { icon: Wrench,        color: "text-[#7C3AED]", bg: "bg-purple-50", text: "What assets need maintenance soon?" },
-  { icon: FileText,      color: "text-[#D97706]", bg: "bg-amber-50",  text: "Summarize expenses by category" },
-  { icon: BarChart2,     color: "text-indigo-600",bg: "bg-indigo-50", text: "Forecast revenue for next month" },
-  { icon: Lightbulb,     color: "text-[#D97706]", bg: "bg-amber-50",  text: "Identify cost savings opportunities" },
-  { icon: MessageSquare, color: "text-[#2563EB]", bg: "bg-blue-50",   text: "Give me a business performance overview" },
+  { icon: TrendingUp,    color: "text-[#2563EB]", bg: "bg-[#EFF6FF]",   text: "What is my revenue trend for the last 6 months?" },
+  { icon: AlertCircle,   color: "text-[#DC2626]", bg: "bg-[#FFF1F2]",    text: "Which jobs are delayed and why?" },
+  { icon: Users,         color: "text-[#16A34A]", bg: "bg-[#F0FDF4]",  text: "Show me top performing workers this month" },
+  { icon: Wrench,        color: "text-[#7C3AED]", bg: "bg-[#F5F3FF]", text: "What assets need maintenance soon?" },
+  { icon: FileText,      color: "text-[#D97706]", bg: "bg-[#FFFBEB]",  text: "Summarize expenses by category" },
+  { icon: BarChart2,     color: "text-[#4F46E5]",bg: "bg-[#EEF2FF]", text: "Forecast revenue for next month" },
+  { icon: Lightbulb,     color: "text-[#D97706]", bg: "bg-[#FFFBEB]",  text: "Identify cost savings opportunities" },
+  { icon: MessageSquare, color: "text-[#2563EB]", bg: "bg-[#EFF6FF]",   text: "Give me a business performance overview" },
 ];
 
 const QUICK_ACTIONS = [
-  { icon: FileText,    bg: "bg-blue-50",   color: "text-[#2563EB]", title: "Create a job report",         sub: "Generate a detailed job report",    href: "/admin/jobs"                  },
-  { icon: AlertCircle, bg: "bg-amber-50",  color: "text-[#D97706]", title: "Analyze pending invoices",    sub: "Get insights on unpaid invoices",   href: "/admin/invoices?status=PENDING"},
-  { icon: TrendingUp,  bg: "bg-green-50",  color: "text-[#16A34A]", title: "Forecast this month revenue", sub: "AI prediction based on trends",     href: "/admin/ai"                    },
-  { icon: Users,       bg: "bg-purple-50", color: "text-[#7C3AED]", title: "Optimize worker allocation",  sub: "Suggest better workforce planning",  href: "/admin/workers"               },
-  { icon: Shield,      bg: "bg-indigo-50", color: "text-indigo-600",title: "Check asset health",          sub: "Get AI insights on your assets",    href: "/admin/assets"                },
+  { icon: FileText,    bg: "bg-[#EFF6FF]",   color: "text-[#2563EB]", title: "Create a job report",         sub: "Generate a detailed job report",    href: "/admin/jobs"                  },
+  { icon: AlertCircle, bg: "bg-[#FFFBEB]",  color: "text-[#D97706]", title: "Analyze pending invoices",    sub: "Get insights on unpaid invoices",   href: "/admin/invoices?status=PENDING"},
+  { icon: TrendingUp,  bg: "bg-[#F0FDF4]",  color: "text-[#16A34A]", title: "Forecast this month revenue", sub: "AI prediction based on trends",     href: "/admin/ai"                    },
+  { icon: Users,       bg: "bg-[#F5F3FF]", color: "text-[#7C3AED]", title: "Optimize worker allocation",  sub: "Suggest better workforce planning",  href: "/admin/workers"               },
+  { icon: Shield,      bg: "bg-[#EEF2FF]", color: "text-[#4F46E5]",title: "Check asset health",          sub: "Get AI insights on your assets",    href: "/admin/assets"                },
 ];
 
 const RESOURCES = [
@@ -264,7 +264,7 @@ export default function AICopilotClient({ userName = "Admin" }: { userName?: str
               {QUICK_CHIPS.map(chip => (
                 <button key={chip} onClick={() => handleSend(chip)}
                   className="text-xs font-medium px-3 py-1.5 rounded-full border border-[#E2E8F0] text-[#475569]
-                    hover:border-[#2563EB]/40 hover:text-[#2563EB] hover:bg-blue-50/50 transition-colors bg-white">
+                    hover:border-[#2563EB]/40 hover:text-[#2563EB] hover:bg-[#EFF6FF]/50 transition-colors bg-white">
                   {chip}
                 </button>
               ))}
@@ -278,7 +278,7 @@ export default function AICopilotClient({ userName = "Admin" }: { userName?: str
             <div className="flex gap-2 flex-wrap -mt-2">
               {TRY_QUESTIONS.slice(0, 4).map(q => (
                 <button key={q.text} onClick={() => handleSend(q.text)}
-                  className="text-xs font-medium px-3 py-1.5 rounded-full border border-[#E2E8F0] text-[#475569] hover:border-[#2563EB]/40 hover:text-[#2563EB] hover:bg-blue-50/50 transition-colors bg-white">
+                  className="text-xs font-medium px-3 py-1.5 rounded-full border border-[#E2E8F0] text-[#475569] hover:border-[#2563EB]/40 hover:text-[#2563EB] hover:bg-[#EFF6FF]/50 transition-colors bg-white">
                   {q.text}
                 </button>
               ))}
@@ -330,7 +330,7 @@ export default function AICopilotClient({ userName = "Admin" }: { userName?: str
             </div>
             <div className="px-5 py-3.5 border-t border-[#F1F5F9]">
               <button onClick={() => handleSend("Generate full business summary")}
-                className="w-full flex items-center justify-center gap-2 text-sm font-semibold text-[#2563EB] hover:text-[#1D4ED8] py-1.5 rounded-[10px] hover:bg-blue-50/50 transition-colors">
+                className="w-full flex items-center justify-center gap-2 text-sm font-semibold text-[#2563EB] hover:text-[#1D4ED8] py-1.5 rounded-[10px] hover:bg-[#EFF6FF]/50 transition-colors">
                 <Sparkles className="w-3.5 h-3.5" /> Generate full business summary
               </button>
             </div>
@@ -371,7 +371,7 @@ export default function AICopilotClient({ userName = "Admin" }: { userName?: str
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {TRY_QUESTIONS.map((q, i) => (
               <button key={i} onClick={() => handleSend(q.text)}
-                className="group flex items-start gap-3 p-3.5 rounded-[12px] border border-[#E2E8F0] hover:border-[#2563EB]/30 hover:shadow-card hover:bg-blue-50/20 transition-all text-left">
+                className="group flex items-start gap-3 p-3.5 rounded-[12px] border border-[#E2E8F0] hover:border-[#2563EB]/30 hover:shadow-card hover:bg-[#EFF6FF]/20 transition-all text-left">
                 <div className={`w-7 h-7 rounded-[8px] flex items-center justify-center shrink-0 ${q.bg}`}>
                   <q.icon className={`w-3.5 h-3.5 ${q.color}`} />
                 </div>
@@ -471,15 +471,15 @@ export default function AICopilotClient({ userName = "Admin" }: { userName?: str
 
 // ── Fallback data ─────────────────────────────────────────────────────────────
 const FALLBACK_INSIGHTS: Insight[] = [
-  { id: "1", icon: TrendingUp,  iconBg: "bg-blue-50",  iconColor: "text-[#2563EB]", text: "Revenue is up this month compared to last month.",       sub: "Check the invoices page for a full breakdown.",    badge: "Positive",       badgeBg: "bg-green-50",          badgeText: "text-[#16A34A]" },
-  { id: "2", icon: AlertCircle, iconBg: "bg-amber-50", iconColor: "text-[#D97706]", text: "You have pending invoices that need attention.",          sub: "Review and follow up with clients.",               badge: "Action needed",  badgeBg: "bg-amber-50",          badgeText: "text-[#D97706]" },
-  { id: "3", icon: BarChart2,   iconBg: "bg-blue-50",  iconColor: "text-[#2563EB]", text: "Jobs completion rate is on track this month.",            sub: "Keep up the momentum.",                           badge: "Info",            badgeBg: "bg-blue-50",           badgeText: "text-[#2563EB]" },
-  { id: "4", icon: TrendingUp,  iconBg: "bg-red-50",   iconColor: "text-[#DC2626]", text: "Fuel & Transport expenses increased this month.",         sub: "Review your expense categories.",                 badge: "Review",          badgeBg: "bg-[#FEF3C7]",         badgeText: "text-[#D97706]" },
+  { id: "1", icon: TrendingUp,  iconBg: "bg-[#EFF6FF]",  iconColor: "text-[#2563EB]", text: "Revenue is up this month compared to last month.",       sub: "Check the invoices page for a full breakdown.",    badge: "Positive",       badgeBg: "bg-[#F0FDF4]",          badgeText: "text-[#16A34A]" },
+  { id: "2", icon: AlertCircle, iconBg: "bg-[#FFFBEB]", iconColor: "text-[#D97706]", text: "You have pending invoices that need attention.",          sub: "Review and follow up with clients.",               badge: "Action needed",  badgeBg: "bg-[#FFFBEB]",          badgeText: "text-[#D97706]" },
+  { id: "3", icon: BarChart2,   iconBg: "bg-[#EFF6FF]",  iconColor: "text-[#2563EB]", text: "Jobs completion rate is on track this month.",            sub: "Keep up the momentum.",                           badge: "Info",            badgeBg: "bg-[#EFF6FF]",           badgeText: "text-[#2563EB]" },
+  { id: "4", icon: TrendingUp,  iconBg: "bg-[#FFF1F2]",   iconColor: "text-[#DC2626]", text: "Fuel & Transport expenses increased this month.",         sub: "Review your expense categories.",                 badge: "Review",          badgeBg: "bg-[#FEF3C7]",         badgeText: "text-[#D97706]" },
 ];
 
 const FALLBACK_SUGGESTIONS: Suggestion[] = [
-  { id: "1", icon: AlertCircle, iconBg: "bg-amber-50",  iconColor: "text-[#D97706]", title: "Review pending invoices",      sub: "Take action to improve cash flow",     href: "/admin/invoices?status=PENDING"   },
-  { id: "2", icon: Wrench,      iconBg: "bg-blue-50",   iconColor: "text-[#2563EB]", title: "Check pending jobs",           sub: "Follow up on in-progress work",        href: "/admin/jobs?status=IN_PROGRESS"   },
-  { id: "3", icon: Users,       iconBg: "bg-green-50",  iconColor: "text-[#16A34A]", title: "Review worker performance",    sub: "See who's performing best",            href: "/admin/workers"                   },
-  { id: "4", icon: BarChart2,   iconBg: "bg-purple-50", iconColor: "text-[#7C3AED]", title: "Analyze expense trends",       sub: "Identify cost saving opportunities",   href: "/admin/expenses"                  },
+  { id: "1", icon: AlertCircle, iconBg: "bg-[#FFFBEB]",  iconColor: "text-[#D97706]", title: "Review pending invoices",      sub: "Take action to improve cash flow",     href: "/admin/invoices?status=PENDING"   },
+  { id: "2", icon: Wrench,      iconBg: "bg-[#EFF6FF]",   iconColor: "text-[#2563EB]", title: "Check pending jobs",           sub: "Follow up on in-progress work",        href: "/admin/jobs?status=IN_PROGRESS"   },
+  { id: "3", icon: Users,       iconBg: "bg-[#F0FDF4]",  iconColor: "text-[#16A34A]", title: "Review worker performance",    sub: "See who's performing best",            href: "/admin/workers"                   },
+  { id: "4", icon: BarChart2,   iconBg: "bg-[#F5F3FF]", iconColor: "text-[#7C3AED]", title: "Analyze expense trends",       sub: "Identify cost saving opportunities",   href: "/admin/expenses"                  },
 ];

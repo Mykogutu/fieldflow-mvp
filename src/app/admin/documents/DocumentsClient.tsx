@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import {
@@ -11,14 +11,14 @@ import { markDocumentSent } from "@/app/actions/document-actions";
 import { formatDate } from "@/lib/utils";
 
 const DOC_CONFIG: Record<string, { label: string; Icon: React.ElementType; color: string; bg: string }> = {
-  INVOICE:                     { label: "Invoice",                   Icon: FileText,    color: "text-blue-600",   bg: "bg-blue-50"   },
+  INVOICE:                     { label: "Invoice",                   Icon: FileText,    color: "text-[#2563EB]",   bg: "bg-[#EFF6FF]"   },
   JOB_CARD:                    { label: "Job Card",                  Icon: Clipboard,   color: "text-slate-600",  bg: "bg-slate-100" },
-  WARRANTY_CERTIFICATE:        { label: "Warranty Certificate",      Icon: ShieldCheck, color: "text-green-600",  bg: "bg-green-50"  },
-  INSTALLATION_REPORT:         { label: "Installation Report",       Icon: FileCheck,   color: "text-indigo-600", bg: "bg-indigo-50" },
-  SERVICE_REPORT:              { label: "Service Report",            Icon: Award,       color: "text-purple-600", bg: "bg-purple-50" },
-  FUEL_CALIBRATION_REPORT:     { label: "Fuel Calibration Report",   Icon: Package,     color: "text-amber-600",  bg: "bg-amber-50"  },
+  WARRANTY_CERTIFICATE:        { label: "Warranty Certificate",      Icon: ShieldCheck, color: "text-[#16A34A]",  bg: "bg-[#F0FDF4]"  },
+  INSTALLATION_REPORT:         { label: "Installation Report",       Icon: FileCheck,   color: "text-[#4F46E5]", bg: "bg-[#EEF2FF]" },
+  SERVICE_REPORT:              { label: "Service Report",            Icon: Award,       color: "text-[#9333EA]", bg: "bg-[#F5F3FF]" },
+  FUEL_CALIBRATION_REPORT:     { label: "Fuel Calibration Report",   Icon: Package,     color: "text-[#D97706]",  bg: "bg-[#FFFBEB]"  },
   DEVICE_REPLACEMENT_REPORT:   { label: "Device Replacement Report", Icon: Package,     color: "text-orange-600", bg: "bg-orange-50" },
-  CLIENT_CONFIRMATION_RECEIPT: { label: "Client Confirmation",       Icon: CheckSquare, color: "text-green-600",  bg: "bg-green-50"  },
+  CLIENT_CONFIRMATION_RECEIPT: { label: "Client Confirmation",       Icon: CheckSquare, color: "text-[#16A34A]",  bg: "bg-[#F0FDF4]"  },
   DELIVERY_NOTE:               { label: "Delivery Note",             Icon: Truck,       color: "text-cyan-600",   bg: "bg-cyan-50"   },
   COMPLIANCE_CERTIFICATE:      { label: "Compliance Certificate",    Icon: FileEdit,    color: "text-teal-600",   bg: "bg-teal-50"   },
   OTHER:                       { label: "Document",                  Icon: FileText,    color: "text-slate-500",  bg: "bg-slate-100" },
@@ -48,7 +48,7 @@ function MarkSentButton({ doc }: { doc: Doc }) {
 
   if (done && sentInfo.at) {
     return (
-      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#16A34A] bg-green-50 px-2 py-0.5 rounded-full">
+      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#16A34A] bg-[#F0FDF4] px-2 py-0.5 rounded-full">
         <CheckCircle2 className="w-3 h-3" />
         {sentInfo.via ? sentInfo.via : "Sent"}
       </span>
@@ -73,8 +73,8 @@ function MarkSentButton({ doc }: { doc: Doc }) {
       {showMenu && (
         <div className="absolute right-0 top-6 z-20 bg-white border border-[#E2E8F0] rounded-[10px] shadow-card py-1 w-44">
           {[
-            { via: "WHATSAPP" as const, icon: MessageCircle, label: "Via WhatsApp", color: "text-green-600" },
-            { via: "EMAIL" as const,    icon: Mail,           label: "Via Email",    color: "text-blue-600" },
+            { via: "WHATSAPP" as const, icon: MessageCircle, label: "Via WhatsApp", color: "text-[#16A34A]" },
+            { via: "EMAIL" as const,    icon: Mail,           label: "Via Email",    color: "text-[#2563EB]" },
             { via: "MANUAL" as const,   icon: Check,          label: "Manual",       color: "text-[#64748B]" },
           ].map(({ via, icon: Icon, label, color }) => (
             <button key={via} onClick={() => handleMark(via)}
@@ -107,10 +107,10 @@ export default function DocumentsClient({ docs, total, typeCounts, typeFilter }:
       {/* ── Summary metrics ──────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Total Docs", value: total.toString(), icon: FileText, color: "text-[#2563EB]", bg: "bg-blue-50" },
-          { label: "Delivered", value: sentCount.toString(), icon: CheckCircle2, color: "text-[#16A34A]", bg: "bg-green-50" },
-          { label: "Undelivered", value: unsentCount.toString(), icon: Send, color: unsentCount > 0 ? "text-[#D97706]" : "text-[#94A3B8]", bg: unsentCount > 0 ? "bg-amber-50" : "bg-[#F1F5F9]" },
-          { label: "Types", value: activeTypes.length.toString(), icon: Package, color: "text-[#7C3AED]", bg: "bg-purple-50" },
+          { label: "Total Docs", value: total.toString(), icon: FileText, color: "text-[#2563EB]", bg: "bg-[#EFF6FF]" },
+          { label: "Delivered", value: sentCount.toString(), icon: CheckCircle2, color: "text-[#16A34A]", bg: "bg-[#F0FDF4]" },
+          { label: "Undelivered", value: unsentCount.toString(), icon: Send, color: unsentCount > 0 ? "text-[#D97706]" : "text-[#94A3B8]", bg: unsentCount > 0 ? "bg-[#FFFBEB]" : "bg-[#F1F5F9]" },
+          { label: "Types", value: activeTypes.length.toString(), icon: Package, color: "text-[#7C3AED]", bg: "bg-[#F5F3FF]" },
         ].map(({ label, value, icon: Icon, color, bg }) => (
           <div key={label} className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card p-4 flex items-center gap-3">
             <div className={`w-10 h-10 rounded-[10px] ${bg} flex items-center justify-center shrink-0`}>
@@ -226,12 +226,12 @@ export default function DocumentsClient({ docs, total, typeCounts, typeFilter }:
                           {doc.pdfUrl && (
                             <>
                               <a href={doc.pdfUrl} target="_blank" rel="noopener noreferrer"
-                                className="p-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/50 hover:text-[#2563EB] hover:bg-blue-50 transition-colors"
+                                className="p-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/50 hover:text-[#2563EB] hover:bg-[#EFF6FF] transition-colors"
                                 title="View PDF">
                                 <Eye className="w-3.5 h-3.5" />
                               </a>
                               <a href={doc.pdfUrl} download target="_blank" rel="noopener noreferrer"
-                                className="p-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/50 hover:text-[#2563EB] hover:bg-blue-50 transition-colors"
+                                className="p-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/50 hover:text-[#2563EB] hover:bg-[#EFF6FF] transition-colors"
                                 title="Download PDF">
                                 <Download className="w-3.5 h-3.5" />
                               </a>

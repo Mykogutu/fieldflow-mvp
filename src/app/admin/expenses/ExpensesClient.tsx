@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -12,11 +12,11 @@ const CATEGORIES = ["MATERIALS", "TRANSPORT", "FUEL", "TOOLS", "LABOR", "OTHER"]
 type Category = typeof CATEGORIES[number];
 
 const CATEGORY_META: Record<Category, { label: string; icon: React.ElementType; color: string; bg: string }> = {
-  MATERIALS: { label: "Materials",  icon: Package,      color: "text-blue-600",   bg: "bg-blue-50"   },
-  TRANSPORT: { label: "Transport",  icon: Truck,        color: "text-amber-600",  bg: "bg-amber-50"  },
+  MATERIALS: { label: "Materials",  icon: Package,      color: "text-[#2563EB]",   bg: "bg-[#EFF6FF]"   },
+  TRANSPORT: { label: "Transport",  icon: Truck,        color: "text-[#D97706]",  bg: "bg-[#FFFBEB]"  },
   FUEL:      { label: "Fuel",       icon: Fuel,         color: "text-orange-600", bg: "bg-orange-50" },
-  TOOLS:     { label: "Tools",      icon: Wrench,       color: "text-purple-600", bg: "bg-purple-50" },
-  LABOR:     { label: "Labor",      icon: Users,        color: "text-green-600",  bg: "bg-green-50"  },
+  TOOLS:     { label: "Tools",      icon: Wrench,       color: "text-[#9333EA]", bg: "bg-[#F5F3FF]" },
+  LABOR:     { label: "Labor",      icon: Users,        color: "text-[#16A34A]",  bg: "bg-[#F0FDF4]"  },
   OTHER:     { label: "Other",      icon: MoreHorizontal,color:"text-slate-600",  bg: "bg-slate-100" },
 };
 
@@ -78,7 +78,7 @@ export default function ExpensesClient({ expenses, total, currentCategory }: {
       {/* ── Summary ──────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card p-4 flex items-center gap-3 lg:col-span-1">
-          <div className="w-10 h-10 rounded-[10px] bg-red-50 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-[10px] bg-[#FFF1F2] flex items-center justify-center shrink-0">
             <TrendingDown className="w-5 h-5 text-[#DC2626]" />
           </div>
           <div>
@@ -174,7 +174,7 @@ export default function ExpensesClient({ expenses, total, currentCategory }: {
                       <td className="text-[#64748B] whitespace-nowrap text-xs">{formatDate(exp.date)}</td>
                       <td className="text-right">
                         <button onClick={() => handleDelete(exp.id)} disabled={isPending}
-                          className="p-1.5 rounded-[6px] border border-[#E2E8F0] text-[#94A3B8] hover:border-red-300 hover:text-[#DC2626] hover:bg-red-50 transition-colors disabled:opacity-50"
+                          className="p-1.5 rounded-[6px] border border-[#E2E8F0] text-[#94A3B8] hover:border-red-300 hover:text-[#DC2626] hover:bg-[#FFF1F2] transition-colors disabled:opacity-50"
                           title="Delete">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import {
@@ -142,18 +142,18 @@ export default function InvoicesClient({
                     <div className="flex items-center gap-1.5">
                       {inv.status === "PENDING" && (
                         <button onClick={() => markPaid(inv.id)} disabled={isPending}
-                          className="text-[11px] font-semibold text-[#16A34A] border border-green-200 hover:bg-green-50 px-2.5 py-1.5 rounded-[8px] transition-colors disabled:opacity-50">
+                          className="text-[11px] font-semibold text-[#16A34A] border border-[#86EFAC] hover:bg-[#F0FDF4] px-2.5 py-1.5 rounded-[8px] transition-colors disabled:opacity-50">
                           Mark Paid
                         </button>
                       )}
                       <a href={`/api/invoices/${inv.id}/pdf`} target="_blank" rel="noopener noreferrer"
-                        className="p-1.5 rounded-[8px] border border-[#E2E8F0] text-[#64748B] hover:text-[#2563EB] hover:bg-blue-50 transition-colors" title="Download">
+                        className="p-1.5 rounded-[8px] border border-[#E2E8F0] text-[#64748B] hover:text-[#2563EB] hover:bg-[#EFF6FF] transition-colors" title="Download">
                         <Download className="w-3.5 h-3.5" />
                       </a>
                       <a href={`https://wa.me/${inv.clientPhone.replace("+", "")}?text=${encodeURIComponent(
                         `Hi ${inv.clientName}, your invoice ${inv.invoiceNumber} for ${formatKES(inv.amount)} is ready.`)}`}
                         target="_blank" rel="noopener noreferrer"
-                        className="p-1.5 rounded-[8px] border border-[#E2E8F0] text-[#64748B] hover:text-green-600 hover:bg-green-50 transition-colors" title="WhatsApp">
+                        className="p-1.5 rounded-[8px] border border-[#E2E8F0] text-[#64748B] hover:text-[#16A34A] hover:bg-[#F0FDF4] transition-colors" title="WhatsApp">
                         <Send className="w-3.5 h-3.5" />
                       </a>
                     </div>
@@ -182,7 +182,7 @@ export default function InvoicesClient({
                       {/* Invoice # */}
                       <td>
                         <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-[8px] bg-blue-50 flex items-center justify-center shrink-0">
+                          <div className="w-8 h-8 rounded-[8px] bg-[#EFF6FF] flex items-center justify-center shrink-0">
                             <FileText className="w-4 h-4 text-[#2563EB]" />
                           </div>
                           <div>
@@ -222,24 +222,24 @@ export default function InvoicesClient({
                       <td>
                         <div className="flex items-center justify-end gap-1.5">
                           <a href={`/api/invoices/${inv.id}/pdf`} target="_blank" rel="noopener noreferrer"
-                            className="p-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/50 hover:text-[#2563EB] hover:bg-blue-50 transition-colors" title="Download PDF">
+                            className="p-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/50 hover:text-[#2563EB] hover:bg-[#EFF6FF] transition-colors" title="Download PDF">
                             <Download className="w-3.5 h-3.5" />
                           </a>
                           <a href={`https://wa.me/${inv.clientPhone.replace("+", "")}?text=${encodeURIComponent(
                             `Hi ${inv.clientName}, your invoice ${inv.invoiceNumber} for ${formatKES(inv.amount)} is ready.`)}`}
                             target="_blank" rel="noopener noreferrer"
-                            className="p-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-green-400 hover:text-green-600 hover:bg-green-50 transition-colors" title="Send via WhatsApp">
+                            className="p-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-green-400 hover:text-[#16A34A] hover:bg-[#F0FDF4] transition-colors" title="Send via WhatsApp">
                             <Send className="w-3.5 h-3.5" />
                           </a>
                           {inv.status === "PENDING" && (
                             <button onClick={() => markPaid(inv.id)} disabled={isPending}
-                              className="text-[11px] font-semibold text-[#16A34A] hover:text-green-700 border border-green-200 hover:bg-green-50 px-3 py-1.5 rounded-[6px] transition-colors disabled:opacity-50 whitespace-nowrap">
+                              className="text-[11px] font-semibold text-[#16A34A] hover:text-[#15803D] border border-[#86EFAC] hover:bg-[#F0FDF4] px-3 py-1.5 rounded-[6px] transition-colors disabled:opacity-50 whitespace-nowrap">
                               Mark Paid
                             </button>
                           )}
                           {inv.job.id && (
                             <Link href={`/admin/jobs/${inv.job.id}`}
-                              className="p-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/50 hover:text-[#2563EB] hover:bg-blue-50 transition-colors" title="View Job">
+                              className="p-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/50 hover:text-[#2563EB] hover:bg-[#EFF6FF] transition-colors" title="View Job">
                               <ExternalLink className="w-3.5 h-3.5" />
                             </Link>
                           )}

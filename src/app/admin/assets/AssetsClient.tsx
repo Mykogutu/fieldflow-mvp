@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -34,27 +34,27 @@ const COMMON_ASSET_TYPES = [
 function assetMeta(type: string): { icon: React.ElementType; color: string; bg: string } {
   const t = type.toLowerCase();
   if (t.includes("plastic tank") || t.includes("water tank") || t.includes("tank"))
-    return { icon: Container,  color: "text-blue-600",   bg: "bg-blue-50"   };
+    return { icon: Container,  color: "text-[#2563EB]",   bg: "bg-[#EFF6FF]"   };
   if (t.includes("underground"))
     return { icon: Droplets,   color: "text-cyan-600",   bg: "bg-cyan-50"   };
   if (t.includes("vehicle") || t.includes("car") || t.includes("truck"))
-    return { icon: Truck,      color: "text-amber-600",  bg: "bg-amber-50"  };
+    return { icon: Truck,      color: "text-[#D97706]",  bg: "bg-[#FFFBEB]"  };
   if (t.includes("tracker") || t.includes("gps"))
-    return { icon: Gauge,      color: "text-purple-600", bg: "bg-purple-50" };
+    return { icon: Gauge,      color: "text-[#9333EA]", bg: "bg-[#F5F3FF]" };
   if (t.includes("sensor") || t.includes("fuel sensor"))
     return { icon: Gauge,      color: "text-orange-600", bg: "bg-orange-50" };
   if (t.includes("device") || t.includes("sim"))
-    return { icon: Cpu,        color: "text-indigo-600", bg: "bg-indigo-50" };
+    return { icon: Cpu,        color: "text-[#4F46E5]", bg: "bg-[#EEF2FF]" };
   if (t.includes("solar") || t.includes("panel"))
     return { icon: Sun,        color: "text-yellow-600", bg: "bg-yellow-50" };
   if (t.includes("inverter") || t.includes("battery"))
-    return { icon: Zap,        color: "text-green-600",  bg: "bg-green-50"  };
+    return { icon: Zap,        color: "text-[#16A34A]",  bg: "bg-[#F0FDF4]"  };
   if (t.includes("building") || t.includes("site") || t.includes("office"))
     return { icon: Building2,  color: "text-slate-600",  bg: "bg-slate-100" };
   if (t.includes("equipment") || t.includes("tool") || t.includes("pump"))
     return { icon: Wrench,     color: "text-slate-600",  bg: "bg-slate-100" };
   if (t.includes("server") || t.includes("computer") || t.includes("it"))
-    return { icon: HardDrive,  color: "text-blue-500",   bg: "bg-blue-50"   };
+    return { icon: HardDrive,  color: "text-blue-500",   bg: "bg-[#EFF6FF]"   };
   return { icon: Package, color: "text-slate-500", bg: "bg-slate-100" };
 }
 
@@ -63,9 +63,9 @@ function warrantyStatus(date: Date | string | null): { label: string; color: str
   const expiry = typeof date === "string" ? new Date(date) : date;
   const now = new Date();
   const days = Math.floor((expiry.getTime() - now.getTime()) / 86400000);
-  if (days < 0)   return { label: "Expired", color: "text-[#DC2626]", bg: "bg-red-50" };
-  if (days < 30)  return { label: `${days}d left`, color: "text-[#D97706]", bg: "bg-amber-50" };
-  return { label: "Active", color: "text-[#16A34A]", bg: "bg-green-50" };
+  if (days < 0)   return { label: "Expired", color: "text-[#DC2626]", bg: "bg-[#FFF1F2]" };
+  if (days < 30)  return { label: `${days}d left`, color: "text-[#D97706]", bg: "bg-[#FFFBEB]" };
+  return { label: "Active", color: "text-[#16A34A]", bg: "bg-[#F0FDF4]" };
 }
 
 // ── Field helper ──────────────────────────────────────────────────────────────
@@ -235,7 +235,7 @@ function AssetCard({ a, onEdit, onDelete }: { a: AssetRow; onEdit: () => void; o
                 <Wrench className="w-3.5 h-3.5" /> Edit
               </button>
               <button onClick={() => { setMenuOpen(false); onDelete(); }}
-                className="flex items-center gap-2 px-3 py-1.5 text-xs text-[#DC2626] hover:bg-red-50 w-full text-left">
+                className="flex items-center gap-2 px-3 py-1.5 text-xs text-[#DC2626] hover:bg-[#FFF1F2] w-full text-left">
                 <X className="w-3.5 h-3.5" /> Delete
               </button>
             </div>
@@ -372,10 +372,10 @@ export default function AssetsClient({ assets, knownTypes, zones, currentSearch,
       {/* ── Summary metrics ──────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Total Assets", value: assets.length.toString(), color: "text-[#2563EB]", bg: "bg-blue-50", icon: Package },
-          { label: "Types", value: knownTypes.length.toString(), color: "text-[#7C3AED]", bg: "bg-purple-50", icon: Filter },
-          { label: "Under Warranty", value: warrantyActiveCount.toString(), color: "text-[#16A34A]", bg: "bg-green-50", icon: Shield },
-          { label: "Warranty Expired", value: warrantyExpiredCount.toString(), color: warrantyExpiredCount > 0 ? "text-[#DC2626]" : "text-[#94A3B8]", bg: warrantyExpiredCount > 0 ? "bg-red-50" : "bg-[#F1F5F9]", icon: Shield },
+          { label: "Total Assets", value: assets.length.toString(), color: "text-[#2563EB]", bg: "bg-[#EFF6FF]", icon: Package },
+          { label: "Types", value: knownTypes.length.toString(), color: "text-[#7C3AED]", bg: "bg-[#F5F3FF]", icon: Filter },
+          { label: "Under Warranty", value: warrantyActiveCount.toString(), color: "text-[#16A34A]", bg: "bg-[#F0FDF4]", icon: Shield },
+          { label: "Warranty Expired", value: warrantyExpiredCount.toString(), color: warrantyExpiredCount > 0 ? "text-[#DC2626]" : "text-[#94A3B8]", bg: warrantyExpiredCount > 0 ? "bg-[#FFF1F2]" : "bg-[#F1F5F9]", icon: Shield },
         ].map(({ label, value, color, bg, icon: Icon }) => (
           <div key={label} className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card p-4 flex items-center gap-3">
             <div className={`w-10 h-10 rounded-[10px] ${bg} flex items-center justify-center shrink-0`}>
@@ -416,7 +416,7 @@ export default function AssetsClient({ assets, knownTypes, zones, currentSearch,
 
       {/* Feedback */}
       {feedback && (
-        <div className="flex items-center justify-between text-sm px-4 py-3 rounded-[10px] bg-green-50 text-green-700 border border-green-200">
+        <div className="flex items-center justify-between text-sm px-4 py-3 rounded-[10px] bg-[#F0FDF4] text-[#15803D] border border-[#86EFAC]">
           {feedback}
           <button onClick={() => setFeedback("")}><X className="w-4 h-4" /></button>
         </div>

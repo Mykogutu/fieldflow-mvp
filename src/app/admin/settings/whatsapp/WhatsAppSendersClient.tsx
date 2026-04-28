@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -25,24 +25,24 @@ const TIERS: { key: BrandingTier; title: string; blurb: string; badge: string; b
     title: "Dedicated Branded Number",
     blurb: "We provision a unique WhatsApp Business number with your verified name + logo, operated under FieldFlow's BSP.",
     badge: "Pro · $79/mo",
-    badgeBg: "bg-blue-50", badgeText: "text-[#2563EB]",
+    badgeBg: "bg-[#EFF6FF]", badgeText: "text-[#2563EB]",
   },
   {
     key: "BYO_WABA",
     title: "Connect Your Own WhatsApp Business",
     blurb: "90-second Meta login. You own the number forever. Best for established businesses with an existing WABA.",
     badge: "Business · $299+/mo",
-    badgeBg: "bg-purple-50", badgeText: "text-[#7C3AED]",
+    badgeBg: "bg-[#F5F3FF]", badgeText: "text-[#7C3AED]",
   },
 ];
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 function SenderStatusBadge({ status, verified }: { status: string; verified: boolean }) {
   const config: Record<string, { bg: string; text: string }> = {
-    ACTIVE:    { bg: "bg-green-50",  text: "text-[#16A34A]"  },
-    PENDING:   { bg: "bg-amber-50",  text: "text-[#D97706]"  },
-    REJECTED:  { bg: "bg-red-50",    text: "text-[#DC2626]"  },
-    SUSPENDED: { bg: "bg-red-50",    text: "text-[#DC2626]"  },
+    ACTIVE:    { bg: "bg-[#F0FDF4]",  text: "text-[#16A34A]"  },
+    PENDING:   { bg: "bg-[#FFFBEB]",  text: "text-[#D97706]"  },
+    REJECTED:  { bg: "bg-[#FFF1F2]",    text: "text-[#DC2626]"  },
+    SUSPENDED: { bg: "bg-[#FFF1F2]",    text: "text-[#DC2626]"  },
   };
   const { bg, text } = config[status] ?? { bg: "bg-[#F1F5F9]", text: "text-[#64748B]" };
   return (
@@ -58,8 +58,8 @@ function SenderStatusBadge({ status, verified }: { status: string; verified: boo
 function TierBadge({ tier }: { tier: BrandingTier }) {
   const config: Record<BrandingTier, { label: string; bg: string; text: string }> = {
     SHARED:   { label: "Shared",   bg: "bg-[#F1F5F9]", text: "text-[#64748B]" },
-    MANAGED:  { label: "Managed",  bg: "bg-blue-50",   text: "text-[#2563EB]" },
-    BYO_WABA: { label: "BYO WABA", bg: "bg-purple-50", text: "text-[#7C3AED]" },
+    MANAGED:  { label: "Managed",  bg: "bg-[#EFF6FF]",   text: "text-[#2563EB]" },
+    BYO_WABA: { label: "BYO WABA", bg: "bg-[#F5F3FF]", text: "text-[#7C3AED]" },
   };
   const { label, bg, text } = config[tier];
   return (
@@ -132,7 +132,7 @@ export default function WhatsAppSendersClient({ senders }: { senders: WhatsAppSe
               onClick={() => { setSelectedTier(tier.key); setShowForm(true); }}
               className={`text-left rounded-[16px] border p-4 transition-all
                 ${active
-                  ? "border-[#2563EB] bg-blue-50 shadow-[0_0_0_3px_rgba(37,99,235,0.15)]"
+                  ? "border-[#2563EB] bg-[#EFF6FF] shadow-[0_0_0_3px_rgba(37,99,235,0.15)]"
                   : "border-[#E2E8F0] bg-white hover:border-[#CBD5E1] hover:shadow-card"
                 }`}>
               <div className="flex items-start justify-between mb-3">
@@ -155,7 +155,7 @@ export default function WhatsAppSendersClient({ senders }: { senders: WhatsAppSe
       <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card overflow-hidden">
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#E2E8F0]">
           <div className="flex items-center gap-2">
-            <MessageCircle className="w-4 h-4 text-green-600" />
+            <MessageCircle className="w-4 h-4 text-[#16A34A]" />
             <h2 className="font-semibold text-sm text-[#0F172A]">Active Senders</h2>
             <span className="text-xs text-[#94A3B8]">({senders.length})</span>
           </div>
@@ -192,8 +192,8 @@ export default function WhatsAppSendersClient({ senders }: { senders: WhatsAppSe
                   <tr key={s.id}>
                     <td>
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-[7px] bg-green-50 flex items-center justify-center shrink-0">
-                          <Phone className="w-3.5 h-3.5 text-green-600" />
+                        <div className="w-7 h-7 rounded-[7px] bg-[#F0FDF4] flex items-center justify-center shrink-0">
+                          <Phone className="w-3.5 h-3.5 text-[#16A34A]" />
                         </div>
                         <span className="font-mono text-xs font-semibold text-[#0F172A]">{s.phoneNumber}</span>
                       </div>
@@ -202,7 +202,7 @@ export default function WhatsAppSendersClient({ senders }: { senders: WhatsAppSe
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-sm text-[#334155]">{s.displayName}</span>
                         {s.isDefault && (
-                          <span className="inline-flex items-center gap-0.5 text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-[#2563EB] px-1.5 py-0.5 rounded-[4px]">
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#EFF6FF] text-[#2563EB] px-1.5 py-0.5 rounded-[4px]">
                             <Star className="w-2.5 h-2.5" /> Default
                           </span>
                         )}
@@ -216,14 +216,14 @@ export default function WhatsAppSendersClient({ senders }: { senders: WhatsAppSe
                           <button
                             onClick={() => startTransition(async () => { await setDefaultSender(s.id); router.refresh(); })}
                             disabled={isPending}
-                            className="text-[11px] font-semibold text-[#2563EB] hover:text-[#1D4ED8] border border-blue-200 hover:bg-blue-50 px-3 py-1.5 rounded-[6px] transition-colors disabled:opacity-50">
+                            className="text-[11px] font-semibold text-[#2563EB] hover:text-[#1D4ED8] border border-[#BFDBFE] hover:bg-[#EFF6FF] px-3 py-1.5 rounded-[6px] transition-colors disabled:opacity-50">
                             Set Default
                           </button>
                         )}
                         <button
                           onClick={() => { if (!confirm(`Delete sender ${s.phoneNumber}?`)) return; startTransition(async () => { await deleteSender(s.id); router.refresh(); }); }}
                           disabled={isPending}
-                          className="p-1.5 rounded-[6px] border border-[#E2E8F0] text-[#94A3B8] hover:border-red-300 hover:text-[#DC2626] hover:bg-red-50 transition-colors disabled:opacity-50">
+                          className="p-1.5 rounded-[6px] border border-[#E2E8F0] text-[#94A3B8] hover:border-red-300 hover:text-[#DC2626] hover:bg-[#FFF1F2] transition-colors disabled:opacity-50">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>

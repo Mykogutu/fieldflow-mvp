@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useTransition, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -112,7 +112,7 @@ function ThreeDotMenu({ onMarkRead, onDelete }: { onMarkRead: () => void; onDele
           {onDelete && (
             <button
               onClick={e => { e.stopPropagation(); onDelete(); setOpen(false); }}
-              className="w-full text-left px-3 py-2 text-[#DC2626] hover:bg-red-50 transition-colors"
+              className="w-full text-left px-3 py-2 text-[#DC2626] hover:bg-[#FFF1F2] transition-colors"
             >
               Delete
             </button>
@@ -313,7 +313,7 @@ export default function NotificationsClient({
                             <Link
                               href={n.link}
                               onClick={() => !n.isRead && handleMarkOne(n.id)}
-                              className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-[6px] border border-[#2563EB]/30 text-[#2563EB] hover:bg-blue-50 transition-colors"
+                              className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-[6px] border border-[#2563EB]/30 text-[#2563EB] hover:bg-[#EFF6FF] transition-colors"
                             >
                               <ExternalLink className="w-3 h-3" />
                               {actionLabel}

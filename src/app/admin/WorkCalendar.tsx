@@ -1,13 +1,13 @@
-"use client";
+﻿"use client";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const PALETTE = [
-  { bg: "bg-blue-100",    text: "text-blue-800",    dot: "bg-blue-500"    },
+  { bg: "bg-[#DBEAFE]",    text: "text-[#1E40AF]",    dot: "bg-[#EFF6FF]0"    },
   { bg: "bg-emerald-100", text: "text-emerald-800",  dot: "bg-emerald-500" },
-  { bg: "bg-amber-100",   text: "text-amber-800",    dot: "bg-amber-500"   },
+  { bg: "bg-[#FEF3C7]",   text: "text-[#92400E]",    dot: "bg-[#FFFBEB]0"   },
   { bg: "bg-violet-100",  text: "text-violet-800",   dot: "bg-violet-500"  },
-  { bg: "bg-rose-100",    text: "text-rose-800",     dot: "bg-rose-500"    },
+  { bg: "bg-[#FFE4E6]",    text: "text-rose-800",     dot: "bg-[#FFF1F2]0"    },
   { bg: "bg-cyan-100",    text: "text-cyan-800",     dot: "bg-cyan-500"    },
   { bg: "bg-orange-100",  text: "text-orange-800",   dot: "bg-orange-500"  },
   { bg: "bg-pink-100",    text: "text-pink-800",     dot: "bg-pink-500"    },
@@ -113,7 +113,7 @@ export default function WorkCalendar({
                 key={dayStr}
                 className={
                   isToday
-                    ? "bg-blue-50/30"
+                    ? "bg-[#EFF6FF]/30"
                     : isWeekend
                     ? "bg-slate-50/50"
                     : ""
@@ -122,7 +122,7 @@ export default function WorkCalendar({
                 {/* Day header */}
                 <div
                   className={`px-2 py-2.5 text-center border-b border-gray-100 ${
-                    isToday ? "bg-blue-50" : ""
+                    isToday ? "bg-[#EFF6FF]" : ""
                   }`}
                 >
                   <p

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -92,9 +92,9 @@ function ClientForm({ isPending, onSubmit, onCancel, defaultValues }: {
 function ClientAvatar({ name, size = "md" }: { name: string; size?: "sm" | "md" | "lg" }) {
   const initials = name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
   const colors = [
-    "bg-blue-100 text-blue-700", "bg-purple-100 text-purple-700",
-    "bg-green-100 text-green-700", "bg-amber-100 text-amber-700",
-    "bg-indigo-100 text-indigo-700", "bg-pink-100 text-pink-700",
+    "bg-[#DBEAFE] text-[#1D4ED8]", "bg-[#EDE9FE] text-[#7C3AED]",
+    "bg-[#DCFCE7] text-[#15803D]", "bg-[#FEF3C7] text-[#B45309]",
+    "bg-[#E0E7FF] text-[#4338CA]", "bg-pink-100 text-pink-700",
   ];
   const color = colors[name.charCodeAt(0) % colors.length];
   const sz = size === "lg" ? "w-14 h-14 text-lg" : size === "sm" ? "w-8 h-8 text-xs" : "w-10 h-10 text-sm";
@@ -127,7 +127,7 @@ function ClientRow({ c, onEdit }: { c: Client; onEdit: () => void }) {
       <td className="py-3 px-4">
         <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-[4px] ${
           c.type === "COMPANY"
-            ? "bg-blue-50 text-blue-700 border border-blue-100"
+            ? "bg-[#EFF6FF] text-[#1D4ED8] border border-[#DBEAFE]"
             : "bg-[#F1F5F9] text-[#64748B] border border-[#E2E8F0]"
         }`}>
           {c.type === "COMPANY" ? "Company" : "Individual"}
@@ -289,10 +289,10 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
       {/* ── 4 Metric cards ───────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
         {[
-          { label: "Total Clients",       value: total,                                           sub: "All time registered clients", Icon: Users,     iconBg: "bg-blue-50",   iconColor: "text-[#2563EB]", href: "/admin/clients"                  },
-          { label: "Active Clients",      value: activeCount,                                     sub: "Currently active clients",    Icon: UserCheck, iconBg: "bg-green-50",  iconColor: "text-[#16A34A]", href: "/admin/clients?filter=active"    },
-          { label: "Outstanding Balance", value: totalOutstanding > 0 ? formatKES(totalOutstanding) : "Clear", sub: `Across ${unpaidClients.length} client${unpaidClients.length !== 1 ? "s" : ""}`, Icon: DollarSign, iconBg: totalOutstanding > 0 ? "bg-red-50" : "bg-green-50", iconColor: totalOutstanding > 0 ? "text-[#DC2626]" : "text-[#16A34A]", href: "/admin/clients?filter=unpaid" },
-          { label: "New This Month",      value: newThisMonth,                                    sub: "New clients this month",      Icon: UserPlus,  iconBg: "bg-purple-50", iconColor: "text-[#7C3AED]", href: "/admin/clients"                  },
+          { label: "Total Clients",       value: total,                                           sub: "All time registered clients", Icon: Users,     iconBg: "bg-[#EFF6FF]",   iconColor: "text-[#2563EB]", href: "/admin/clients"                  },
+          { label: "Active Clients",      value: activeCount,                                     sub: "Currently active clients",    Icon: UserCheck, iconBg: "bg-[#F0FDF4]",  iconColor: "text-[#16A34A]", href: "/admin/clients?filter=active"    },
+          { label: "Outstanding Balance", value: totalOutstanding > 0 ? formatKES(totalOutstanding) : "Clear", sub: `Across ${unpaidClients.length} client${unpaidClients.length !== 1 ? "s" : ""}`, Icon: DollarSign, iconBg: totalOutstanding > 0 ? "bg-[#FFF1F2]" : "bg-[#F0FDF4]", iconColor: totalOutstanding > 0 ? "text-[#DC2626]" : "text-[#16A34A]", href: "/admin/clients?filter=unpaid" },
+          { label: "New This Month",      value: newThisMonth,                                    sub: "New clients this month",      Icon: UserPlus,  iconBg: "bg-[#F5F3FF]", iconColor: "text-[#7C3AED]", href: "/admin/clients"                  },
         ].map(m => (
           <Link key={m.label} href={m.href}
             className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card p-3.5 sm:p-5 flex items-center gap-2.5 sm:gap-4 hover:border-[#2563EB]/30 hover:shadow-card-hover transition-all group">
@@ -313,8 +313,8 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
       {feedback && (
         <div className={`flex items-center justify-between text-sm px-4 py-3 rounded-[10px] ${
           feedback.type === "ok"
-            ? "bg-green-50 text-green-700 border border-green-200"
-            : "bg-red-50 text-red-700 border border-red-200"}`}>
+            ? "bg-[#F0FDF4] text-[#15803D] border border-[#86EFAC]"
+            : "bg-[#FFF1F2] text-[#B91C1C] border border-[#FECACA]"}`}>
           {feedback.msg}
           <button onClick={() => setFeedback(null)} className="p-1 rounded hover:bg-black/5">
             <X className="w-4 h-4" />
@@ -382,7 +382,7 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
                         <p className="text-sm font-semibold text-[#0F172A] truncate">{c.name}</p>
                         <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-[4px] shrink-0 ${
                           c.type === "COMPANY"
-                            ? "bg-blue-50 text-blue-700"
+                            ? "bg-[#EFF6FF] text-[#1D4ED8]"
                             : "bg-[#F1F5F9] text-[#64748B]"
                         }`}>
                           {c.type === "COMPANY" ? "Co" : "Ind"}
@@ -471,7 +471,7 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-semibold text-[#0F172A]">Clients needing follow up</h3>
                 {unpaidClients.length > 0 && (
-                  <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-bold">
+                  <span className="text-[10px] bg-[#FEE2E2] text-[#B91C1C] px-1.5 py-0.5 rounded-full font-bold">
                     {unpaidClients.length}
                   </span>
                 )}
@@ -493,7 +493,7 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-1">
                         <p className="text-xs font-semibold text-[#0F172A] truncate leading-tight">{c.name}</p>
-                        <span className="text-[10px] font-bold text-[#DC2626] bg-red-50 px-1.5 py-0.5 rounded shrink-0 leading-tight">
+                        <span className="text-[10px] font-bold text-[#DC2626] bg-[#FFF1F2] px-1.5 py-0.5 rounded shrink-0 leading-tight">
                           UNPAID
                         </span>
                       </div>
@@ -563,7 +563,7 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
           <div className="pt-4 mt-2 border-t border-[#E2E8F0]">
             <button
               onClick={() => { setEditing(null); handleDeactivate(editing.id); }}
-              className="w-full text-xs text-[#DC2626] hover:text-red-700 py-2 transition-colors">
+              className="w-full text-xs text-[#DC2626] hover:text-[#B91C1C] py-2 transition-colors">
               Deactivate client
             </button>
           </div>

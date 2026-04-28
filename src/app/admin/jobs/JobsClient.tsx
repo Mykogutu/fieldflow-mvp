@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -278,7 +278,7 @@ export default function JobsClient({
                           <span className="text-[11px] font-mono font-semibold text-[#2563EB] shrink-0">{job.jobNumber}</span>
                           <StatusBadge status={job.status} size="xs" />
                           {job.priority === "EMERGENCY" && (
-                            <span className="text-[10px] text-red-600 font-bold shrink-0">🚨</span>
+                            <span className="text-[10px] text-[#DC2626] font-bold shrink-0">🚨</span>
                           )}
                         </div>
                         <p className="text-sm font-semibold text-[#0F172A] truncate">{job.clientName}</p>
