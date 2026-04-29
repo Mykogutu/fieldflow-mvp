@@ -141,7 +141,11 @@ function SecurityRow({ icon: Icon, label, subtitle, action }: {
           <p className="text-[11px] text-[#94A3B8]">{subtitle}</p>
         </div>
       </div>
-      <button className="shrink-0 text-[11px] font-semibold px-2.5 py-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/40 hover:text-[#2563EB] hover:bg-[#EFF6FF]/30 transition-colors whitespace-nowrap">
+      <button
+        disabled
+        className="shrink-0 text-[11px] font-semibold px-2.5 py-1.5 rounded-[6px] border border-[#E2E8F0] text-[#94A3B8] bg-[#F8FAFC] cursor-not-allowed whitespace-nowrap"
+        title="This control is not active yet"
+      >
         {action}
       </button>
     </div>
@@ -189,6 +193,56 @@ function SelectRow({ icon: Icon, label, subtitle, options, defaultValue }: {
         className="shrink-0 text-xs border border-[#E2E8F0] rounded-[6px] px-2.5 py-1.5 text-[#334155] bg-white focus:outline-none focus:ring-1 focus:ring-[#2563EB]">
         {options.map(o => <option key={o}>{o}</option>)}
       </select>
+    </div>
+  );
+}
+
+function ControlledSelectRow({ icon: Icon, label, subtitle, options, value, onChange }: {
+  icon: React.ElementType;
+  label: string;
+  subtitle: string;
+  options: string[];
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-3.5 border-b border-[#F1F5F9] last:border-0">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="w-8 h-8 rounded-[8px] bg-[#F1F5F9] flex items-center justify-center shrink-0">
+          <Icon className="w-4 h-4 text-[#64748B]" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-[#0F172A]">{label}</p>
+          <p className="text-[11px] text-[#94A3B8]">{subtitle}</p>
+        </div>
+      </div>
+      <select value={value} onChange={e => onChange(e.target.value)}
+        className="shrink-0 text-xs border border-[#E2E8F0] rounded-[6px] px-2.5 py-1.5 text-[#334155] bg-white focus:outline-none focus:ring-1 focus:ring-[#2563EB]">
+        {options.map(o => <option key={o}>{o}</option>)}
+      </select>
+    </div>
+  );
+}
+
+function ControlledToggleRow({ icon: Icon, label, subtitle, on, onToggle }: {
+  icon: React.ElementType;
+  label: string;
+  subtitle: string;
+  on: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-3.5 border-b border-[#F1F5F9] last:border-0">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="w-8 h-8 rounded-[8px] bg-[#F1F5F9] flex items-center justify-center shrink-0">
+          <Icon className="w-4 h-4 text-[#64748B]" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-[#0F172A]">{label}</p>
+          <p className="text-[11px] text-[#94A3B8]">{subtitle}</p>
+        </div>
+      </div>
+      <Toggle on={on} onToggle={onToggle} />
     </div>
   );
 }
@@ -318,6 +372,11 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
   const [currency, setCurrency]           = useState(settings.currency ?? "KES");
   const [dateFormat, setDateFormat]       = useState(settings.date_format ?? "DD/MM/YYYY");
   const [timeFormat, setTimeFormat]       = useState(settings.time_format ?? "12-hour");
+  const [language, setLanguage]           = useState(settings.language ?? "English");
+  const [defaultView, setDefaultView]     = useState(settings.default_view ?? "Grid");
+  const [itemsPerPage, setItemsPerPage]   = useState(settings.items_per_page ?? "25");
+  const [emailNotifications, setEmailNotifications] = useState(settings.email_notifications !== "false");
+  const [pushNotifications, setPushNotifications]   = useState(settings.push_notifications === "true");
 
   // ── Company tab ───────────────────────────────────────────────────────────
   const [companyDesc, setCompanyDesc]             = useState(settings.company_description ?? "");
@@ -357,6 +416,19 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
   const [weeklyEarnings, setWeeklyEarnings]       = useState(settings.weekly_earnings !== "false");
   const [reviewRequests, setReviewRequests]       = useState(settings.review_requests !== "false");
   const [quoteFollowUps, setQuoteFollowUps]       = useState(settings.quote_follow_ups === "true");
+  const [whatsappJobAssignments, setWhatsappJobAssignments] = useState(settings.whatsapp_job_assignment_notifications !== "false");
+  const [whatsappOtpMessages, setWhatsappOtpMessages] = useState(settings.whatsapp_otp_completion_messages !== "false");
+  const [whatsappDocumentDelivery, setWhatsappDocumentDelivery] = useState(settings.whatsapp_document_delivery !== "false");
+  const [whatsappReassignmentAlerts, setWhatsappReassignmentAlerts] = useState(settings.whatsapp_reassignment_alerts !== "false");
+  const [whatsappClientNotifications, setWhatsappClientNotifications] = useState(settings.whatsapp_client_notifications !== "false");
+
+  // ── Data & privacy tab ───────────────────────────────────────────────────
+  const [completedJobsRetention, setCompletedJobsRetention] = useState(settings.retention_completed_jobs ?? "2 years");
+  const [invoiceRecordsRetention, setInvoiceRecordsRetention] = useState(settings.retention_invoice_records ?? "5 years");
+  const [activityLogsRetention, setActivityLogsRetention] = useState(settings.retention_activity_logs ?? "90 days");
+  const [analyticsUsage, setAnalyticsUsage] = useState(settings.analytics_usage !== "false");
+  const [productUpdatesEmail, setProductUpdatesEmail] = useState(settings.product_updates_email !== "false");
+  const [requireTwoFactor, setRequireTwoFactor] = useState(settings.require_two_factor === "true");
 
   // ── Documents tab ─────────────────────────────────────────────────────────
   const DEFAULT_DOCS = ["invoice", "job_card", "warranty"];
@@ -415,6 +487,11 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
           currency_symbol:      currency,
           date_format:          dateFormat,
           time_format:          timeFormat,
+          language,
+          default_view:         defaultView,
+          items_per_page:       itemsPerPage,
+          email_notifications:  String(emailNotifications),
+          push_notifications:   String(pushNotifications),
           industry,
           worker_title:         workerTitle,
           worker_title_plural:  workerTitlePlural,
@@ -443,6 +520,17 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
           weekly_earnings:      String(weeklyEarnings),
           review_requests:      String(reviewRequests),
           quote_follow_ups:     String(quoteFollowUps),
+          whatsapp_job_assignment_notifications: String(whatsappJobAssignments),
+          whatsapp_otp_completion_messages: String(whatsappOtpMessages),
+          whatsapp_document_delivery: String(whatsappDocumentDelivery),
+          whatsapp_reassignment_alerts: String(whatsappReassignmentAlerts),
+          whatsapp_client_notifications: String(whatsappClientNotifications),
+          retention_completed_jobs: completedJobsRetention,
+          retention_invoice_records: invoiceRecordsRetention,
+          retention_activity_logs: activityLogsRetention,
+          analytics_usage:      String(analyticsUsage),
+          product_updates_email: String(productUpdatesEmail),
+          require_two_factor:   String(requireTwoFactor),
           emoji: (INDUSTRY_TEMPLATES[industry] ?? INDUSTRY_TEMPLATES.OTHER).emoji,
         }),
       });
@@ -509,17 +597,17 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
 
               <div className="space-y-5">
                 <SectionCard title="Security Settings">
-                  <SecurityRow icon={Lock}       label="Password"        subtitle="Last changed 30 days ago"      action="Change" />
-                  <SecurityRow icon={Smartphone} label="Two-Factor Auth" subtitle="Disabled — add extra security"  action="Enable" />
-                  <SecurityRow icon={Eye}        label="Active Sessions" subtitle="2 active sessions"              action="Manage" />
-                  <SecurityRow icon={Activity}   label="Login Activity"  subtitle="View recent logins"             action="View"   />
+                  <SecurityRow icon={Lock}       label="Password"        subtitle="Password changes are not active in this build"      action="Not active" />
+                  <SecurityRow icon={Smartphone} label="Two-Factor Auth" subtitle="2FA enforcement is saved in Data & Privacy"         action="Configure below" />
+                  <SecurityRow icon={Eye}        label="Active Sessions" subtitle="Session management is planned for the auth layer"    action="Not active" />
+                  <SecurityRow icon={Activity}   label="Login Activity"  subtitle="Audit log storage is planned with workspace events" action="Not active" />
                 </SectionCard>
                 <SectionCard title="Preferences">
-                  <SelectRow icon={Languages} label="Language"            subtitle="Interface language"  options={["English", "Swahili", "French"]} defaultValue="English" />
-                  <ToggleRow icon={Bell}       label="Email Notifications" subtitle="Receive email alerts" defaultOn={true}  />
-                  <ToggleRow icon={BellOff}    label="Push Notifications"  subtitle="Browser push alerts"  defaultOn={false} />
-                  <SelectRow icon={LayoutGrid} label="Default View"        subtitle="Dashboard layout"    options={["Grid", "List", "Compact"]}     defaultValue="Grid"    />
-                  <SelectRow icon={List}       label="Items Per Page"      subtitle="Table pagination"    options={["10", "25", "50", "100"]}       defaultValue="25"      />
+                  <ControlledSelectRow icon={Languages} label="Language" subtitle="Saved for workspace-level localization" options={["English", "Swahili", "French"]} value={language} onChange={setLanguage} />
+                  <ControlledToggleRow icon={Bell} label="Email Notifications" subtitle="Used by notification and document delivery preferences" on={emailNotifications} onToggle={() => setEmailNotifications(v => !v)} />
+                  <ControlledToggleRow icon={BellOff} label="Push Notifications" subtitle="Saved for browser alert preferences" on={pushNotifications} onToggle={() => setPushNotifications(v => !v)} />
+                  <ControlledSelectRow icon={LayoutGrid} label="Default View" subtitle="Used by list pages that support grid/list modes" options={["Grid", "List", "Compact"]} value={defaultView} onChange={setDefaultView} />
+                  <ControlledSelectRow icon={List} label="Items Per Page" subtitle="Default table page size" options={["10", "25", "50", "100"]} value={itemsPerPage} onChange={setItemsPerPage} />
                 </SectionCard>
               </div>
 
@@ -542,25 +630,34 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                       </div>
                     ))}
                   </div>
-                  <button className="w-full mt-4 text-xs font-semibold py-2.5 rounded-[8px] border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#334155] transition-colors">
-                    Manage Storage
-                  </button>
+                  <div className="w-full mt-4 text-xs font-semibold py-2.5 rounded-[8px] border border-[#E2E8F0] text-[#94A3B8] bg-[#F8FAFC] text-center">
+                    Storage manager not active yet
+                  </div>
                 </div>
 
                 <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card p-4">
                   <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Account Actions</h3>
                   <div className="space-y-2">
                     {[
-                      { icon: Download, label: "Export Data",   danger: false },
-                      { icon: Upload,   label: "Import Data",   danger: false },
-                      { icon: Trash2,   label: "Delete Account",danger: true  },
-                    ].map(({ icon: Icon, label, danger }) => (
-                      <button key={label}
+                      { icon: Download, label: "Export Data", href: "/api/settings/export?scope=full", danger: false, note: "Download JSON" },
+                      { icon: Upload, label: "Import Data", href: "", danger: false, note: "Not active" },
+                      { icon: Trash2, label: "Delete Account", href: "", danger: true, note: "Use Data tab" },
+                    ].map(({ icon: Icon, label, href, danger, note }) => (
+                      href ? (
+                      <a key={label} href={href}
                         className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-[8px] border text-sm transition-colors
                           ${danger ? "border-[#FEE2E2] text-[#DC2626] hover:bg-[#FFF1F2]" : "border-[#E2E8F0] text-[#334155] hover:bg-[#F8FAFC] hover:border-[#CBD5E1]"}`}>
                         <div className="flex items-center gap-2"><Icon className="w-4 h-4" /><span className="font-medium">{label}</span></div>
-                        <ChevronRight className={`w-4 h-4 ${danger ? "text-[#DC2626]/60" : "text-[#94A3B8]"}`} />
+                        <span className="text-[10px] font-semibold text-[#94A3B8]">{note}</span>
+                      </a>
+                      ) : (
+                      <button key={label} type="button" disabled
+                        className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-[8px] border text-sm bg-[#F8FAFC] cursor-not-allowed
+                          ${danger ? "border-[#FEE2E2] text-[#DC2626]/70" : "border-[#E2E8F0] text-[#94A3B8]"}`}>
+                        <div className="flex items-center gap-2"><Icon className="w-4 h-4" /><span className="font-medium">{label}</span></div>
+                        <span className="text-[10px] font-semibold text-[#94A3B8]">{note}</span>
                       </button>
+                      )
                     ))}
                   </div>
                 </div>
@@ -650,7 +747,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
           {/* ═══════════════════════════ OPERATIONS ══════════════════════════ */}
           {tab === "operations" && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-              <div className="space-y-5">
+              <div className="space-y-5 order-2 lg:order-1">
 
                 <SectionCard title="Vocabulary / Terminology" subtitle="Words used in WhatsApp messages, documents, and across the platform.">
                   <p className="text-xs text-[#94A3B8] mb-3 leading-relaxed">Rename things to match your industry. Changes apply to the UI and generated documents.</p>
@@ -691,37 +788,41 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
 
               </div>
 
-              <div className="space-y-5">
-                <SectionCard title="Industry Preset" subtitle="Auto-fills labels, job types, and defaults for your industry. You can edit all values after selecting.">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {INDUSTRY_LIST.map(t => {
-                      const Icon = INDUSTRY_ICONS[t.key] ?? HelpCircle;
-                      const active = industry === t.key;
-                      return (
-                        <button key={t.key} type="button" onClick={() => applyTemplate(t.key)}
-                          className={`flex items-center gap-2 px-2.5 py-2.5 rounded-[10px] text-xs border transition-all text-left
-                            ${active ? "border-[#2563EB] bg-[#EFF6FF] text-[#2563EB] font-semibold" : "border-[#E2E8F0] bg-white text-[#64748B] hover:border-[#2563EB]/30 hover:bg-[#EFF6FF]/30"}`}>
-                          <Icon className={`w-3.5 h-3.5 shrink-0 ${active ? "text-[#2563EB]" : "text-[#94A3B8]"}`} />
-                          <span className="truncate">{t.displayName}</span>
-                          {active && <span className="ml-auto w-2 h-2 rounded-full bg-[#2563EB] shrink-0" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {industry !== "OTHER" && (
-                    <div className="mt-3 p-3 bg-[#EFF6FF]/60 border border-[#DBEAFE] rounded-[10px]">
-                      <p className="text-xs text-[#1D4ED8] font-semibold mb-1">Preset applied: {INDUSTRY_LIST.find(i => i.key === industry)?.displayName}</p>
-                      <p className="text-[11px] text-[#64748B]">Vocabulary, job types, and defaults have been filled in. You can edit any field above.</p>
+              <div className="contents lg:block lg:space-y-5 lg:order-2">
+                <div className="order-1 lg:order-none">
+                  <SectionCard title="Industry Preset" subtitle="Auto-fills labels, job types, and defaults for your industry. You can edit all values after selecting.">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {INDUSTRY_LIST.map(t => {
+                        const Icon = INDUSTRY_ICONS[t.key] ?? HelpCircle;
+                        const active = industry === t.key;
+                        return (
+                          <button key={t.key} type="button" onClick={() => applyTemplate(t.key)}
+                            className={`flex items-center gap-2 px-2.5 py-2.5 rounded-[10px] text-xs border transition-all text-left
+                              ${active ? "border-[#2563EB] bg-[#EFF6FF] text-[#2563EB] font-semibold" : "border-[#E2E8F0] bg-white text-[#64748B] hover:border-[#2563EB]/30 hover:bg-[#EFF6FF]/30"}`}>
+                            <Icon className={`w-3.5 h-3.5 shrink-0 ${active ? "text-[#2563EB]" : "text-[#94A3B8]"}`} />
+                            <span className="truncate">{t.displayName}</span>
+                            {active && <span className="ml-auto w-2 h-2 rounded-full bg-[#2563EB] shrink-0" />}
+                          </button>
+                        );
+                      })}
                     </div>
-                  )}
-                </SectionCard>
+                    {industry !== "OTHER" && (
+                      <div className="mt-3 p-3 bg-[#EFF6FF]/60 border border-[#DBEAFE] rounded-[10px]">
+                        <p className="text-xs text-[#1D4ED8] font-semibold mb-1">Preset applied: {INDUSTRY_LIST.find(i => i.key === industry)?.displayName}</p>
+                        <p className="text-[11px] text-[#64748B]">Vocabulary, job types, and defaults have been filled in. You can edit any field above.</p>
+                      </div>
+                    )}
+                  </SectionCard>
+                </div>
 
-                <SectionCard title="Default Warranty Text" subtitle="Added to warranty certificates unless overridden per job.">
-                  <textarea value={defaultWarranty} onChange={e => setDefaultWarranty(e.target.value)}
-                    rows={3} placeholder="e.g. 1 year workmanship warranty on qualifying repair jobs. Does not cover physical damage or misuse."
-                    className="ff-input text-sm resize-none" />
-                  <p className="text-[11px] text-[#94A3B8] mt-2">Also configurable in the Documents tab.</p>
-                </SectionCard>
+                <div className="order-3 lg:order-none">
+                  <SectionCard title="Default Warranty Text" subtitle="Added to warranty certificates unless overridden per job.">
+                    <textarea value={defaultWarranty} onChange={e => setDefaultWarranty(e.target.value)}
+                      rows={3} placeholder="e.g. 1 year workmanship warranty on qualifying repair jobs. Does not cover physical damage or misuse."
+                      className="ff-input text-sm resize-none" />
+                    <p className="text-[11px] text-[#94A3B8] mt-2">Also configurable in the Documents tab.</p>
+                  </SectionCard>
+                </div>
               </div>
             </div>
           )}
@@ -1136,11 +1237,12 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                 </div>
 
                 <SectionCard title="Message Settings" subtitle="Configure how WhatsApp messages are sent.">
-                  <ToggleRow icon={Bell}          label="Job assignment notifications" subtitle="Notify worker via WhatsApp when a job is assigned" defaultOn={true}  />
-                  <ToggleRow icon={CheckCircle2}   label="OTP completion messages"     subtitle="Send OTP to client when worker reports done"       defaultOn={true}  />
-                  <ToggleRow icon={FileText}       label="Document delivery"            subtitle="Send PDFs to clients after job verification"       defaultOn={true}  />
-                  <ToggleRow icon={RefreshCw}      label="Reassignment alerts"          subtitle="Notify worker when a job is reassigned to them"    defaultOn={true}  />
-                  <ToggleRow icon={Clock}          label="Daily briefing"               subtitle="Morning job schedule sent to each worker"          defaultOn={briefingEnabled} />
+                  <ControlledToggleRow icon={Bell} label="Job assignment notifications" subtitle="Notify worker via WhatsApp when a job is assigned" on={whatsappJobAssignments} onToggle={() => setWhatsappJobAssignments(v => !v)} />
+                  <ControlledToggleRow icon={CheckCircle2} label="OTP completion messages" subtitle="Send OTP to client when worker reports done" on={whatsappOtpMessages} onToggle={() => setWhatsappOtpMessages(v => !v)} />
+                  <ControlledToggleRow icon={FileText} label="Document delivery" subtitle="Send PDFs to clients after job verification" on={whatsappDocumentDelivery} onToggle={() => setWhatsappDocumentDelivery(v => !v)} />
+                  <ControlledToggleRow icon={RefreshCw} label="Reassignment alerts" subtitle="Notify worker when a job is reassigned to them" on={whatsappReassignmentAlerts} onToggle={() => setWhatsappReassignmentAlerts(v => !v)} />
+                  <ControlledToggleRow icon={MessageCircle} label="Client notifications" subtitle="Send client appointment and postponement updates" on={whatsappClientNotifications} onToggle={() => setWhatsappClientNotifications(v => !v)} />
+                  <ControlledToggleRow icon={Clock} label="Daily briefing" subtitle="Morning job schedule sent to each worker" on={briefingEnabled} onToggle={() => setBriefingEnabled(v => !v)} />
                 </SectionCard>
               </div>
 
@@ -1407,26 +1509,26 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                             <p className="text-[11px] text-[#94A3B8]">{desc}</p>
                           </div>
                         </div>
-                        <button className="shrink-0 inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/40 hover:text-[#2563EB] hover:bg-[#EFF6FF]/30 transition-colors">
+                        <a href={`/api/settings/export?scope=${encodeURIComponent(label)}`} className="shrink-0 inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/40 hover:text-[#2563EB] hover:bg-[#EFF6FF]/30 transition-colors">
                           <Download className="w-3 h-3" /> Export
-                        </button>
+                        </a>
                       </div>
                     ))}
                   </div>
                 </SectionCard>
 
                 <SectionCard title="Data Retention" subtitle="Control how long your data is kept.">
-                  <SelectRow icon={FileText}   label="Completed jobs"     subtitle="Keep closed job records for"    options={["1 year", "2 years", "5 years", "Forever"]} defaultValue="2 years" />
-                  <SelectRow icon={CreditCard} label="Invoice records"    subtitle="Retain invoice history for"     options={["3 years", "5 years", "7 years", "Forever"]} defaultValue="5 years" />
-                  <SelectRow icon={Database}   label="Activity logs"      subtitle="System audit logs kept for"     options={["30 days", "90 days", "1 year"]}             defaultValue="90 days" />
+                  <ControlledSelectRow icon={FileText} label="Completed jobs" subtitle="Keep closed job records for" options={["1 year", "2 years", "5 years", "Forever"]} value={completedJobsRetention} onChange={setCompletedJobsRetention} />
+                  <ControlledSelectRow icon={CreditCard} label="Invoice records" subtitle="Retain invoice history for" options={["3 years", "5 years", "7 years", "Forever"]} value={invoiceRecordsRetention} onChange={setInvoiceRecordsRetention} />
+                  <ControlledSelectRow icon={Database} label="Activity logs" subtitle="System audit logs kept for" options={["30 days", "90 days", "1 year"]} value={activityLogsRetention} onChange={setActivityLogsRetention} />
                 </SectionCard>
               </div>
 
               <div className="space-y-5">
                 <SectionCard title="Privacy Settings" subtitle="Manage how data is used in your workspace.">
-                  <ToggleRow icon={Eye}        label="Analytics & Usage"         subtitle="Allow FieldFlow to improve the product using anonymised usage data" defaultOn={true}  />
-                  <ToggleRow icon={Bell}       label="Product updates by email"  subtitle="Receive release notes and feature announcements"                    defaultOn={true}  />
-                  <ToggleRow icon={Shield}     label="Two-factor auth required"  subtitle="Enforce 2FA for all admin accounts"                                 defaultOn={false} />
+                  <ControlledToggleRow icon={Eye} label="Analytics & Usage" subtitle="Allow FieldFlow to improve the product using anonymised usage data" on={analyticsUsage} onToggle={() => setAnalyticsUsage(v => !v)} />
+                  <ControlledToggleRow icon={Bell} label="Product updates by email" subtitle="Receive release notes and feature announcements" on={productUpdatesEmail} onToggle={() => setProductUpdatesEmail(v => !v)} />
+                  <ControlledToggleRow icon={Shield} label="Two-factor auth required" subtitle="Saved for admin access policy enforcement" on={requireTwoFactor} onToggle={() => setRequireTwoFactor(v => !v)} />
                 </SectionCard>
 
                 {/* Danger zone */}
@@ -1443,14 +1545,14 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                       { label: "Delete all job history",    desc: "Permanently remove all jobs, photos, and job cards",       action: "Delete jobs"    },
                       { label: "Reset workspace settings",  desc: "Revert all settings to factory defaults",                   action: "Reset settings" },
                       { label: "Delete workspace",          desc: "Permanently delete your workspace and all associated data",  action: "Delete workspace"},
-                    ].map(({ label, desc, action }) => (
+                    ].map(({ label, desc }) => (
                       <div key={label} className="flex items-center justify-between gap-4 py-2.5 border-b border-red-50 last:border-0">
                         <div>
                           <p className="text-sm font-semibold text-[#0F172A]">{label}</p>
                           <p className="text-[11px] text-[#94A3B8] mt-0.5">{desc}</p>
                         </div>
-                        <button className="shrink-0 text-[11px] font-semibold px-2.5 py-1.5 rounded-[6px] border border-[#FECACA] text-[#DC2626] hover:bg-[#FFF1F2] transition-colors whitespace-nowrap">
-                          {action}
+                        <button disabled className="shrink-0 text-[11px] font-semibold px-2.5 py-1.5 rounded-[6px] border border-[#FECACA] text-[#DC2626]/70 bg-[#FFF1F2] cursor-not-allowed whitespace-nowrap" title="Requires a confirmation workflow before activation">
+                          Confirmation required
                         </button>
                       </div>
                     ))}

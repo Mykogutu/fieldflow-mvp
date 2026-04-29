@@ -459,7 +459,7 @@ export default async function DashboardPage({
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Collection Rate</p>
-                    <p className="mt-1 text-3xl font-black text-[#0F172A]">{collectionRate}%</p>
+                    <p className="mt-1 text-2xl font-bold text-[#0F172A] leading-none">{collectionRate}%</p>
                   </div>
                   <div className="w-10 h-10 rounded-[12px] bg-[#DCFCE7] flex items-center justify-center shrink-0">
                     <ReceiptText className="w-5 h-5 text-[#16A34A]" />
@@ -482,7 +482,7 @@ export default async function DashboardPage({
                 ].map((item) => (
                   <div key={item.label} className={`rounded-[12px] ${item.bg} px-3 py-3`}>
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{item.label}</p>
-                    <p className={`mt-1 text-sm font-black leading-tight ${item.tone}`}>{item.value}</p>
+                    <p className={`mt-1 text-sm font-semibold leading-tight ${item.tone}`}>{item.value}</p>
                   </div>
                 ))}
               </div>

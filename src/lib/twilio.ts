@@ -14,6 +14,7 @@ import {
   applyBrandingFooter,
   type WhatsAppSender,
 } from "./senders";
+import { prisma } from "./prisma";
 
 function to(phone: string) {
   return `whatsapp:${phone}`;
@@ -24,6 +25,22 @@ async function resolveSender(
 ): Promise<WhatsAppSender | null> {
   if (sender) return sender;
   return await getDefaultSender();
+}
+
+async function isWhatsAppFlowEnabled(
+  settingKey: string,
+  sender?: WhatsAppSender | null
+): Promise<boolean> {
+  const s = await resolveSender(sender);
+  const workspaceId = s?.workspaceId;
+  if (!workspaceId) return true;
+
+  const setting = await prisma.setting.findFirst({
+    where: { workspaceId, key: settingKey },
+    select: { value: true },
+  });
+
+  return setting?.value !== "false";
 }
 
 export async function sendWhatsApp(
@@ -38,10 +55,17 @@ export async function sendWhatsApp(
   }
   try {
     const client = getTwilioClient(s);
+    const poweredBySetting = await prisma.setting.findFirst({
+      where: { workspaceId: s.workspaceId, key: "show_powered_by" },
+      select: { value: true },
+    });
+    const outboundBody =
+      poweredBySetting?.value === "false" ? body : applyBrandingFooter(s, body);
+
     await client.messages.create({
       from: senderFromAddress(s),
       to: to(phone),
-      body: applyBrandingFooter(s, body),
+      body: outboundBody,
     });
   } catch (err) {
     console.error("[Twilio] sendWhatsApp error:", err);
@@ -59,6 +83,8 @@ export async function sendJobAssignment(
   },
   sender?: WhatsAppSender | null
 ): Promise<void> {
+  if (!(await isWhatsAppFlowEnabled("whatsapp_job_assignment_notifications", sender))) return;
+
   const body =
     `🔔 *New Job Assigned*\n\n` +
     `Client: ${params.clientName}\n` +
@@ -80,6 +106,8 @@ export async function sendOTPToClient(
   },
   sender?: WhatsAppSender | null
 ): Promise<void> {
+  if (!(await isWhatsAppFlowEnabled("whatsapp_otp_completion_messages", sender))) return;
+
   // Tenant brand sits in the body so SHARED-tier messages still feel like
   // they came from the workspace, not from FieldFlow.
   const body =
@@ -102,6 +130,8 @@ export async function sendDocsToClient(
   },
   sender?: WhatsAppSender | null
 ): Promise<void> {
+  if (!(await isWhatsAppFlowEnabled("whatsapp_document_delivery", sender))) return;
+
   const parts = [
     `✅ *Service Verified — ${params.companyName}*\n`,
     `Dear ${params.clientName}, thank you for using our services.\n`,
@@ -117,6 +147,8 @@ export async function sendPostponeNotice(
   params: { reason: string; companyName: string },
   sender?: WhatsAppSender | null
 ): Promise<void> {
+  if (!(await isWhatsAppFlowEnabled("whatsapp_client_notifications", sender))) return;
+
   const body =
     `📅 *Appointment Update — ${params.companyName}*\n\n` +
     `Your appointment has been postponed.\n` +

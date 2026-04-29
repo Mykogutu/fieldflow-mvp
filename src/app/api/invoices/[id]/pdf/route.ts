@@ -15,9 +15,10 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   if (!invoice) return new NextResponse("Not found", { status: 404 });
 
   const companyName = await getCompanyName();
-  const companySetting = await prisma.setting.findFirst({
-    where: { workspaceId, key: "company_phone" },
+  const settings = await prisma.setting.findMany({
+    where: { workspaceId, key: { in: ["company_phone", "brand_color", "pdf_footer"] } },
   });
+  const settingsMap = Object.fromEntries(settings.map((setting) => [setting.key, setting.value]));
 
   const pdfBytes = generateInvoicePDF({
     invoiceNumber: invoice.invoiceNumber,
@@ -32,7 +33,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     items: invoice.items as { description: string; amount: number }[] | undefined,
     createdAt: invoice.createdAt,
     companyName,
-    companyPhone: companySetting?.value ?? "",
+    companyPhone: settingsMap.company_phone ?? "",
+    brandColor: settingsMap.brand_color,
+    footerText: settingsMap.pdf_footer,
   });
 
   return new NextResponse(Buffer.from(pdfBytes), {

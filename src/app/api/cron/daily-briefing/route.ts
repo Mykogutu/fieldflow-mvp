@@ -11,6 +11,18 @@ export async function GET(req: NextRequest) {
   }
 
   const workspaceId = await currentWorkspaceId();
+  const briefingSetting = await prisma.setting.findFirst({
+    where: { workspaceId, key: "briefing_enabled" },
+    select: { value: true },
+  });
+  const whatsappBriefingSetting = await prisma.setting.findFirst({
+    where: { workspaceId, key: "whatsapp_job_assignment_notifications" },
+    select: { value: true },
+  });
+
+  if (briefingSetting?.value === "false" || whatsappBriefingSetting?.value === "false") {
+    return NextResponse.json({ ok: true, sent: 0, skipped: "Daily briefing is disabled" });
+  }
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
