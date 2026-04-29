@@ -1,7 +1,11 @@
+import { jsPDF } from "jspdf";
+
 export type TemplateDocumentType =
   | "INVOICE"
   | "JOB_CARD"
   | "WARRANTY_CERTIFICATE"
+  | "COMPLETION_CERTIFICATE"
+  | "QUOTATION"
   | "INSTALLATION_REPORT"
   | "SERVICE_REPORT"
   | "FUEL_CALIBRATION_REPORT"
@@ -29,6 +33,16 @@ export const DOCUMENT_TEMPLATE_DEFINITIONS: Record<
     title: "Warranty Certificate",
     subtitle: "Warranty terms issued after verification",
     sections: ["Client", "Asset", "Coverage", "Terms", "Verification"],
+  },
+  COMPLETION_CERTIFICATE: {
+    title: "Completion Certificate",
+    subtitle: "Formal proof that the service was completed and accepted",
+    sections: ["Client", "Service Scope", "Completion Details", "Worker", "Client Confirmation"],
+  },
+  QUOTATION: {
+    title: "Quotation",
+    subtitle: "Pre-job estimate with scope, line items, and approval terms",
+    sections: ["Client", "Scope", "Line Items", "Terms", "Approval"],
   },
   INSTALLATION_REPORT: {
     title: "Installation Report",
@@ -76,8 +90,8 @@ export const SETTINGS_DOC_TO_TEMPLATE: Record<string, TemplateDocumentType> = {
   invoice: "INVOICE",
   job_card: "JOB_CARD",
   warranty: "WARRANTY_CERTIFICATE",
-  completion_certificate: "CLIENT_CONFIRMATION_RECEIPT",
-  quotation: "OTHER",
+  completion_certificate: "COMPLETION_CERTIFICATE",
+  quotation: "QUOTATION",
   service_report: "SERVICE_REPORT",
   installation_report: "INSTALLATION_REPORT",
   fuel_calibration_report: "FUEL_CALIBRATION_REPORT",
@@ -87,19 +101,41 @@ export const SETTINGS_DOC_TO_TEMPLATE: Record<string, TemplateDocumentType> = {
   compliance_certificate: "COMPLIANCE_CERTIFICATE",
 };
 
+const TEMPLATE_TO_SETTINGS_DOC = Object.fromEntries(
+  Object.entries(SETTINGS_DOC_TO_TEMPLATE).map(([key, value]) => [value, key])
+) as Record<TemplateDocumentType, string>;
+
+function resolveTemplateType(type: string): TemplateDocumentType {
+  return (type.toUpperCase() in DOCUMENT_TEMPLATE_DEFINITIONS
+    ? type.toUpperCase()
+    : SETTINGS_DOC_TO_TEMPLATE[type] ?? "OTHER") as TemplateDocumentType;
+}
+
+function resolveDocumentConfig(
+  type: TemplateDocumentType,
+  settings: Record<string, string>
+): Record<string, unknown> {
+  try {
+    const config = JSON.parse(settings.document_type_config || "{}") as Record<string, Record<string, unknown>>;
+    return config[TEMPLATE_TO_SETTINGS_DOC[type]] ?? {};
+  } catch {
+    return {};
+  }
+}
+
 export function renderDocumentTemplateHtml(
   type: string,
   settings: Record<string, string>,
   data: Record<string, string> = {}
 ): string {
-  const templateType = (type.toUpperCase() in DOCUMENT_TEMPLATE_DEFINITIONS
-    ? type.toUpperCase()
-    : SETTINGS_DOC_TO_TEMPLATE[type] ?? "OTHER") as TemplateDocumentType;
+  const templateType = resolveTemplateType(type);
   const definition = DOCUMENT_TEMPLATE_DEFINITIONS[templateType] ?? DOCUMENT_TEMPLATE_DEFINITIONS.OTHER;
+  const config = resolveDocumentConfig(templateType, settings);
   const companyName = settings.company_name || "FieldFlow";
-  const brandColor = settings.brand_color || "#2563EB";
+  const brandColor = config.useBrandColor === false ? "#0F172A" : settings.brand_color || "#2563EB";
   const currency = settings.currency || "KES";
-  const footer = settings.pdf_footer || `${companyName} - ${settings.company_phone || ""}`;
+  const footer = String(config.footerText || settings.pdf_footer || `${companyName} - ${settings.company_phone || ""}`);
+  const terms = String(config.defaultTerms || settings.default_warranty || "Generated from your configured FieldFlow document template.");
   const sample = {
     clientName: "Mrs. Aisha Mohamed",
     clientPhone: "+254712345005",
@@ -155,6 +191,9 @@ export function renderDocumentTemplateHtml(
       .grid { padding: 16px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
       .verification { margin-top: 22px; border: 2px solid var(--brand); border-radius: 14px; padding: 16px; display: flex; justify-content: space-between; align-items: center; }
       .code { font-size: 24px; font-weight: 900; color: var(--brand); }
+      .terms { margin-top: 22px; border: 1px solid var(--line); border-radius: 14px; padding: 16px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+      .terms strong { display: block; color: var(--ink); margin-bottom: 4px; }
+      .terms p { margin: 0; }
       .footer { padding: 18px 38px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; display: flex; justify-content: space-between; }
       @media print { body { background: white; } .page { margin: 0; box-shadow: none; } }
     </style>
@@ -189,6 +228,10 @@ export function renderDocumentTemplateHtml(
           </div>
           <div class="code">${escapeHtml(sample.serviceCode)}</div>
         </div>
+        <section class="terms">
+          <strong>Default terms</strong>
+          <p>${escapeHtml(terms)}</p>
+        </section>
       </div>
       <footer class="footer">
         <span>${escapeHtml(footer)}</span>
@@ -197,6 +240,114 @@ export function renderDocumentTemplateHtml(
     </main>
   </body>
 </html>`;
+}
+
+export function generateDocumentTemplateSamplePDF(
+  type: string,
+  settings: Record<string, string>
+): Uint8Array {
+  const templateType = resolveTemplateType(type);
+  const definition = DOCUMENT_TEMPLATE_DEFINITIONS[templateType] ?? DOCUMENT_TEMPLATE_DEFINITIONS.OTHER;
+  const config = resolveDocumentConfig(templateType, settings);
+  const companyName = settings.company_name || "FieldFlow";
+  const companyPhone = settings.company_phone || "";
+  const brandColor = config.useBrandColor === false ? "#0F172A" : settings.brand_color || "#2563EB";
+  const footer = String(config.footerText || settings.pdf_footer || `${companyName}${companyPhone ? ` - ${companyPhone}` : ""}`);
+  const terms = String(config.defaultTerms || settings.default_warranty || "");
+  const [r, g, b] = hexToRgb(brandColor);
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+
+  doc.setFillColor(r, g, b);
+  doc.rect(0, 0, 210, 30, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.text(companyName, 14, 13);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.text(companyPhone || "Document preview", 14, 22);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.text(definition.title.toUpperCase(), 196, 13, { align: "right" });
+
+  let y = 42;
+  doc.setTextColor(15, 23, 42);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text(definition.subtitle, 14, y);
+  y += 10;
+
+  doc.setFillColor(248, 250, 252);
+  doc.setDrawColor(226, 232, 240);
+  doc.roundedRect(10, y, 190, 24, 3, 3, "FD");
+  doc.setFontSize(8);
+  doc.setTextColor(100, 116, 139);
+  doc.text("CLIENT", 16, y + 8);
+  doc.text("JOB", 78, y + 8);
+  doc.text("AMOUNT", 142, y + 8);
+  doc.setTextColor(15, 23, 42);
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.text("Mrs. Aisha Mohamed", 16, y + 16);
+  doc.text("Water Tank Cleaning", 78, y + 16);
+  doc.text(`${settings.currency || "KES"} 6,500`, 142, y + 16);
+  y += 34;
+
+  for (const section of definition.sections) {
+    if (y > 252) {
+      doc.addPage();
+      y = 18;
+    }
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(10, y, 190, 22, 3, 3, "FD");
+    doc.setTextColor(r, g, b);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.text(section.toUpperCase(), 16, y + 8);
+    doc.setTextColor(71, 85, 105);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.text("Template section with workspace-aware fields and sample content.", 16, y + 16);
+    y += 28;
+  }
+
+  doc.setDrawColor(r, g, b);
+  doc.setLineWidth(0.6);
+  doc.roundedRect(10, y, 190, 18, 3, 3);
+  doc.setTextColor(r, g, b);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text("CLIENT VERIFICATION", 16, y + 7);
+  doc.text("847291", 190, y + 11, { align: "right" });
+  y += 26;
+
+  if (terms && y < 270) {
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.2);
+    doc.roundedRect(10, y, 190, 16, 3, 3);
+    doc.setTextColor(71, 85, 105);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.text(terms, 16, y + 7, { maxWidth: 178 });
+  }
+
+  doc.setTextColor(100, 116, 139);
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(8);
+  doc.text(footer || "Generated by FieldFlow", 14, 286);
+
+  return doc.output("arraybuffer") as unknown as Uint8Array;
+}
+
+function hexToRgb(hex: string): [number, number, number] {
+  const normalized = hex.replace("#", "").trim();
+  if (!/^[0-9a-f]{6}$/i.test(normalized)) return [37, 99, 235];
+  return [
+    parseInt(normalized.slice(0, 2), 16),
+    parseInt(normalized.slice(2, 4), 16),
+    parseInt(normalized.slice(4, 6), 16),
+  ];
 }
 
 function escapeHtml(value: string): string {

@@ -16,6 +16,14 @@ import {
 } from "./senders";
 import { prisma } from "./prisma";
 
+type WhatsAppSendMeta = {
+  messageType?: string;
+  jobId?: string;
+  clientId?: string;
+  workerId?: string;
+  templateId?: string;
+};
+
 function to(phone: string) {
   return `whatsapp:${phone}`;
 }
@@ -46,12 +54,13 @@ async function isWhatsAppFlowEnabled(
 export async function sendWhatsApp(
   phone: string,
   body: string,
-  sender?: WhatsAppSender | null
-): Promise<void> {
+  sender?: WhatsAppSender | null,
+  meta: WhatsAppSendMeta = {}
+): Promise<boolean> {
   const s = await resolveSender(sender);
   if (!s) {
     console.error("[Twilio] sendWhatsApp: no sender configured");
-    return;
+    return false;
   }
   try {
     const client = getTwilioClient(s);
@@ -62,13 +71,57 @@ export async function sendWhatsApp(
     const outboundBody =
       poweredBySetting?.value === "false" ? body : applyBrandingFooter(s, body);
 
-    await client.messages.create({
+    const message = await client.messages.create({
       from: senderFromAddress(s),
       to: to(phone),
       body: outboundBody,
     });
+    await logWhatsAppMessage(s, phone, "SENT", meta, message.sid);
+    return true;
   } catch (err) {
     console.error("[Twilio] sendWhatsApp error:", err);
+    await logWhatsAppMessage(
+      s,
+      phone,
+      "FAILED",
+      meta,
+      undefined,
+      err instanceof Error ? err.message : "Unknown WhatsApp send error"
+    );
+    return false;
+  }
+}
+
+async function logWhatsAppMessage(
+  sender: WhatsAppSender,
+  phone: string,
+  status: "SENT" | "FAILED",
+  meta: WhatsAppSendMeta,
+  providerMessageSid?: string,
+  errorReason?: string
+) {
+  try {
+    await prisma.whatsAppMessageLog.create({
+      data: {
+        workspaceId: sender.workspaceId,
+        senderId: sender.id === "env-fallback" ? null : sender.id,
+        templateId: meta.templateId,
+        direction: "OUTBOUND",
+        messageType: meta.messageType ?? "FREEFORM",
+        jobId: meta.jobId,
+        clientId: meta.clientId,
+        workerId: meta.workerId,
+        toPhone: phone,
+        fromPhone: sender.phoneNumber,
+        status,
+        providerMessageSid,
+        errorReason,
+        sentAt: status === "SENT" ? new Date() : null,
+        failedAt: status === "FAILED" ? new Date() : null,
+      },
+    });
+  } catch (error) {
+    console.error("[Twilio] message log error:", error);
   }
 }
 
@@ -93,7 +146,7 @@ export async function sendJobAssignment(
     `Scheduled: ${params.scheduledDate}\n\n` +
     `Reply *ACCEPT* to confirm or *DECLINE* if unavailable.`;
 
-  await sendWhatsApp(workerPhone, body, sender);
+  await sendWhatsApp(workerPhone, body, sender, { messageType: "JOB_ASSIGNMENT", jobId: params.jobId });
 }
 
 export async function sendOTPToClient(
@@ -117,7 +170,7 @@ export async function sendOTPToClient(
     `🔐 *Service Code: ${params.otpCode}*\n\n` +
     `Share this code with the technician AFTER payment to confirm the service.`;
 
-  await sendWhatsApp(clientPhone, body, sender);
+  await sendWhatsApp(clientPhone, body, sender, { messageType: "SERVICE_COMPLETION_OTP" });
 }
 
 export async function sendDocsToClient(
@@ -131,6 +184,7 @@ export async function sendDocsToClient(
   sender?: WhatsAppSender | null
 ): Promise<void> {
   if (!(await isWhatsAppFlowEnabled("whatsapp_document_delivery", sender))) return;
+  if (!(await isWhatsAppFlowEnabled("document_send_whatsapp", sender))) return;
 
   const parts = [
     `✅ *Service Verified — ${params.companyName}*\n`,
@@ -139,7 +193,7 @@ export async function sendDocsToClient(
   if (params.invoiceUrl) parts.push(`📄 Invoice: ${params.invoiceUrl}`);
   if (params.jobCardUrl) parts.push(`📋 Job Card: ${params.jobCardUrl}`);
   parts.push("\nThank you for your business!");
-  await sendWhatsApp(clientPhone, parts.join("\n"), sender);
+  await sendWhatsApp(clientPhone, parts.join("\n"), sender, { messageType: "DOCUMENT_DELIVERY" });
 }
 
 export async function sendPostponeNotice(
@@ -154,7 +208,7 @@ export async function sendPostponeNotice(
     `Your appointment has been postponed.\n` +
     `Reason: ${params.reason}\n\n` +
     `We will contact you shortly to reschedule.`;
-  await sendWhatsApp(clientPhone, body, sender);
+  await sendWhatsApp(clientPhone, body, sender, { messageType: "CLIENT_NOTIFICATION" });
 }
 
 export async function sendWorkerReply(
@@ -162,5 +216,5 @@ export async function sendWorkerReply(
   message: string,
   sender?: WhatsAppSender | null
 ): Promise<void> {
-  await sendWhatsApp(phone, message, sender);
+  await sendWhatsApp(phone, message, sender, { messageType: "WORKER_REPLY" });
 }

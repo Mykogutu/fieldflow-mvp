@@ -24,6 +24,7 @@ const DOCUMENT_OPTIONS = [
   { key: "job_card", label: "Job Card" },
   { key: "warranty", label: "Warranty Certificate" },
   { key: "completion_certificate", label: "Completion Certificate" },
+  { key: "quotation", label: "Quotation" },
   { key: "service_report", label: "Service Report" },
   { key: "installation_report", label: "Installation Report" },
   { key: "fuel_calibration_report", label: "Fuel Calibration Report" },
@@ -65,9 +66,16 @@ const documentKeyMap: Record<string, string> = {
 export default function OnboardingClient({
   settings,
   adminName,
+  recordCounts,
 }: {
   settings: Record<string, string>;
   adminName: string;
+  recordCounts: {
+    workers: number;
+    clients: number;
+    assets: number;
+    jobs: number;
+  };
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -101,6 +109,9 @@ export default function OnboardingClient({
   const [jobTypes, setJobTypes] = useState<string[]>(safeJson(settings.job_types, []));
   const [zones, setZones] = useState<string[]>(safeJson(settings.zones, []));
   const [enabledDocs, setEnabledDocs] = useState<string[]>(safeJson(settings.enabled_documents, ["invoice", "job_card"]));
+  const [docSendWhatsapp, setDocSendWhatsapp] = useState(settings.document_send_whatsapp !== "false");
+  const [docSendEmail, setDocSendEmail] = useState(settings.document_send_email === "true");
+  const [docStoreDashboard, setDocStoreDashboard] = useState(settings.document_store_dashboard !== "false");
 
   const selectedIndustry = useMemo(
     () => INDUSTRY_LIST.find((industry) => industry.key === form.industry) ?? INDUSTRY_LIST[0],
@@ -133,6 +144,9 @@ export default function OnboardingClient({
       job_types: JSON.stringify(jobTypes),
       zones: JSON.stringify(zones),
       enabled_documents: JSON.stringify(enabledDocs),
+      document_send_whatsapp: String(docSendWhatsapp),
+      document_send_email: String(docSendEmail),
+      document_store_dashboard: String(docStoreDashboard),
       currency: settings.currency ?? "KES",
       currency_symbol: settings.currency_symbol ?? settings.currency ?? "KES",
       show_logo_on_docs: settings.show_logo_on_docs ?? "true",
@@ -265,6 +279,8 @@ export default function OnboardingClient({
                     <Input label="Job plural" value={form.job_label_plural} onChange={(value) => update("job_label_plural", value)} />
                     <Input label="Asset label" value={form.asset_label} onChange={(value) => update("asset_label", value)} />
                     <Input label="Asset plural" value={form.asset_label_plural} onChange={(value) => update("asset_label_plural", value)} />
+                    <Input label="Client label" value={form.client_label} onChange={(value) => update("client_label", value)} />
+                    <Input label="Client plural" value={form.client_label_plural} onChange={(value) => update("client_label_plural", value)} />
                   </div>
                 </div>
               )}
@@ -301,23 +317,33 @@ export default function OnboardingClient({
               )}
 
               {step === 4 && (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {DOCUMENT_OPTIONS.map((doc) => {
-                    const selected = enabledDocs.includes(doc.key);
-                    return (
-                      <button
-                        key={doc.key}
-                        type="button"
-                        onClick={() => setEnabledDocs(selected ? enabledDocs.filter((item) => item !== doc.key) : [...enabledDocs, doc.key])}
-                        className={`flex items-center justify-between rounded-[12px] border px-4 py-3 text-left text-sm transition-colors ${
-                          selected ? "border-[#93C5FD] bg-[#EFF6FF] text-[#1D4ED8]" : "border-[#E2E8F0] text-[#475569] hover:bg-[#F8FAFC]"
-                        }`}
-                      >
-                        <span className="font-semibold">{doc.label}</span>
-                        {selected ? <Check className="h-4 w-4" /> : <X className="h-4 w-4 text-[#CBD5E1]" />}
-                      </button>
-                    );
-                  })}
+                <div className="space-y-5">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {DOCUMENT_OPTIONS.map((doc) => {
+                      const selected = enabledDocs.includes(doc.key);
+                      return (
+                        <button
+                          key={doc.key}
+                          type="button"
+                          onClick={() => setEnabledDocs(selected ? enabledDocs.filter((item) => item !== doc.key) : [...enabledDocs, doc.key])}
+                          className={`flex items-center justify-between rounded-[12px] border px-4 py-3 text-left text-sm transition-colors ${
+                            selected ? "border-[#93C5FD] bg-[#EFF6FF] text-[#1D4ED8]" : "border-[#E2E8F0] text-[#475569] hover:bg-[#F8FAFC]"
+                          }`}
+                        >
+                          <span className="font-semibold">{doc.label}</span>
+                          {selected ? <Check className="h-4 w-4" /> : <X className="h-4 w-4 text-[#CBD5E1]" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="rounded-[14px] border border-[#E2E8F0] p-4">
+                    <h3 className="text-sm font-bold text-[#0F172A]">Default delivery</h3>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                      <ToggleChoice label="Send through WhatsApp" checked={docSendWhatsapp} onChange={setDocSendWhatsapp} />
+                      <ToggleChoice label="Email copies" checked={docSendEmail} onChange={setDocSendEmail} />
+                      <ToggleChoice label="Store on dashboard" checked={docStoreDashboard} onChange={setDocStoreDashboard} />
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -344,19 +370,16 @@ export default function OnboardingClient({
               )}
 
               {step === 6 && (
-                <div className="grid gap-4 sm:grid-cols-3">
-                  {[
-                    ["Add a worker", "/admin/workers"],
-                    ["Add a client", "/admin/clients"],
-                    ["Create first job", "/admin/jobs"],
-                  ].map(([label, href]) => (
-                    <Link key={label} href={href} className="rounded-[14px] border border-[#E2E8F0] p-5 text-sm font-bold text-[#0F172A] hover:border-[#93C5FD] hover:bg-[#EFF6FF]">
-                      {label}
-                    </Link>
-                  ))}
-                  <p className="text-sm leading-6 text-[#64748B] sm:col-span-3">
-                    You can finish onboarding now and add records from the dashboard, or open any setup screen above.
-                  </p>
+                <div className="space-y-4">
+                  <div className="rounded-[14px] border border-[#DBEAFE] bg-[#EFF6FF] p-4 text-sm leading-6 text-[#475569]">
+                    New workspaces start empty. Open any setup page below to add real records, or finish onboarding and add them later from the dashboard.
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    <FirstRecordCard label={`Add first ${form.worker_title.toLowerCase() || "worker"}`} href="/admin/workers" count={recordCounts.workers} countLabel={form.worker_title_plural || "Workers"} />
+                    <FirstRecordCard label={`Add first ${form.client_label.toLowerCase() || "client"}`} href="/admin/clients" count={recordCounts.clients} countLabel={form.client_label_plural || "Clients"} />
+                    <FirstRecordCard label={`Add first ${form.asset_label.toLowerCase() || "asset"}`} href="/admin/assets" count={recordCounts.assets} countLabel={form.asset_label_plural || "Assets"} />
+                    <FirstRecordCard label={`Create first ${form.job_label.toLowerCase() || "job"}`} href="/admin/jobs" count={recordCounts.jobs} countLabel={form.job_label_plural || "Jobs"} />
+                  </div>
                 </div>
               )}
 
@@ -367,6 +390,7 @@ export default function OnboardingClient({
                   <Review label="Job types" value={`${jobTypes.length} configured`} />
                   <Review label="Zones" value={`${zones.length} configured`} />
                   <Review label="Documents" value={`${enabledDocs.length} enabled`} />
+                  <Review label="First records" value={`${recordCounts.workers} ${form.worker_title_plural.toLowerCase()}, ${recordCounts.clients} ${form.client_label_plural.toLowerCase()}, ${recordCounts.assets} ${form.asset_label_plural.toLowerCase()}, ${recordCounts.jobs} ${form.job_label_plural.toLowerCase()}`} />
                   <Review label="WhatsApp" value={form.whatsapp_setup_mode} />
                 </div>
               )}
@@ -462,6 +486,52 @@ function TagEditor({
         <button type="button" onClick={add} className="ff-btn-primary px-3 py-2 text-sm">Add</button>
       </div>
     </div>
+  );
+}
+
+function ToggleChoice({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!checked)}
+      className={`flex items-center justify-between rounded-[12px] border px-3 py-2.5 text-left text-xs font-bold transition-colors ${
+        checked ? "border-[#93C5FD] bg-[#EFF6FF] text-[#1D4ED8]" : "border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC]"
+      }`}
+    >
+      <span>{label}</span>
+      <span className={`ml-3 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${checked ? "bg-[#2563EB] text-white" : "bg-[#E2E8F0] text-[#94A3B8]"}`}>
+        {checked ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+      </span>
+    </button>
+  );
+}
+
+function FirstRecordCard({
+  label,
+  href,
+  count,
+  countLabel,
+}: {
+  label: string;
+  href: string;
+  count: number;
+  countLabel: string;
+}) {
+  return (
+    <Link href={href} className="rounded-[14px] border border-[#E2E8F0] p-4 transition-colors hover:border-[#93C5FD] hover:bg-[#EFF6FF]">
+      <span className="block text-sm font-bold text-[#0F172A]">{label}</span>
+      <span className="mt-2 block text-xs font-semibold text-[#64748B]">
+        {count} {count === 1 ? countLabel.replace(/s$/i, "") : countLabel} added
+      </span>
+    </Link>
   );
 }
 

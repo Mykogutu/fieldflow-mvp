@@ -86,6 +86,21 @@ export async function POST(req: NextRequest) {
   const enabledDocuments = Array.from(
     new Set(["invoice", "job_card", ...template.defaultDocuments.map((doc) => documentKeyMap[doc])])
   );
+  const documentTypeConfig = Object.fromEntries(
+    enabledDocuments.map((key) => [
+      key,
+      {
+        templateLabel: `${key.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())} - Standard`,
+        generationTrigger: key === "quotation" ? "Before job approval" : "After client verification",
+        deliveryChannels: ["whatsapp", "dashboard"],
+        includeLogo: true,
+        useBrandColor: true,
+        includeOtpStamp: ["job_card", "client_confirmation_receipt"].includes(key),
+        autoSendAfterVerification: key !== "quotation",
+        storeInDashboard: true,
+      },
+    ])
+  );
 
   try {
     const slug = await uniqueWorkspaceSlug(data.businessName);
@@ -136,6 +151,10 @@ export async function POST(req: NextRequest) {
         { key: "job_types", value: JSON.stringify(template.jobTypes), type: "json" },
         { key: "zones", value: JSON.stringify([]), type: "json" },
         { key: "enabled_documents", value: JSON.stringify(enabledDocuments), type: "json" },
+        { key: "document_type_config", value: JSON.stringify(documentTypeConfig), type: "json" },
+        { key: "document_send_whatsapp", value: "true", type: "boolean" },
+        { key: "document_send_email", value: "false", type: "boolean" },
+        { key: "document_store_dashboard", value: "true", type: "boolean" },
         { key: "default_warranty", value: template.defaultWarranty ?? "" },
         { key: "currency", value: template.currencyHint ?? "KES" },
         { key: "currency_symbol", value: template.currencyHint ?? "KES" },
@@ -151,6 +170,7 @@ export async function POST(req: NextRequest) {
         { key: "whatsapp_document_delivery", value: "true", type: "boolean" },
         { key: "whatsapp_reassignment_alerts", value: "true", type: "boolean" },
         { key: "whatsapp_client_notifications", value: "true", type: "boolean" },
+        { key: "whatsapp_quotation_sending", value: "true", type: "boolean" },
         { key: "whatsapp_setup_mode", value: "shared" },
         { key: "onboarding_complete", value: "false", type: "boolean" },
         { key: "onboarding_step", value: "1" },

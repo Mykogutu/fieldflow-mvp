@@ -67,7 +67,7 @@ model Job {
   completedAt    DateTime?
   verifiedAt     DateTime?
   lastActionAt   DateTime?
-  metadata       Json?                                          // industry-specific optional fields
+  metadata       Json? // industry-specific optional fields
 
   workers       User[]         @relation("JobWorkers")
   invoice       Invoice?
@@ -110,10 +110,10 @@ model Invoice {
   clientPhone      String
   workerName       String?
   paidAt           DateTime?
-  paymentMethod    String?       // CASH | MPESA | BANK | CHEQUE | OTHER
-  paymentReference String?       // M-Pesa code, bank ref, cheque number
+  paymentMethod    String? // CASH | MPESA | BANK | CHEQUE | OTHER
+  paymentReference String? // M-Pesa code, bank ref, cheque number
   paymentNotes     String?
-  partialAmount    Float?        // amount paid if PARTIALLY_PAID
+  partialAmount    Float? // amount paid if PARTIALLY_PAID
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 
@@ -174,28 +174,28 @@ model Setting {
 // is being done on" — water tank, vehicle, fuel sensor, inverter, building.
 // One model, configurable labels, no per-industry tables.
 model Asset {
-  id                  String    @id @default(cuid())
-  workspaceId         String
-  name                String                                  // "Mrs. Wanjiku's 5000L tank"
-  assetType           String                                  // configurable per industry
-  identifier          String?                                 // free-form per industry
-  serialNumber        String?
-  registrationNumber  String?                                 // e.g. "KDA 123A" for vehicles
-  deviceNumber        String?                                 // for trackers, sensors
-  simNumber           String?                                 // for connected devices
-  imageUrl            String?                                 // optional asset photo
-  clientName          String
-  clientPhone         String?
-  location            String?
-  zone                String?
-  installationDate    DateTime?
-  warrantyExpiryDate  DateTime?
-  lastServiceDate     DateTime?
-  notes               String?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  id                 String    @id @default(cuid())
+  workspaceId        String
+  name               String // "Mrs. Wanjiku's 5000L tank"
+  assetType          String // configurable per industry
+  identifier         String? // free-form per industry
+  serialNumber       String?
+  registrationNumber String? // e.g. "KDA 123A" for vehicles
+  deviceNumber       String? // for trackers, sensors
+  simNumber          String? // for connected devices
+  imageUrl           String? // optional asset photo
+  clientName         String
+  clientPhone        String?
+  location           String?
+  zone               String?
+  installationDate   DateTime?
+  warrantyExpiryDate DateTime?
+  lastServiceDate    DateTime?
+  notes              String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  jobs                Job[]
+  jobs Job[]
 
   @@index([workspaceId])
   @@index([workspaceId, clientPhone])
@@ -208,16 +208,16 @@ model Asset {
 // Fuel Calibration Report etc. into a single table. Invoice stays separate
 // because it carries financial state.
 model Document {
-  id           String       @id @default(cuid())
-  workspaceId  String
-  jobId        String?
-  type         DocumentType
-  title        String?                                        // optional human-readable title
-  pdfUrl       String?
-  metadata     Json?                                          // type-specific fields
-  sentAt       DateTime?                                      // when sent to client
-  sentVia      String?                                        // WHATSAPP | EMAIL | MANUAL
-  generatedAt  DateTime     @default(now())
+  id          String       @id @default(cuid())
+  workspaceId String
+  jobId       String?
+  type        DocumentType
+  title       String? // optional human-readable title
+  pdfUrl      String?
+  metadata    Json? // type-specific fields
+  sentAt      DateTime? // when sent to client
+  sentVia     String? // WHATSAPP | EMAIL | MANUAL
+  generatedAt DateTime     @default(now())
 
   @@index([workspaceId])
   @@index([jobId])
@@ -228,6 +228,8 @@ enum DocumentType {
   INVOICE
   JOB_CARD
   WARRANTY_CERTIFICATE
+  COMPLETION_CERTIFICATE
+  QUOTATION
   INSTALLATION_REPORT
   SERVICE_REPORT
   FUEL_CALIBRATION_REPORT
@@ -269,16 +271,16 @@ enum ClientType {
 // Workspaces optionally carry a partnerId so revenue share can be calculated
 // at billing time.
 model Partner {
-  id              String    @id @default(cuid())
+  id              String   @id @default(cuid())
   name            String
-  type            String    @default("RESELLER")              // RESELLER | PILOT_CLIENT | INTRODUCER
-  commissionRate  Float     @default(0.20)                    // setup-fee share, decimal (0.20 = 20%)
-  recurringRate   Float     @default(0.15)                    // monthly recurring share
-  recurringMonths Int       @default(12)                      // commission expires
-  isActive        Boolean   @default(true)
+  type            String   @default("RESELLER") // RESELLER | PILOT_CLIENT | INTRODUCER
+  commissionRate  Float    @default(0.20) // setup-fee share, decimal (0.20 = 20%)
+  recurringRate   Float    @default(0.15) // monthly recurring share
+  recurringMonths Int      @default(12) // commission expires
+  isActive        Boolean  @default(true)
   notes           String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([isActive])
 }
@@ -287,29 +289,92 @@ model Partner {
 //
 // One codebase routes to many senders. Branding lives as data, not code.
 model WhatsAppSender {
-  id               String       @id @default(cuid())
-  workspaceId      String
-  phoneNumber      String       @unique                    // E.164, the inbound `To` lookup key
-  twilioAccountSid String                                  // subaccount per tenant (or main account)
-  twilioAuthToken  String                                  // store encrypted at rest
-  wabaId           String?                                 // null for SHARED, set for MANAGED/BYO
-  displayName      String                                  // e.g. "AquaTech Plumbing"
-  profilePhotoUrl  String?                                 // pushed to Meta WABA profile
-  brandingTier     BrandingTier @default(SHARED)
-  status           SenderStatus @default(PENDING)
-  isVerified       Boolean      @default(false)            // green-tick
-  isDefault        Boolean      @default(false)            // primary fallback for unrouted msgs
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  id                       String               @id @default(cuid())
+  workspaceId              String
+  provider                 String               @default("twilio")
+  phoneNumber              String               @unique // E.164, the inbound `To` lookup key
+  twilioAccountSid         String // subaccount per tenant (or main account)
+  twilioAuthToken          String // store encrypted at rest
+  twilioAuthTokenEncrypted String?
+  messagingServiceSid      String?
+  senderIdentifier         String?
+  wabaId                   String? // null for SHARED, set for MANAGED/BYO
+  displayName              String // e.g. "AquaTech Plumbing"
+  profilePhotoUrl          String? // pushed to Meta WABA profile
+  brandingTier             BrandingTier         @default(SHARED)
+  status                   SenderStatus         @default(PENDING)
+  isVerified               Boolean              @default(false) // green-tick
+  isDefault                Boolean              @default(false) // primary fallback for unrouted msgs
+  lastVerifiedAt           DateTime?
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
+  templates                WhatsAppTemplate[]
+  messageLogs              WhatsAppMessageLog[]
 
   @@index([workspaceId])
   @@index([status])
 }
 
+model WhatsAppTemplate {
+  id                  String               @id @default(cuid())
+  workspaceId         String
+  senderId            String?
+  sender              WhatsAppSender?      @relation(fields: [senderId], references: [id], onDelete: SetNull)
+  templateName        String
+  providerTemplateSid String?
+  language            String               @default("en")
+  category            String               @default("UTILITY")
+  status              String               @default("DRAFT")
+  useCase             String
+  body                String
+  headerType          String?
+  footerText          String?
+  variableSchema      Json?
+  lastSyncedAt        DateTime?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  messageLogs         WhatsAppMessageLog[]
+
+  @@index([workspaceId])
+  @@index([senderId])
+  @@index([useCase])
+  @@index([status])
+}
+
+model WhatsAppMessageLog {
+  id                 String            @id @default(cuid())
+  workspaceId        String
+  senderId           String?
+  sender             WhatsAppSender?   @relation(fields: [senderId], references: [id], onDelete: SetNull)
+  templateId         String?
+  template           WhatsAppTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  direction          String            @default("OUTBOUND")
+  messageType        String            @default("FREEFORM")
+  jobId              String?
+  clientId           String?
+  workerId           String?
+  toPhone            String?
+  fromPhone          String?
+  status             String            @default("QUEUED")
+  providerMessageSid String?
+  errorReason        String?
+  sentAt             DateTime?
+  deliveredAt        DateTime?
+  failedAt           DateTime?
+  createdAt          DateTime          @default(now())
+
+  @@index([workspaceId])
+  @@index([senderId])
+  @@index([templateId])
+  @@index([jobId])
+  @@index([status])
+  @@index([messageType])
+}
+
 enum BrandingTier {
-  SHARED      // FieldFlow's number, branded message footer
-  MANAGED     // Dedicated number under FieldFlow's BSP
-  BYO_WABA    // Tenant's own WhatsApp Business Account (Embedded Signup)
+  SHARED // FieldFlow's number, branded message footer
+  MANAGED // Dedicated number under FieldFlow's BSP
+  BYO_WABA // Tenant's own WhatsApp Business Account (Embedded Signup)
 }
 
 enum SenderStatus {

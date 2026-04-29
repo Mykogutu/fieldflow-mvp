@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { currentWorkspaceId } from "@/lib/workspace";
@@ -37,6 +38,7 @@ export default async function AdminLayout({
   if (!session || session.role !== "ADMIN") redirect("/login");
 
   const workspaceId = await currentWorkspaceId();
+  const pathname = headers().get("x-pathname") ?? "";
 
   const [adminUser, companyNameSetting, industrySetting, onboardingSetting] = await Promise.all([
     prisma.user.findUnique({ where: { id: session.userId }, select: { name: true } }),
@@ -45,7 +47,16 @@ export default async function AdminLayout({
     prisma.setting.findFirst({ where: { workspaceId, key: "onboarding_complete" } }),
   ]);
 
-  if (onboardingSetting?.value === "false") redirect("/onboarding");
+  const setupRoutesAllowedDuringOnboarding = [
+    "/admin/workers",
+    "/admin/clients",
+    "/admin/assets",
+    "/admin/jobs",
+  ];
+  const canUseSetupRoute =
+    setupRoutesAllowedDuringOnboarding.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+
+  if (onboardingSetting?.value === "false" && !canUseSetupRoute) redirect("/onboarding");
 
   const name = adminUser?.name ?? "Admin";
   const initials = name

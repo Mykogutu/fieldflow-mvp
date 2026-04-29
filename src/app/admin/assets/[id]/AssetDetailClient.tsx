@@ -134,24 +134,25 @@ export default function AssetDetailClient({ asset }: { asset: AssetDetailData })
 
       {/* ── Header Card ────────────────────────────────────────────────────── */}
       <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card p-5 sm:p-6">
-        <div className="flex items-start gap-4 flex-wrap">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
           {/* Image or icon */}
-          {asset.imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={asset.imageUrl}
-              alt={asset.name}
-              className="w-20 h-20 rounded-[14px] object-cover border border-[#E2E8F0] shrink-0"
-            />
-          ) : (
-            <div className={`w-14 h-14 rounded-[14px] flex items-center justify-center shrink-0 ${meta.bg}`}>
-              <meta.icon className={`w-7 h-7 ${meta.color}`} />
-            </div>
-          )}
+          <div className="flex min-w-0 flex-1 items-start gap-3 sm:gap-4">
+            {asset.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={asset.imageUrl}
+                alt={asset.name}
+                className="w-14 h-14 sm:w-20 sm:h-20 rounded-[14px] object-cover border border-[#E2E8F0] shrink-0"
+              />
+            ) : (
+              <div className={`w-14 h-14 rounded-[14px] flex items-center justify-center shrink-0 ${meta.bg}`}>
+                <meta.icon className={`w-7 h-7 ${meta.color}`} />
+              </div>
+            )}
 
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2.5 flex-wrap mb-1">
-              <h1 className="text-2xl font-bold text-[#0F172A]">{asset.name}</h1>
+              <h1 className="min-w-0 w-full text-xl sm:text-2xl font-bold leading-tight text-[#0F172A] break-words">{asset.name}</h1>
               <span className={`text-xs px-2.5 py-1 rounded-[6px] font-semibold ${meta.bg} ${meta.color}`}>
                 {asset.assetType}
               </span>
@@ -183,14 +184,15 @@ export default function AssetDetailClient({ asset }: { asset: AssetDetailData })
               )}
             </div>
           </div>
+          </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-2 shrink-0">
-            <Link href={createJobUrl} className="ff-btn-primary inline-flex items-center gap-1.5 text-sm px-3.5 py-2">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:shrink-0">
+            <Link href={createJobUrl} className="ff-btn-primary justify-center inline-flex items-center gap-1.5 text-sm px-3.5 py-2">
               <Plus className="w-4 h-4" /> Create Job
             </Link>
             <Link href={`/admin/assets?edit=${asset.id}`}
-              className="ff-btn-secondary inline-flex items-center gap-1.5 text-sm px-3.5 py-2">
+              className="ff-btn-secondary justify-center inline-flex items-center gap-1.5 text-sm px-3.5 py-2">
               <Wrench className="w-4 h-4" /> Edit
             </Link>
           </div>

@@ -57,8 +57,8 @@ const DOC_PREVIEW_TYPES: Record<string, string> = {
   invoice: "INVOICE",
   job_card: "JOB_CARD",
   warranty: "WARRANTY_CERTIFICATE",
-  completion_certificate: "CLIENT_CONFIRMATION_RECEIPT",
-  quotation: "OTHER",
+  completion_certificate: "COMPLETION_CERTIFICATE",
+  quotation: "QUOTATION",
   service_report: "SERVICE_REPORT",
   installation_report: "INSTALLATION_REPORT",
   fuel_calibration_report: "FUEL_CALIBRATION_REPORT",
@@ -83,10 +83,61 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "data",        label: "Data & Privacy" },
 ];
 
+type TeamMember = {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string;
+  role: "ADMIN" | "TECHNICIAN";
+  isActive: boolean;
+};
+
+type DocumentConfig = {
+  templateLabel?: string;
+  generationTrigger?: string;
+  deliveryChannels?: string[];
+  footerText?: string;
+  defaultTerms?: string;
+  includeLogo?: boolean;
+  useBrandColor?: boolean;
+  includeOtpStamp?: boolean;
+  autoSendAfterVerification?: boolean;
+  storeInDashboard?: boolean;
+};
+
+type WhatsAppSummary = {
+  connected: boolean;
+  activeSenderCount: number;
+  displayName: string;
+  phoneNumber: string;
+  status: string;
+  source: string;
+};
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function safeJson<T>(raw: string | undefined, fallback: T): T {
   if (!raw) return fallback;
   try { return JSON.parse(raw) as T; } catch { return fallback; }
+}
+
+function initialsFor(name: string): string {
+  return name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "U";
+}
+
+function memberColor(index: number): string {
+  const colors = [
+    "bg-[#DBEAFE] text-[#1D4ED8]",
+    "bg-[#DCFCE7] text-[#15803D]",
+    "bg-[#FEF3C7] text-[#B45309]",
+    "bg-[#FFE4E6] text-[#BE123C]",
+    "bg-[#EDE9FE] text-[#6D28D9]",
+  ];
+  return colors[index % colors.length];
 }
 
 // ── Toggle ────────────────────────────────────────────────────────────────────
@@ -357,7 +408,15 @@ function StatusPill({ status }: { status: "connected" | "disconnected" | "option
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-export default function SettingsClient({ settings }: { settings: Record<string, string> }) {
+export default function SettingsClient({
+  settings,
+  teamMembers,
+  whatsappSummary,
+}: {
+  settings: Record<string, string>;
+  teamMembers: TeamMember[];
+  whatsappSummary: WhatsAppSummary;
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
@@ -421,6 +480,10 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
   const [whatsappDocumentDelivery, setWhatsappDocumentDelivery] = useState(settings.whatsapp_document_delivery !== "false");
   const [whatsappReassignmentAlerts, setWhatsappReassignmentAlerts] = useState(settings.whatsapp_reassignment_alerts !== "false");
   const [whatsappClientNotifications, setWhatsappClientNotifications] = useState(settings.whatsapp_client_notifications !== "false");
+  const [whatsappQuotationSending, setWhatsappQuotationSending] = useState(settings.whatsapp_quotation_sending !== "false");
+  const [whatsappTestPhone, setWhatsappTestPhone] = useState("");
+  const [whatsappTestStatus, setWhatsappTestStatus] = useState("");
+  const [isSendingWhatsappTest, setIsSendingWhatsappTest] = useState(false);
 
   // ── Data & privacy tab ───────────────────────────────────────────────────
   const [completedJobsRetention, setCompletedJobsRetention] = useState(settings.retention_completed_jobs ?? "2 years");
@@ -434,12 +497,58 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
   const DEFAULT_DOCS = ["invoice", "job_card", "warranty"];
   const [enabledDocs, setEnabledDocs] = useState<string[]>(safeJson<string[]>(settings.enabled_documents, DEFAULT_DOCS));
   const [previewDoc, setPreviewDoc] = useState(enabledDocs[0] ?? "invoice");
+  const [docSendWhatsapp, setDocSendWhatsapp] = useState(settings.document_send_whatsapp !== "false");
+  const [docSendEmail, setDocSendEmail] = useState(settings.document_send_email === "true");
+  const [docStoreDashboard, setDocStoreDashboard] = useState(settings.document_store_dashboard !== "false");
+  const [documentConfig, setDocumentConfig] = useState<Record<string, DocumentConfig>>(
+    safeJson<Record<string, DocumentConfig>>(settings.document_type_config, {})
+  );
   function toggleDoc(key: string) {
     setEnabledDocs(prev => {
       const next = prev.includes(key) ? prev.filter(d => d !== key) : [...prev, key];
       if (!next.includes(previewDoc)) setPreviewDoc(next[0] ?? key);
       return next;
     });
+  }
+  function docConfigFor(key: string, label: string): Required<DocumentConfig> {
+    const config = documentConfig[key] ?? {};
+    return {
+      templateLabel: config.templateLabel ?? `${label} - Standard`,
+      generationTrigger: config.generationTrigger ?? "After client verification",
+      deliveryChannels: config.deliveryChannels ?? ["whatsapp", "dashboard"],
+      footerText: config.footerText ?? "",
+      defaultTerms: config.defaultTerms ?? "",
+      includeLogo: config.includeLogo ?? true,
+      useBrandColor: config.useBrandColor ?? true,
+      includeOtpStamp: config.includeOtpStamp ?? ["job_card", "client_confirmation_receipt"].includes(key),
+      autoSendAfterVerification: config.autoSendAfterVerification ?? ["invoice", "job_card", "warranty", "completion_certificate", "client_confirmation_receipt"].includes(key),
+      storeInDashboard: config.storeInDashboard ?? true,
+    };
+  }
+  function updateDocConfig(key: string, patch: Partial<DocumentConfig>) {
+    setDocumentConfig(prev => ({
+      ...prev,
+      [key]: {
+        ...(prev[key] ?? {}),
+        ...patch,
+      },
+    }));
+  }
+
+  async function sendWhatsappTest() {
+    setWhatsappTestStatus("");
+    setIsSendingWhatsappTest(true);
+    try {
+      const response = await fetch("/api/whatsapp/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: whatsappTestPhone }),
+      });
+      const data = await response.json().catch(() => ({}));
+      setWhatsappTestStatus(response.ok ? "Test message sent." : data.error ?? "Unable to send test message.");
+    } finally {
+      setIsSendingWhatsappTest(false);
+    }
   }
 
   // ── Edit modal ────────────────────────────────────────────────────────────
@@ -512,6 +621,10 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
           job_types:            JSON.stringify(jobTypes),
           zones:                JSON.stringify(zones),
           enabled_documents:    JSON.stringify(enabledDocs),
+          document_type_config: JSON.stringify(documentConfig),
+          document_send_whatsapp: String(docSendWhatsapp),
+          document_send_email:   String(docSendEmail),
+          document_store_dashboard: String(docStoreDashboard),
           briefing_time:        briefingTime,
           briefing_enabled:     String(briefingEnabled),
           reminders_enabled:    String(remindersEnabled),
@@ -525,6 +638,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
           whatsapp_document_delivery: String(whatsappDocumentDelivery),
           whatsapp_reassignment_alerts: String(whatsappReassignmentAlerts),
           whatsapp_client_notifications: String(whatsappClientNotifications),
+          whatsapp_quotation_sending: String(whatsappQuotationSending),
           retention_completed_jobs: completedJobsRetention,
           retention_invoice_records: invoiceRecordsRetention,
           retention_activity_logs: activityLogsRetention,
@@ -836,6 +950,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                   <div className="space-y-2 -mx-1">
                     {DOCUMENT_OPTIONS.map(doc => {
                       const on = enabledDocs.includes(doc.key);
+                      const config = docConfigFor(doc.key, doc.label);
                       return (
                         <div key={doc.key}
                           className="rounded-[12px] border border-[#E2E8F0] hover:border-[#CBD5E1] transition-colors">
@@ -855,28 +970,102 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 border-t border-[#F1F5F9] bg-[#F8FAFC] px-4 py-3">
                               <div>
                                 <label className="block text-[11px] font-semibold text-[#475569] mb-1.5">Default template label</label>
-                                <input defaultValue={`${doc.label} - Standard`} className="ff-input text-xs bg-white" />
+                                <input
+                                  value={config.templateLabel}
+                                  onChange={(e) => updateDocConfig(doc.key, { templateLabel: e.target.value })}
+                                  className="ff-input text-xs bg-white"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[11px] font-semibold text-[#475569] mb-1.5">Generation trigger</label>
+                                <select
+                                  value={config.generationTrigger}
+                                  onChange={(e) => updateDocConfig(doc.key, { generationTrigger: e.target.value })}
+                                  className="ff-input text-xs bg-white"
+                                >
+                                  <option>After client verification</option>
+                                  <option>After worker completion</option>
+                                  <option>Manual only</option>
+                                  <option>Before job approval</option>
+                                </select>
                               </div>
                               <div>
                                 <label className="block text-[11px] font-semibold text-[#475569] mb-1.5">Custom footer text</label>
-                                <input placeholder="Optional footer for this document" className="ff-input text-xs bg-white" />
+                                <input
+                                  value={config.footerText}
+                                  onChange={(e) => updateDocConfig(doc.key, { footerText: e.target.value })}
+                                  placeholder="Optional footer for this document"
+                                  className="ff-input text-xs bg-white"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[11px] font-semibold text-[#475569] mb-1.5">Delivery channels</label>
+                                <select
+                                  value={config.deliveryChannels.join(",")}
+                                  onChange={(e) => updateDocConfig(doc.key, { deliveryChannels: e.target.value.split(",").filter(Boolean) })}
+                                  className="ff-input text-xs bg-white"
+                                >
+                                  <option value="whatsapp,dashboard">WhatsApp + dashboard</option>
+                                  <option value="dashboard">Dashboard only</option>
+                                  <option value="email,dashboard">Email + dashboard</option>
+                                  <option value="whatsapp,email,dashboard">WhatsApp + email + dashboard</option>
+                                </select>
                               </div>
                               <div className="md:col-span-2">
                                 <label className="block text-[11px] font-semibold text-[#475569] mb-1.5">Default terms</label>
-                                <textarea rows={2} placeholder="Optional terms shown on this document" className="ff-input text-xs bg-white resize-none" />
+                                <textarea
+                                  rows={2}
+                                  value={config.defaultTerms}
+                                  onChange={(e) => updateDocConfig(doc.key, { defaultTerms: e.target.value })}
+                                  placeholder="Optional terms shown on this document"
+                                  className="ff-input text-xs bg-white resize-none"
+                                />
                               </div>
                               <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
                                 <label className="flex items-center gap-2 text-[11px] font-medium text-[#475569]">
-                                  <input type="checkbox" defaultChecked className="rounded border-[#CBD5E1]" />
+                                  <input
+                                    type="checkbox"
+                                    checked={config.includeLogo}
+                                    onChange={(e) => updateDocConfig(doc.key, { includeLogo: e.target.checked })}
+                                    className="rounded border-[#CBD5E1]"
+                                  />
                                   Include company logo
                                 </label>
                                 <label className="flex items-center gap-2 text-[11px] font-medium text-[#475569]">
-                                  <input type="checkbox" defaultChecked={["job_card", "client_confirmation_receipt"].includes(doc.key)} className="rounded border-[#CBD5E1]" />
+                                  <input
+                                    type="checkbox"
+                                    checked={config.includeOtpStamp}
+                                    onChange={(e) => updateDocConfig(doc.key, { includeOtpStamp: e.target.checked })}
+                                    className="rounded border-[#CBD5E1]"
+                                  />
                                   Include OTP stamp
                                 </label>
                                 <label className="flex items-center gap-2 text-[11px] font-medium text-[#475569]">
-                                  <input type="checkbox" defaultChecked={["invoice", "job_card", "warranty", "completion_certificate", "client_confirmation_receipt"].includes(doc.key)} className="rounded border-[#CBD5E1]" />
+                                  <input
+                                    type="checkbox"
+                                    checked={config.autoSendAfterVerification}
+                                    onChange={(e) => updateDocConfig(doc.key, { autoSendAfterVerification: e.target.checked })}
+                                    className="rounded border-[#CBD5E1]"
+                                  />
                                   Auto-send after verification
+                                </label>
+                                <label className="flex items-center gap-2 text-[11px] font-medium text-[#475569]">
+                                  <input
+                                    type="checkbox"
+                                    checked={config.useBrandColor}
+                                    onChange={(e) => updateDocConfig(doc.key, { useBrandColor: e.target.checked })}
+                                    className="rounded border-[#CBD5E1]"
+                                  />
+                                  Use brand colour
+                                </label>
+                                <label className="flex items-center gap-2 text-[11px] font-medium text-[#475569]">
+                                  <input
+                                    type="checkbox"
+                                    checked={config.storeInDashboard}
+                                    onChange={(e) => updateDocConfig(doc.key, { storeInDashboard: e.target.checked })}
+                                    className="rounded border-[#CBD5E1]"
+                                  />
+                                  Store in dashboard
                                 </label>
                               </div>
                             </div>
@@ -889,9 +1078,9 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
 
                 {/* Delivery settings */}
                 <SectionCard title="Document Delivery" subtitle="How documents are sent after job completion.">
-                  <ToggleRow icon={MessageCircle} label="Send via WhatsApp"    subtitle="Deliver PDFs to clients through WhatsApp"  defaultOn={true}  />
-                  <ToggleRow icon={Mail}          label="Send via Email"       subtitle="Also email documents to the client"        defaultOn={false} />
-                  <ToggleRow icon={FileText}      label="Store in dashboard"   subtitle="Keep all documents accessible in FieldFlow" defaultOn={true} />
+                  <ControlledToggleRow icon={MessageCircle} label="Send via WhatsApp" subtitle="Deliver PDFs to clients through WhatsApp" on={docSendWhatsapp} onToggle={() => setDocSendWhatsapp(v => !v)} />
+                  <ControlledToggleRow icon={Mail} label="Send via Email" subtitle="Also email documents to the client when email delivery is configured" on={docSendEmail} onToggle={() => setDocSendEmail(v => !v)} />
+                  <ControlledToggleRow icon={FileText} label="Store in dashboard" subtitle="Keep all documents accessible in FieldFlow" on={docStoreDashboard} onToggle={() => setDocStoreDashboard(v => !v)} />
                 </SectionCard>
               </div>
 
@@ -913,15 +1102,26 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                         <p className="mt-2 text-xs text-[#DC2626]">Enable at least one document to preview a template.</p>
                       )}
                     </div>
-                    <a
-                      href={`/api/documents/template-preview?type=${DOC_PREVIEW_TYPES[previewDoc] ?? previewDoc}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={`ff-btn-primary inline-flex w-full items-center justify-center gap-2 px-3 py-2.5 text-sm ${enabledDocs.length === 0 ? "pointer-events-none opacity-50" : ""}`}
-                    >
-                      <Eye className="w-4 h-4" />
-                      Preview Template
-                    </a>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <a
+                        href={`/api/documents/template-preview?type=${DOC_PREVIEW_TYPES[previewDoc] ?? previewDoc}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={`ff-btn-primary inline-flex w-full items-center justify-center gap-2 px-3 py-2.5 text-sm ${enabledDocs.length === 0 ? "pointer-events-none opacity-50" : ""}`}
+                      >
+                        <Eye className="w-4 h-4" />
+                        Preview HTML
+                      </a>
+                      <a
+                        href={`/api/documents/template-preview?type=${DOC_PREVIEW_TYPES[previewDoc] ?? previewDoc}&format=pdf`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={`ff-btn-secondary inline-flex w-full items-center justify-center gap-2 px-3 py-2.5 text-sm ${enabledDocs.length === 0 ? "pointer-events-none opacity-50" : ""}`}
+                      >
+                        <FileText className="w-4 h-4" />
+                        Test PDF
+                      </a>
+                    </div>
                   </div>
                 </SectionCard>
 
@@ -1218,18 +1418,34 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
           {tab === "whatsapp" && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
               <div className="space-y-5">
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-[#86EFAC] rounded-[16px] p-5">
+                <div className={`rounded-[16px] border p-5 ${
+                  whatsappSummary.connected
+                    ? "border-[#86EFAC] bg-[#F0FDF4]"
+                    : "border-[#FECACA] bg-[#FEF2F2]"
+                }`}>
                   <div className="flex items-start gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-[10px] bg-[#22C55E] flex items-center justify-center shrink-0">
-                      <MessageCircle className="w-5 h-5 text-white" />
+                    <div className={`w-10 h-10 rounded-[10px] flex items-center justify-center shrink-0 ${
+                      whatsappSummary.connected ? "bg-[#22C55E]" : "bg-[#EF4444]"
+                    }`}>
+                      {whatsappSummary.connected ? <MessageCircle className="w-5 h-5 text-white" /> : <AlertTriangle className="w-5 h-5 text-white" />}
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-green-900">WhatsApp Business</p>
-                      <p className="text-xs text-[#15803D] mt-0.5">WhatsApp Business API</p>
+                      <p className={`text-sm font-bold ${whatsappSummary.connected ? "text-green-900" : "text-red-900"}`}>WhatsApp Business</p>
+                      <p className={`text-xs mt-0.5 ${whatsappSummary.connected ? "text-[#15803D]" : "text-[#DC2626]"}`}>
+                        {whatsappSummary.connected ? `${whatsappSummary.displayName} · ${whatsappSummary.phoneNumber}` : "No active sender configured"}
+                      </p>
                     </div>
-                    <span className="ml-auto text-[10px] font-bold bg-green-200 text-[#166534] px-2 py-0.5 rounded-full">Connected</span>
+                    <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      whatsappSummary.connected ? "bg-green-200 text-[#166534]" : "bg-red-100 text-[#DC2626]"
+                    }`}>
+                      {whatsappSummary.connected ? whatsappSummary.status : "Not connected"}
+                    </span>
                   </div>
-                  <p className="text-xs text-[#166534]/80 leading-relaxed mb-4">Workers and clients interact with FieldFlow entirely through WhatsApp. Manage your senders, templates, and message configuration here.</p>
+                  <p className={`text-xs leading-relaxed mb-4 ${whatsappSummary.connected ? "text-[#166534]/80" : "text-[#991B1B]"}`}>
+                    {whatsappSummary.connected
+                      ? `${whatsappSummary.source}. ${whatsappSummary.activeSenderCount} active workspace sender${whatsappSummary.activeSenderCount === 1 ? "" : "s"}.`
+                      : "Add a sender or configure the environment fallback before WhatsApp messages can be sent."}
+                  </p>
                   <a href="/admin/settings/whatsapp"
                     className="inline-flex items-center gap-2 text-sm font-semibold bg-green-600 text-white px-4 py-2.5 rounded-[10px] hover:bg-green-700 transition-colors">
                     <MessageCircle className="w-4 h-4" /> Manage WhatsApp Senders
@@ -1242,6 +1458,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                   <ControlledToggleRow icon={FileText} label="Document delivery" subtitle="Send PDFs to clients after job verification" on={whatsappDocumentDelivery} onToggle={() => setWhatsappDocumentDelivery(v => !v)} />
                   <ControlledToggleRow icon={RefreshCw} label="Reassignment alerts" subtitle="Notify worker when a job is reassigned to them" on={whatsappReassignmentAlerts} onToggle={() => setWhatsappReassignmentAlerts(v => !v)} />
                   <ControlledToggleRow icon={MessageCircle} label="Client notifications" subtitle="Send client appointment and postponement updates" on={whatsappClientNotifications} onToggle={() => setWhatsappClientNotifications(v => !v)} />
+                  <ControlledToggleRow icon={FileEdit} label="Quotation sending" subtitle="Allow quotation links and quote follow-ups to be sent through WhatsApp" on={whatsappQuotationSending} onToggle={() => setWhatsappQuotationSending(v => !v)} />
                   <ControlledToggleRow icon={Clock} label="Daily briefing" subtitle="Morning job schedule sent to each worker" on={briefingEnabled} onToggle={() => setBriefingEnabled(v => !v)} />
                 </SectionCard>
               </div>
@@ -1274,11 +1491,25 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                   <div className="space-y-3">
                     <div>
                       <label className="block text-xs font-semibold text-[#475569] mb-1.5">Phone number</label>
-                      <input className="ff-input text-sm" placeholder="+254 7XX XXX XXX" />
+                      <input value={whatsappTestPhone} onChange={e => setWhatsappTestPhone(e.target.value)} className="ff-input text-sm" placeholder="+254 7XX XXX XXX" />
                     </div>
-                    <button className="ff-btn-secondary w-full justify-center gap-2 text-sm">
-                      <MessageCircle className="w-4 h-4 text-[#16A34A]" /> Send test message
+                    <button
+                      type="button"
+                      onClick={sendWhatsappTest}
+                      disabled={isSendingWhatsappTest || !whatsappSummary.connected || !whatsappTestPhone.trim()}
+                      className="ff-btn-secondary w-full justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <MessageCircle className="w-4 h-4 text-[#16A34A]" /> {isSendingWhatsappTest ? "Sending..." : "Send test message"}
                     </button>
+                    {whatsappTestStatus && (
+                      <p className={`rounded-[8px] border px-3 py-2 text-xs ${
+                        whatsappTestStatus.includes("sent")
+                          ? "border-[#BBF7D0] bg-[#F0FDF4] text-[#15803D]"
+                          : "border-[#FECACA] bg-[#FEF2F2] text-[#DC2626]"
+                      }`}>
+                        {whatsappTestStatus}
+                      </p>
+                    )}
                   </div>
                 </SectionCard>
               </div>
@@ -1295,7 +1526,11 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                     <h3 className="text-sm font-semibold text-[#0F172A]">Team Members</h3>
                     <p className="text-xs text-[#94A3B8] mt-0.5">Admins can manage everything. Workers access the WhatsApp interface.</p>
                   </div>
-                  <button className="ff-btn-primary inline-flex items-center gap-1.5 text-sm px-3 py-2">
+                  <button
+                    disabled
+                    className="inline-flex items-center gap-1.5 rounded-[10px] border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2 text-sm font-semibold text-[#94A3B8] cursor-not-allowed"
+                    title="Use the Workers page to add WhatsApp-first workers"
+                  >
                     <UserPlus className="w-3.5 h-3.5" /> Invite
                   </button>
                 </div>
@@ -1308,20 +1543,15 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                     <p className="text-[11px] font-semibold text-[#64748B] uppercase tracking-wide w-16 text-right">Actions</p>
                   </div>
                   {/* Rows */}
-                  {[
-                    { name: "You (Admin)", email: "admin@fieldflow.app", role: "ADMIN",      status: "Active",   initials: "AD", color: "bg-[#DBEAFE] text-[#1D4ED8]"   },
-                    { name: "James Baraka", email: "+254 722 000 111",    role: "TECHNICIAN", status: "Active",   initials: "JB", color: "bg-[#DCFCE7] text-[#15803D]" },
-                    { name: "Peter Ouma",   email: "+254 733 000 222",    role: "TECHNICIAN", status: "Active",   initials: "PO", color: "bg-[#FEF3C7] text-[#B45309]" },
-                    { name: "Mary Wanjiku", email: "+254 711 000 333",    role: "TECHNICIAN", status: "Inactive", initials: "MW", color: "bg-[#FFE4E6] text-[#BE123C]"   },
-                  ].map((m, i) => (
-                    <div key={i} className="px-5 py-3.5 border-b border-[#F8FAFC] last:border-0 grid grid-cols-[1fr_auto_auto] gap-4 items-center">
+                  {teamMembers.map((m, i) => (
+                    <div key={m.id} className="px-5 py-3.5 border-b border-[#F8FAFC] last:border-0 grid grid-cols-[1fr_auto_auto] gap-4 items-center">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${m.color}`}>
-                          {m.initials}
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${memberColor(i)}`}>
+                          {initialsFor(m.name)}
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-[#0F172A] truncate">{m.name}</p>
-                          <p className="text-[11px] text-[#94A3B8] truncate">{m.email}</p>
+                          <p className="text-[11px] text-[#94A3B8] truncate">{m.email || m.phone}</p>
                         </div>
                       </div>
                       <div className="w-20 flex justify-center">
@@ -1331,12 +1561,22 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                         </span>
                       </div>
                       <div className="w-16 flex justify-end">
-                        <button className="text-[11px] font-semibold px-2.5 py-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/40 hover:text-[#2563EB] hover:bg-[#EFF6FF]/30 transition-colors">
-                          Edit
+                        <button
+                          disabled
+                          className="text-[11px] font-semibold px-2.5 py-1.5 rounded-[6px] border border-[#E2E8F0] text-[#94A3B8] bg-[#F8FAFC] cursor-not-allowed"
+                        >
+                          {m.isActive ? "Active" : "Inactive"}
                         </button>
                       </div>
                     </div>
                   ))}
+                  {teamMembers.length === 0 && (
+                    <div className="px-5 py-10 text-center">
+                      <Users className="mx-auto h-6 w-6 text-[#94A3B8]" />
+                      <p className="mt-2 text-sm font-semibold text-[#475569]">No team members yet</p>
+                      <p className="mt-1 text-xs text-[#94A3B8]">New workspaces start without demo workers or sample users.</p>
+                    </div>
+                  )}
                 </div>
               </div>
 

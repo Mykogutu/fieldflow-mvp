@@ -4,7 +4,29 @@ import SettingsClient from "./SettingsClient";
 
 export default async function SettingsPage() {
   const workspaceId = await currentWorkspaceId();
-  const settings = await prisma.setting.findMany({ where: { workspaceId } });
+  const [settings, teamMembers, defaultSender, activeSenderCount] = await Promise.all([
+    prisma.setting.findMany({ where: { workspaceId } }),
+    prisma.user.findMany({
+      where: { workspaceId },
+      select: { id: true, name: true, email: true, phone: true, role: true, isActive: true },
+      orderBy: [{ role: "asc" }, { name: "asc" }],
+    }),
+    prisma.whatsAppSender.findFirst({
+      where: { workspaceId, isDefault: true, status: "ACTIVE" },
+      select: { displayName: true, phoneNumber: true, status: true, brandingTier: true },
+    }),
+    prisma.whatsAppSender.count({ where: { workspaceId, status: "ACTIVE" } }),
+  ]);
   const map = Object.fromEntries(settings.map((s) => [s.key, s.value]));
-  return <SettingsClient settings={map} />;
+  const hasEnvFallback = Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_WHATSAPP_NUMBER);
+  const whatsappSummary = {
+    connected: Boolean(defaultSender || hasEnvFallback),
+    activeSenderCount,
+    displayName: defaultSender?.displayName ?? (hasEnvFallback ? "Environment fallback sender" : ""),
+    phoneNumber: defaultSender?.phoneNumber ?? (hasEnvFallback ? process.env.TWILIO_WHATSAPP_NUMBER ?? "" : ""),
+    status: defaultSender?.status ?? (hasEnvFallback ? "ACTIVE" : "DISCONNECTED"),
+    source: defaultSender ? "Workspace sender" : hasEnvFallback ? "Environment fallback" : "Not configured",
+  };
+
+  return <SettingsClient settings={map} teamMembers={teamMembers} whatsappSummary={whatsappSummary} />;
 }

@@ -36,9 +36,13 @@ async function envFallbackSender(): Promise<WhatsAppSender | null> {
   return {
     id: "env-fallback",
     workspaceId: await currentWorkspaceId(),
+    provider: "twilio",
     phoneNumber: normalizePhone(phone),
     twilioAccountSid: sid,
     twilioAuthToken: token,
+    twilioAuthTokenEncrypted: null,
+    messagingServiceSid: null,
+    senderIdentifier: null,
     wabaId: null,
     displayName: process.env.NEXT_PUBLIC_BRAND_NAME ?? "FieldFlow",
     profilePhotoUrl: null,
@@ -46,6 +50,7 @@ async function envFallbackSender(): Promise<WhatsAppSender | null> {
     status: "ACTIVE" as SenderStatus,
     isVerified: false,
     isDefault: true,
+    lastVerifiedAt: null,
     createdAt: new Date(0),
     updatedAt: new Date(0),
   };
