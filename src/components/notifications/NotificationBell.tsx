@@ -24,6 +24,17 @@ const TYPE_COLORS: Record<string, string> = {
   DEFAULT: "bg-slate-100 text-slate-500",
 };
 
+function stripEmoji(text: string): string {
+  return Array.from(text)
+    .filter((char) => {
+      const code = char.codePointAt(0) ?? 0;
+      return !((code >= 0x1f300 && code <= 0x1faff) || (code >= 0x2600 && code <= 0x27bf) || (code >= 0x2300 && code <= 0x23ff));
+    })
+    .join("")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export default function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -32,11 +43,16 @@ export default function NotificationBell() {
   const router = useRouter();
 
   async function load() {
-    const res = await fetch("/api/notifications");
-    if (res.ok) {
-      const data = await res.json();
-      setNotifications(data.notifications);
-      setUnread(data.notifications.filter((n: Notification) => !n.isRead).length);
+    try {
+      const res = await fetch("/api/notifications", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = await res.json() as { notifications?: Notification[] };
+      const nextNotifications = Array.isArray(data.notifications) ? data.notifications : [];
+      setNotifications(nextNotifications);
+      setUnread(nextNotifications.filter((n: Notification) => !n.isRead).length);
+    } catch {
+      setNotifications([]);
+      setUnread(0);
     }
   }
 
@@ -55,8 +71,13 @@ export default function NotificationBell() {
   }, []);
 
   async function markAll() {
-    await fetch("/api/notifications/read-all", { method: "POST" });
-    load();
+    try {
+      await fetch("/api/notifications/read-all", { method: "POST" });
+      await load();
+    } catch {
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setUnread(0);
+    }
   }
 
   async function handleItemClick(n: Notification) {
@@ -119,9 +140,9 @@ export default function NotificationBell() {
                     }`}
                   >
                     <div className="flex items-start gap-2.5">
-                      <span className={`mt-0.5 w-2 h-2 rounded-full shrink-0 ${!n.isRead ? "bg-blue-500" : "bg-transparent"}`} />
+                      <span className={`mt-0.5 w-2 h-2 rounded-full shrink-0 ${!n.isRead ? dotColor.split(" ")[0] : "bg-transparent"}`} />
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-slate-800 leading-snug">{n.title}</p>
+                        <p className="text-sm font-medium text-slate-800 leading-snug">{stripEmoji(n.title)}</p>
                         <p className="text-xs text-slate-500 mt-0.5 line-clamp-2 leading-relaxed">{n.message}</p>
                         <p className="text-[10px] text-slate-400 mt-1">
                           {new Date(n.createdAt).toLocaleString("en-KE", {

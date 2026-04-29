@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
@@ -79,6 +80,13 @@ export default function LoginPage() {
             {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
+
+        <p className="mt-5 text-center text-sm text-gray-500">
+          New to FieldFlow?{" "}
+          <Link href="/signup" className="font-semibold text-blue-600 hover:text-blue-700">
+            Create a workspace
+          </Link>
+        </p>
       </div>
     </div>
   );

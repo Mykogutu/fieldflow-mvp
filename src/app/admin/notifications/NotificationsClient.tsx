@@ -30,8 +30,20 @@ const TYPE_CONFIG: Record<string, { Icon: React.ElementType; color: string; bg: 
   JOB_REASSIGNED: { Icon: RefreshCw,     color: "text-[#4F46E5]", bg: "bg-[#EEF2FF]"  },
   JOB_CANCELLED:  { Icon: XCircle,       color: "text-[#64748B]", bg: "bg-[#F1F5F9]"  },
   INVOICE_PAID:   { Icon: FileText,      color: "text-[#16A34A]", bg: "bg-[#F0FDF4]"  },
+  SLA_ALERT:       { Icon: Clock,         color: "text-[#D97706]", bg: "bg-[#FFFBEB]"  },
   DEFAULT:        { Icon: Bell,          color: "text-[#64748B]", bg: "bg-[#F1F5F9]"  },
 };
+
+function stripEmoji(text: string): string {
+  return Array.from(text)
+    .filter((char) => {
+      const code = char.codePointAt(0) ?? 0;
+      return !((code >= 0x1f300 && code <= 0x1faff) || (code >= 0x2600 && code <= 0x27bf) || (code >= 0x2300 && code <= 0x23ff));
+    })
+    .join("")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 function getActionLabel(type: string): string {
   if (type.startsWith("JOB_"))     return "View Job";
@@ -299,7 +311,7 @@ export default function NotificationsClient({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <p className={`text-sm leading-snug ${!n.isRead ? "font-semibold text-[#0F172A]" : "font-medium text-[#334155]"}`}>
-                            {n.title}
+                            {stripEmoji(n.title)}
                           </p>
                           <span className="text-[10px] text-[#94A3B8] whitespace-nowrap shrink-0 mt-0.5">
                             {timeAgo(n.createdAt)}

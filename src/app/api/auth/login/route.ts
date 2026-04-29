@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { validateCredentials, signToken, setCookieToken } from "@/lib/auth";
+import { validateCredentials, signToken } from "@/lib/auth";
 import { normalizePhone } from "@/lib/utils";
 import { z } from "zod";
 
@@ -27,10 +27,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    const token = signToken({ userId: user.userId, role: user.role, phone: user.phone });
-    setCookieToken(token);
+    const token = signToken({ userId: user.userId, role: user.role, phone: user.phone, workspaceId: user.workspaceId });
+    const response = NextResponse.json({ ok: true });
+    response.cookies.set("ff_token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 7,
+      path: "/",
+    });
 
-    return NextResponse.json({ ok: true });
+    return response;
   } catch (err) {
     console.error("[Login]", err);
     return NextResponse.json({ error: "Server error. Check database connection." }, { status: 500 });

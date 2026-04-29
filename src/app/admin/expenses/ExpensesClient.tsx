@@ -107,8 +107,8 @@ export default function ExpensesClient({ expenses, total, currentCategory }: {
       {/* ── Tab bar + table card ──────────────────────────────────────────── */}
       <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card overflow-hidden">
         {/* Tab bar */}
-        <div className="border-b border-[#E2E8F0] px-4 overflow-x-auto scrollbar-none">
-          <div className="flex gap-0 min-w-max">
+        <div className="border-b border-[#E2E8F0] px-4 py-3 overflow-x-auto scrollbar-none">
+          <div className="flex gap-2 min-w-max">
             {tabs.map(tab => (
               <button key={tab.key}
                 onClick={() => {
@@ -116,7 +116,7 @@ export default function ExpensesClient({ expenses, total, currentCategory }: {
                   if (tab.key !== "ALL") sp.set("category", tab.key);
                   router.push(`/admin/expenses?${sp}`);
                 }}
-                className={`ff-tab ${activeTab === tab.key ? "ff-tab-active" : "ff-tab-inactive"}`}>
+                className={`ff-tab min-h-9 px-4 py-2 ${activeTab === tab.key ? "ff-tab-active" : "ff-tab-inactive"}`}>
                 {tab.label}
                 {tab.count > 0 && (
                   <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-semibold

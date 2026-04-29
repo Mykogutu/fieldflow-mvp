@@ -71,9 +71,9 @@ export const STATUS_MAP: Record<
   // ── Invoice statuses ─────────────────────────────────────────────
   PENDING: {
     label: "Unpaid",
-    color: "#D97706",
-    bg: "#FEF3C7",
-    border: "#FDE68A",
+    color: "#DC2626",
+    bg: "#FEE2E2",
+    border: "#FECACA",
   },
   PAID: {
     label: "Paid",

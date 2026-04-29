@@ -1,12 +1,12 @@
 ﻿"use client";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Search, Plus, MapPin, Package, X, ChevronRight,
   Truck, Zap, Droplets, Shield, MoreHorizontal,
   Hash, Wrench, Filter, Sun, Building2, Cpu,
-  HardDrive, Container, Gauge,
+  HardDrive, Container, Gauge, LayoutGrid, List,
 } from "lucide-react";
 import { createAsset, updateAsset, deleteAsset } from "@/app/actions/asset-actions";
 import { formatDate } from "@/lib/utils";
@@ -194,13 +194,13 @@ function AssetThumbnail({ asset }: { asset: AssetRow }) {
       <img
         src={asset.imageUrl}
         alt={asset.name}
-        className="w-full aspect-square object-cover rounded-t-[16px]"
+        className="h-28 w-full object-cover rounded-t-[16px] sm:h-32"
       />
     );
   }
   return (
-    <div className={`w-full aspect-square flex items-center justify-center rounded-t-[16px] ${meta.bg}`}>
-      <meta.icon className={`w-12 h-12 ${meta.color} opacity-60`} />
+    <div className={`h-28 w-full flex items-center justify-center rounded-t-[16px] sm:h-32 ${meta.bg}`}>
+      <meta.icon className={`w-9 h-9 ${meta.color} opacity-70`} />
     </div>
   );
 }
@@ -296,6 +296,69 @@ function AssetCard({ a, onEdit, onDelete }: { a: AssetRow; onEdit: () => void; o
   );
 }
 
+function AssetRowView({ a, onEdit, onDelete }: { a: AssetRow; onEdit: () => void; onDelete: () => void }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const meta = assetMeta(a.assetType);
+  const warrant = warrantyStatus(a.warrantyExpiryDate);
+  const Icon = meta.icon;
+
+  return (
+    <div className="flex items-center gap-3 border-b border-[#F1F5F9] px-4 py-3.5 last:border-0 hover:bg-[#F8FAFC] transition-colors">
+      <Link href={`/admin/assets/${a.id}`} className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] ${meta.bg}`}>
+        {a.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={a.imageUrl} alt={a.name} className="h-11 w-11 rounded-[10px] object-cover" />
+        ) : (
+          <Icon className={`h-5 w-5 ${meta.color}`} />
+        )}
+      </Link>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href={`/admin/assets/${a.id}`} className="truncate text-sm font-semibold text-[#0F172A] hover:text-[#2563EB]">
+            {a.name}
+          </Link>
+          <span className={`rounded-[4px] px-1.5 py-0.5 text-[10px] font-semibold ${meta.bg} ${meta.color}`}>{a.assetType}</span>
+          {warrant && (
+            <span className={`rounded-[4px] px-1.5 py-0.5 text-[10px] font-semibold ${warrant.bg} ${warrant.color}`}>{warrant.label}</span>
+          )}
+        </div>
+        <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#94A3B8]">
+          <span className="font-medium text-[#64748B]">{a.clientName}</span>
+          {a.location && <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" />{a.location}</span>}
+          {(a.serialNumber ?? a.registrationNumber ?? a.identifier) && (
+            <span className="inline-flex items-center gap-1"><Hash className="h-3 w-3" />{a.serialNumber ?? a.registrationNumber ?? a.identifier}</span>
+          )}
+          <span>{a._count.jobs} job{a._count.jobs === 1 ? "" : "s"}</span>
+          <span>Last service: {a.lastServiceDate ? formatDate(a.lastServiceDate) : "—"}</span>
+        </div>
+      </div>
+      <Link href={`/admin/assets/${a.id}`} className="hidden sm:inline-flex min-h-9 items-center rounded-[8px] border border-[#DBEAFE] bg-[#EFF6FF] px-3 py-2 text-xs font-semibold text-[#2563EB] hover:bg-[#DBEAFE]">
+        View Asset
+      </Link>
+      <div className="relative">
+        <button
+          onClick={() => setMenuOpen(v => !v)}
+          className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-[8px] border border-[#E2E8F0] p-2 text-[#94A3B8] hover:bg-[#F8FAFC] hover:text-[#475569]"
+        >
+          <MoreHorizontal className="h-3.5 w-3.5" />
+        </button>
+        {menuOpen && (
+          <div className="absolute right-0 top-full z-20 mt-1 w-36 rounded-[10px] border border-[#E2E8F0] bg-white py-1 shadow-card">
+            <button onClick={() => { setMenuOpen(false); onEdit(); }}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-[#334155] hover:bg-[#F8FAFC]">
+              <Wrench className="h-3.5 w-3.5" /> Edit
+            </button>
+            <button onClick={() => { setMenuOpen(false); onDelete(); }}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-[#DC2626] hover:bg-[#FFF1F2]">
+              <X className="h-3.5 w-3.5" /> Delete
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────────
 export default function AssetsClient({ assets, knownTypes, zones, currentSearch, currentType }: {
   assets: AssetRow[]; knownTypes: string[]; zones: string[];
@@ -305,10 +368,18 @@ export default function AssetsClient({ assets, knownTypes, zones, currentSearch,
   const params = useSearchParams();
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<AssetRow | null>(null);
+  const [viewMode, setViewMode] = useState<"grid" | "rows">("grid");
   const [feedback, setFeedback] = useState("");
   const [isPending, startTransition] = useTransition();
 
   const allTypes = Array.from(new Set([...knownTypes, ...COMMON_ASSET_TYPES])).sort();
+
+  useEffect(() => {
+    const editId = params.get("edit");
+    if (!editId) return;
+    const target = assets.find((asset) => asset.id === editId);
+    if (target) setEditing(target);
+  }, [assets, params]);
 
   function updateFilter(key: string, value: string) {
     const next = new URLSearchParams(params.toString());
@@ -411,6 +482,22 @@ export default function AssetsClient({ assets, knownTypes, zones, currentSearch,
               Clear filters
             </button>
           )}
+          <div className="ml-auto flex items-center gap-1 rounded-[10px] border border-[#E2E8F0] bg-[#F8FAFC] p-1">
+            <button
+              type="button"
+              onClick={() => setViewMode("grid")}
+              className={`inline-flex min-h-9 items-center gap-1.5 rounded-[8px] px-3 py-2 text-xs font-semibold transition-colors ${viewMode === "grid" ? "bg-white text-[#2563EB] shadow-sm" : "text-[#64748B] hover:text-[#334155]"}`}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" /> Grid
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("rows")}
+              className={`inline-flex min-h-9 items-center gap-1.5 rounded-[8px] px-3 py-2 text-xs font-semibold transition-colors ${viewMode === "rows" ? "bg-white text-[#2563EB] shadow-sm" : "text-[#64748B] hover:text-[#334155]"}`}
+            >
+              <List className="h-3.5 w-3.5" /> Rows
+            </button>
+          </div>
         </div>
       </div>
 
@@ -436,6 +523,12 @@ export default function AssetsClient({ assets, knownTypes, zones, currentSearch,
               <Plus className="w-4 h-4" /> Add Asset
             </button>
           )}
+        </div>
+      ) : viewMode === "rows" ? (
+        <div className="overflow-hidden rounded-[16px] border border-[#E2E8F0] bg-white shadow-card">
+          {assets.map(a => (
+            <AssetRowView key={a.id} a={a} onEdit={() => setEditing(a)} onDelete={() => handleDelete(a.id)} />
+          ))}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

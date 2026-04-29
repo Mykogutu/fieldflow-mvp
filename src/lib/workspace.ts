@@ -18,6 +18,8 @@
  * they pick up the new behavior for free.
  */
 
+import { cookies } from "next/headers";
+import { verifyToken } from "./auth";
 import { prisma } from "./prisma";
 
 let cachedId: string | null = null;
@@ -30,6 +32,14 @@ let inflight: Promise<string> | null = null;
  * the application boots. See `prisma/seed.ts`.
  */
 export async function currentWorkspaceId(): Promise<string> {
+  try {
+    const token = cookies().get("ff_token")?.value;
+    const session = token ? verifyToken(token) : null;
+    if (session?.workspaceId) return session.workspaceId;
+  } catch {
+    // Some cron/build paths do not have a request cookie store; use fallback.
+  }
+
   if (cachedId) return cachedId;
 
   // Allow override for tests / preview deployments without seeding.

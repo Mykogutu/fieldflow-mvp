@@ -47,7 +47,7 @@ export type AssetDetailData = {
   documents: Document[];
 };
 
-type Tab = "overview" | "jobs" | "documents" | "notes";
+type Tab = "overview" | "jobs" | "documents" | "notes" | "history";
 
 // ── Asset type icon ───────────────────────────────────────────────────────────
 function assetMeta(type: string): { icon: React.ElementType; color: string; bg: string } {
@@ -118,6 +118,7 @@ export default function AssetDetailClient({ asset }: { asset: AssetDetailData })
     { id: "jobs",      label: "Jobs",      count: asset.jobs.length },
     { id: "documents", label: "Documents", count: asset.documents.length },
     { id: "notes",     label: "Notes" },
+    { id: "history",   label: "History" },
   ];
 
   return (
@@ -154,6 +155,7 @@ export default function AssetDetailClient({ asset }: { asset: AssetDetailData })
               <span className={`text-xs px-2.5 py-1 rounded-[6px] font-semibold ${meta.bg} ${meta.color}`}>
                 {asset.assetType}
               </span>
+              <StatusBadge status="ACTIVE" size="xs" />
               {warrant && (
                 <span className={`text-xs px-2.5 py-1 rounded-[6px] font-semibold flex items-center gap-1 ${warrant.bg} ${warrant.color} border ${warrant.border}`}>
                   <Shield className="w-3 h-3" /> {warrant.label}
@@ -218,11 +220,11 @@ export default function AssetDetailClient({ asset }: { asset: AssetDetailData })
       {/* ── Tab Card ──────────────────────────────────────────────────────────── */}
       <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card overflow-hidden">
         {/* Tab bar */}
-        <div className="border-b border-[#E2E8F0] px-4 overflow-x-auto scrollbar-none">
-          <div className="flex gap-0 min-w-max">
+        <div className="border-b border-[#E2E8F0] px-4 py-3 overflow-x-auto scrollbar-none">
+          <div className="flex gap-2 min-w-max">
             {tabs.map(t => (
               <button key={t.id} onClick={() => setTab(t.id)}
-                className={`ff-tab ${tab === t.id ? "ff-tab-active" : "ff-tab-inactive"}`}>
+                className={`ff-tab min-h-9 px-4 py-2 ${tab === t.id ? "ff-tab-active" : "ff-tab-inactive"}`}>
                 {t.label}
                 {t.count !== undefined && t.count > 0 && (
                   <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-semibold
@@ -406,6 +408,45 @@ export default function AssetDetailClient({ asset }: { asset: AssetDetailData })
                   className="text-xs text-[#2563EB] font-semibold hover:text-[#1D4ED8] transition-colors">
                   Edit asset to add notes →
                 </Link>
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab === "history" && (
+          <div className="p-5">
+            {asset.jobs.length === 0 ? (
+              <div className="py-12 flex flex-col items-center gap-3 text-center">
+                <div className="w-12 h-12 rounded-2xl bg-[#F1F5F9] flex items-center justify-center">
+                  <History className="w-5 h-5 text-[#94A3B8]" />
+                </div>
+                <p className="text-sm font-medium text-[#475569]">No history yet</p>
+                <p className="text-xs text-[#94A3B8]">Service history will build as jobs are completed</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {asset.jobs.map((job) => (
+                  <Link
+                    key={job.id}
+                    href={`/admin/jobs/${job.id}`}
+                    className="flex items-start gap-3 rounded-[12px] border border-[#E2E8F0] p-3.5 hover:border-[#2563EB]/30 hover:bg-[#EFF6FF]/20 transition-colors"
+                  >
+                    <div className="mt-1 h-2 w-2 rounded-full bg-[#2563EB] shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-semibold text-[#0F172A]">{job.jobType}</p>
+                        <StatusBadge status={job.status} size="xs" />
+                      </div>
+                      <p className="mt-1 text-xs text-[#64748B]">
+                        {formatDate(job.scheduledDate ?? job.createdAt)}
+                        {job.workers.length > 0 ? ` by ${job.workers.map((w) => w.name).join(", ")}` : ""}
+                      </p>
+                      {job.description && (
+                        <p className="mt-1 text-xs text-[#94A3B8] line-clamp-1">{job.description}</p>
+                      )}
+                    </div>
+                  </Link>
+                ))}
               </div>
             )}
           </div>

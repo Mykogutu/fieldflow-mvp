@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import {
   createJob, reassignJob, rescheduleJob, updateJobStatus,
 } from "@/app/actions/job-actions";
-import { formatKES, formatDate } from "@/lib/utils";
+import { formatKES, formatDate, friendlyJobNumber } from "@/lib/utils";
 import {
   Plus, X, Search, Filter, MoreHorizontal, Clock,
   AlertTriangle, Wrench, ChevronRight, Calendar,
@@ -270,15 +270,16 @@ export default function JobsClient({
                 {jobs.map(job => {
                   const sched = fmtScheduled(job.scheduledDate);
                   const amount = job.finalAmount ?? job.quotedAmount;
+                  const displayJobNumber = friendlyJobNumber(job.jobNumber, job.createdAt);
                   return (
                     <Link key={job.id} href={`/admin/jobs/${job.id}`}
                       className="flex items-center gap-3 px-4 py-3.5 hover:bg-[#F8FAFC] transition-colors">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <span className="text-[11px] font-mono font-semibold text-[#2563EB] shrink-0">{job.jobNumber}</span>
+                          <span className="text-[11px] font-mono font-semibold text-[#2563EB] shrink-0">{displayJobNumber}</span>
                           <StatusBadge status={job.status} size="xs" />
                           {job.priority === "EMERGENCY" && (
-                            <span className="text-[10px] text-[#DC2626] font-bold shrink-0">🚨</span>
+                            <AlertTriangle className="w-3.5 h-3.5 text-[#DC2626] shrink-0" aria-label="Emergency priority" />
                           )}
                         </div>
                         <p className="text-sm font-semibold text-[#0F172A] truncate">{job.clientName}</p>
@@ -340,12 +341,13 @@ export default function JobsClient({
                 const sched = fmtScheduled(job.scheduledDate);
                 const amount = job.finalAmount ?? job.quotedAmount;
                 const workerFirstName = job.workers[0]?.name?.split(" ")[0];
+                const displayJobNumber = friendlyJobNumber(job.jobNumber, job.createdAt);
                 return (
                   <tr key={job.id} className="group">
                     {/* Job */}
                     <td>
                       <p className="font-semibold text-[#2563EB] text-[13px] font-mono truncate">
-                        {job.jobNumber}
+                        {displayJobNumber}
                       </p>
                       <p className="text-xs text-[#94A3B8] mt-0.5 truncate">
                         {job.jobType}{job.asset ? ` · ${job.asset.name}` : ""}
@@ -397,19 +399,10 @@ export default function JobsClient({
                     {/* Actions */}
                     <td className="whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1">
-                        {/* Split "View Job" button */}
-                        <div className="flex items-stretch rounded-[8px] overflow-hidden border border-[#DBEAFE]">
-                          <Link href={`/admin/jobs/${job.id}`}
-                            className="text-xs text-[#2563EB] hover:text-[#1D4ED8] font-semibold bg-[#DBEAFE] hover:bg-[#BFDBFE] px-2.5 py-1.5 transition-colors whitespace-nowrap">
-                            View Job
-                          </Link>
-                          <button
-                            onClick={() => setOpenMenuId(openMenuId === job.id ? null : job.id)}
-                            className="text-[#2563EB] bg-[#DBEAFE] hover:bg-[#BFDBFE] border-l border-[#BFDBFE] px-1.5 transition-colors">
-                            <ChevronRight className="w-3 h-3 rotate-90" />
-                          </button>
-                        </div>
-                        {/* More menu */}
+                        <Link href={`/admin/jobs/${job.id}`}
+                          className="text-xs text-[#2563EB] hover:text-[#1D4ED8] font-semibold bg-[#DBEAFE] hover:bg-[#BFDBFE] border border-[#DBEAFE] px-2.5 py-1.5 rounded-[8px] transition-colors whitespace-nowrap">
+                          View Job
+                        </Link>
                         <div className="relative">
                           <button
                             onClick={() => setOpenMenuId(openMenuId === `m-${job.id}` ? null : `m-${job.id}`)}
@@ -418,11 +411,6 @@ export default function JobsClient({
                           </button>
                           {openMenuId === `m-${job.id}` && (
                             <div className="absolute right-0 top-8 w-40 bg-white border border-[#E2E8F0] rounded-[10px] shadow-xl z-20 py-1">
-                              <Link href={`/admin/jobs/${job.id}`}
-                                className="block px-3.5 py-2 text-sm text-[#334155] hover:bg-[#F8FAFC] transition-colors"
-                                onClick={() => setOpenMenuId(null)}>
-                                View Details
-                              </Link>
                               {!["VERIFIED","CLOSED","CANCELLED"].includes(job.status) && (
                                 <button
                                   onClick={() => handleStatusChange(job.id, "CANCELLED")}
@@ -494,7 +482,7 @@ export default function JobsClient({
                       status={j.status === "ISSUE_REPORTED" ? "ISSUE_REPORTED" : j.priority === "EMERGENCY" ? "EMERGENCY" : "POSTPONED"}
                       size="xs"
                     />
-                    <span className="text-[10px] font-mono text-[#94A3B8]">{j.jobNumber.slice(0,12)}</span>
+                    <span className="text-[10px] font-mono text-[#94A3B8]">{friendlyJobNumber(j.jobNumber, j.createdAt)}</span>
                   </div>
                   <p className="text-[13px] font-semibold text-[#0F172A] truncate">{j.clientName}</p>
                   <p className="text-xs text-[#94A3B8] mt-0.5 truncate">{j.jobType}</p>

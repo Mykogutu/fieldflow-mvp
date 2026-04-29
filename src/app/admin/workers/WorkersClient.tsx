@@ -90,19 +90,19 @@ function WorkerCard({ w, onEdit, onDeactivate }: { w: Worker; onEdit: () => void
           </div>
         </div>
 
-        <div className="flex gap-2 pt-4 border-t border-[#F1F5F9]">
+        <div className="flex gap-2 rounded-[12px] border border-[#E2E8F0] bg-[#F8FAFC] p-2">
           <a href={`https://wa.me/${w.phone.replace("+", "")}`}
             target="_blank" rel="noopener noreferrer"
-            className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-medium py-2 rounded-[8px] bg-[#F0FDF4] text-[#16A34A] hover:bg-[#DCFCE7] border border-[#86EFAC] transition-colors">
+            className="flex-1 inline-flex min-h-10 items-center justify-center gap-1.5 rounded-[8px] border border-[#86EFAC] bg-[#F0FDF4] px-3 py-2.5 text-xs font-medium text-[#16A34A] transition-colors hover:bg-[#DCFCE7]">
             <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
           </a>
           <button onClick={onEdit}
-            className="flex-1 text-xs font-medium py-2 rounded-[8px] border border-[#E2E8F0] text-[#64748B] hover:border-[#BFDBFE] hover:text-[#2563EB] hover:bg-[#EFF6FF] transition-colors">
+            className="flex-1 min-h-10 rounded-[8px] border border-[#E2E8F0] bg-white px-3 py-2.5 text-xs font-medium text-[#64748B] transition-colors hover:border-[#BFDBFE] hover:bg-[#EFF6FF] hover:text-[#2563EB]">
             Edit
           </button>
           {w.isActive && (
             <button onClick={onDeactivate}
-              className="text-xs font-medium py-2 px-3 rounded-[8px] border border-[#FECACA] text-[#DC2626] hover:bg-[#FFF1F2] transition-colors">
+              className="flex min-h-10 min-w-10 items-center justify-center rounded-[8px] border border-[#FECACA] bg-white px-3 py-2.5 text-xs font-medium text-[#DC2626] transition-colors hover:bg-[#FFF1F2]">
               <XCircle className="w-3.5 h-3.5" />
             </button>
           )}

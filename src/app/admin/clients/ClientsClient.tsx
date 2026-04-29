@@ -94,7 +94,7 @@ function ClientAvatar({ name, size = "md" }: { name: string; size?: "sm" | "md" 
   const colors = [
     "bg-[#DBEAFE] text-[#1D4ED8]", "bg-[#EDE9FE] text-[#7C3AED]",
     "bg-[#DCFCE7] text-[#15803D]", "bg-[#FEF3C7] text-[#B45309]",
-    "bg-[#E0E7FF] text-[#4338CA]", "bg-pink-100 text-pink-700",
+    "bg-[#E0E7FF] text-[#4338CA]", "bg-[#FFE4E6] text-[#BE123C]",
   ];
   const color = colors[name.charCodeAt(0) % colors.length];
   const sz = size === "lg" ? "w-14 h-14 text-lg" : size === "sm" ? "w-8 h-8 text-xs" : "w-10 h-10 text-sm";
@@ -157,20 +157,20 @@ function ClientRow({ c, onEdit }: { c: Client; onEdit: () => void }) {
       </td>
       {/* Last Job */}
       <td className="py-3 px-4">
-        <p className="text-[13px] text-[#334155] truncate">
+        <p className="text-[13px] text-[#334155] truncate max-w-[8rem]">
           {c.lastJobDate ? formatDate(c.lastJobDate) : <span className="text-[#94A3B8]">—</span>}
         </p>
       </td>
       {/* Actions */}
       <td className="py-3 px-4">
-        <div className="flex items-center gap-1.5 justify-end">
+        <div className="flex min-w-[140px] items-center gap-2 justify-end">
           <Link href={`/admin/clients/${c.id}`}
-            className="ff-btn-secondary text-xs px-2.5 py-1.5 whitespace-nowrap">
+            className="ff-btn-secondary min-h-9 text-xs px-3 py-2 whitespace-nowrap">
             View Profile
           </Link>
           <div className="relative">
             <button onClick={() => setMenuOpen(v => !v)}
-              className="p-1.5 rounded-[8px] border border-[#E2E8F0] hover:bg-[#F8FAFC] text-[#94A3B8] hover:text-[#475569] transition-colors">
+              className="min-h-9 min-w-9 p-2 rounded-[8px] border border-[#E2E8F0] hover:bg-[#F8FAFC] text-[#94A3B8] hover:text-[#475569] transition-colors">
               <MoreHorizontal className="w-3.5 h-3.5" />
             </button>
             {menuOpen && (
@@ -433,13 +433,13 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
             ) : (
               <table className="w-full table-fixed ff-table">
                 <colgroup>
-                  <col className="w-[24%]" />
-                  <col className="w-[13%]" />
-                  <col className="w-[17%]" />
-                  <col className="w-[7%]" />
-                  <col className="w-[18%]" />
-                  <col className="w-[13%]" />
-                  <col className="w-[8%]" />
+                  <col className="w-[22%]" />
+                  <col className="w-[11%]" />
+                  <col className="w-[14%]" />
+                  <col className="w-[6%]" />
+                  <col className="w-[15%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[20%]" />
                 </colgroup>
                 <thead>
                   <tr>
@@ -484,7 +484,7 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
             <div className="divide-y divide-[#F1F5F9]">
               {unpaidClients.length === 0 ? (
                 <div className="px-4 py-6 text-center">
-                  <p className="text-xs text-[#94A3B8]">All clients are up to date 🎉</p>
+                  <p className="text-xs text-[#94A3B8]">All clients are up to date</p>
                 </div>
               ) : (
                 unpaidClients.slice(0, 3).map(c => (

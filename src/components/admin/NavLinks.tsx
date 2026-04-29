@@ -40,7 +40,7 @@ const NAV_GROUPS = [
   {
     label: "Intelligence",
     items: [
-      { href: "/admin/ai", label: "AI Copilot", Icon: Sparkles },
+      { href: "/admin/ai", label: "Ask AI", Icon: Sparkles },
     ],
   },
   {

@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import {
   FileText, Download, DollarSign, Clock, CheckCircle2,
   XCircle, TrendingUp, Send, Phone, ExternalLink,
+  Eye,
 } from "lucide-react";
 import { updateInvoiceStatus } from "@/app/actions/invoice-actions";
 import { formatDate, formatKES } from "@/lib/utils";
@@ -15,7 +16,7 @@ interface Invoice {
   amount: number; status: string; pdfUrl: string | null;
   paidAt: Date | string | null; createdAt: Date | string;
   workerName: string | null;
-  job: { id?: string; jobType: string; location: string | null; workers: { name: string }[] };
+  job: { id?: string; jobNumber?: string; jobType: string; location: string | null; workers: { name: string }[] };
 }
 
 export default function InvoicesClient({
@@ -83,11 +84,11 @@ export default function InvoicesClient({
       {/* ── Tab bar + table card ──────────────────────────────────────────── */}
       <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card overflow-hidden">
         {/* Tab bar */}
-        <div className="border-b border-[#E2E8F0] px-4 overflow-x-auto scrollbar-none">
-          <div className="flex gap-0 min-w-max">
+        <div className="border-b border-[#E2E8F0] px-4 py-3 overflow-x-auto scrollbar-none">
+          <div className="flex gap-2 min-w-max">
             {tabs.map(tab => (
               <button key={tab.key} onClick={() => navigate(tab.key)}
-                className={`ff-tab ${(currentStatus ?? "ALL") === tab.key ? "ff-tab-active" : "ff-tab-inactive"}`}>
+                className={`ff-tab min-h-9 px-4 py-2 ${(currentStatus ?? "ALL") === tab.key ? "ff-tab-active" : "ff-tab-inactive"}`}>
                 {tab.label}
                 {tab.count > 0 && (
                   <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-semibold
@@ -116,7 +117,8 @@ export default function InvoicesClient({
             {/* ── Mobile card list (sm:hidden) ─────────────────────────── */}
             <div className="sm:hidden divide-y divide-[#F1F5F9]">
               {invoices.map(inv => (
-                <div key={inv.id} className="px-4 py-3.5">
+                <div key={inv.id} onClick={() => router.push(`/admin/invoices/${inv.id}`)}
+                  className="block cursor-pointer px-4 py-3.5 hover:bg-[#F8FAFC] transition-colors">
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="flex items-center gap-2.5">
                       <div className="w-9 h-9 rounded-[10px] bg-[#EFF6FF] flex items-center justify-center shrink-0">
@@ -141,18 +143,20 @@ export default function InvoicesClient({
                     </div>
                     <div className="flex items-center gap-1.5">
                       {inv.status === "PENDING" && (
-                        <button onClick={() => markPaid(inv.id)} disabled={isPending}
+                        <button onClick={(e) => { e.stopPropagation(); markPaid(inv.id); }} disabled={isPending}
                           className="text-[11px] font-semibold text-[#16A34A] border border-[#86EFAC] hover:bg-[#F0FDF4] px-2.5 py-1.5 rounded-[8px] transition-colors disabled:opacity-50">
                           Mark Paid
                         </button>
                       )}
                       <a href={`/api/invoices/${inv.id}/pdf`} target="_blank" rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
                         className="p-1.5 rounded-[8px] border border-[#E2E8F0] text-[#64748B] hover:text-[#2563EB] hover:bg-[#EFF6FF] transition-colors" title="Download">
                         <Download className="w-3.5 h-3.5" />
                       </a>
                       <a href={`https://wa.me/${inv.clientPhone.replace("+", "")}?text=${encodeURIComponent(
                         `Hi ${inv.clientName}, your invoice ${inv.invoiceNumber} for ${formatKES(inv.amount)} is ready.`)}`}
                         target="_blank" rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
                         className="p-1.5 rounded-[8px] border border-[#E2E8F0] text-[#64748B] hover:text-[#16A34A] hover:bg-[#F0FDF4] transition-colors" title="WhatsApp">
                         <Send className="w-3.5 h-3.5" />
                       </a>
@@ -178,7 +182,8 @@ export default function InvoicesClient({
                 </thead>
                 <tbody>
                   {invoices.map(inv => (
-                    <tr key={inv.id}>
+                    <tr key={inv.id} onClick={() => router.push(`/admin/invoices/${inv.id}`)}
+                      className="cursor-pointer hover:bg-[#FAFBFD] transition-colors">
                       {/* Invoice # */}
                       <td>
                         <div className="flex items-center gap-2.5">
@@ -186,7 +191,7 @@ export default function InvoicesClient({
                             <FileText className="w-4 h-4 text-[#2563EB]" />
                           </div>
                           <div>
-                            <p className="font-mono text-xs font-bold text-[#0F172A]">{inv.invoiceNumber}</p>
+                            <p className="font-mono text-xs font-bold text-[#0F172A] group-hover:text-[#2563EB]">{inv.invoiceNumber}</p>
                             {inv.job.location && (
                               <p className="text-[10px] text-[#94A3B8] mt-0.5 truncate max-w-[100px]">{inv.job.location}</p>
                             )}
@@ -196,9 +201,10 @@ export default function InvoicesClient({
                       {/* Client */}
                       <td>
                         <p className="font-semibold text-[#0F172A] text-sm truncate max-w-[140px]">{inv.clientName}</p>
-                        <a href={`https://wa.me/${inv.clientPhone.replace("+", "")}`}
-                          target="_blank" rel="noopener noreferrer"
-                          className="text-[11px] text-[#94A3B8] hover:text-[#16A34A] transition-colors flex items-center gap-1 mt-0.5">
+                          <a href={`https://wa.me/${inv.clientPhone.replace("+", "")}`}
+                            target="_blank" rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-[11px] text-[#94A3B8] hover:text-[#16A34A] transition-colors flex items-center gap-1 mt-0.5">
                           <Phone className="w-2.5 h-2.5" />{inv.clientPhone}
                         </a>
                       </td>
@@ -220,26 +226,35 @@ export default function InvoicesClient({
                       <td className="text-[#64748B] whitespace-nowrap text-xs">{formatDate(inv.createdAt)}</td>
                       {/* Actions */}
                       <td>
-                        <div className="flex items-center justify-end gap-1.5">
+                        <div className="flex items-center justify-end gap-2">
+                          <Link href={`/admin/invoices/${inv.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex min-h-9 items-center gap-1.5 rounded-[8px] border border-[#DBEAFE] bg-[#EFF6FF] px-3 py-2 text-[11px] font-semibold text-[#2563EB] transition-colors hover:bg-[#DBEAFE]" title="View Invoice">
+                            <Eye className="w-3.5 h-3.5" />
+                            View
+                          </Link>
                           <a href={`/api/invoices/${inv.id}/pdf`} target="_blank" rel="noopener noreferrer"
-                            className="p-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/50 hover:text-[#2563EB] hover:bg-[#EFF6FF] transition-colors" title="Download PDF">
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-[8px] border border-[#E2E8F0] p-2 text-[#64748B] transition-colors hover:border-[#2563EB]/50 hover:bg-[#EFF6FF] hover:text-[#2563EB]" title="Download PDF">
                             <Download className="w-3.5 h-3.5" />
                           </a>
                           <a href={`https://wa.me/${inv.clientPhone.replace("+", "")}?text=${encodeURIComponent(
                             `Hi ${inv.clientName}, your invoice ${inv.invoiceNumber} for ${formatKES(inv.amount)} is ready.`)}`}
                             target="_blank" rel="noopener noreferrer"
-                            className="p-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-green-400 hover:text-[#16A34A] hover:bg-[#F0FDF4] transition-colors" title="Send via WhatsApp">
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-[8px] border border-[#E2E8F0] p-2 text-[#64748B] transition-colors hover:border-green-400 hover:bg-[#F0FDF4] hover:text-[#16A34A]" title="Send via WhatsApp">
                             <Send className="w-3.5 h-3.5" />
                           </a>
                           {inv.status === "PENDING" && (
-                            <button onClick={() => markPaid(inv.id)} disabled={isPending}
-                              className="text-[11px] font-semibold text-[#16A34A] hover:text-[#15803D] border border-[#86EFAC] hover:bg-[#F0FDF4] px-3 py-1.5 rounded-[6px] transition-colors disabled:opacity-50 whitespace-nowrap">
+                            <button onClick={(e) => { e.stopPropagation(); markPaid(inv.id); }} disabled={isPending}
+                              className="min-h-9 rounded-[8px] border border-[#86EFAC] px-3 py-2 text-[11px] font-semibold text-[#16A34A] transition-colors hover:bg-[#F0FDF4] hover:text-[#15803D] disabled:opacity-50 whitespace-nowrap">
                               Mark Paid
                             </button>
                           )}
                           {inv.job.id && (
                             <Link href={`/admin/jobs/${inv.job.id}`}
-                              className="p-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/50 hover:text-[#2563EB] hover:bg-[#EFF6FF] transition-colors" title="View Job">
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-[8px] border border-[#E2E8F0] p-2 text-[#64748B] transition-colors hover:border-[#2563EB]/50 hover:bg-[#EFF6FF] hover:text-[#2563EB]" title="View Job">
                               <ExternalLink className="w-3.5 h-3.5" />
                             </Link>
                           )}

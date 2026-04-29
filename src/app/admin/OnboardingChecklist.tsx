@@ -43,27 +43,29 @@ export default function OnboardingChecklist({ state }: { state: OnboardingState 
   return (
     <div className="bg-white rounded-[16px] border border-[#BFDBFE] shadow-card overflow-hidden">
       {/* Header */}
-      <div className="px-5 py-3.5 flex items-center justify-between gap-4">
+      <div className="px-4 py-4 sm:px-5 sm:py-3.5 flex items-start sm:items-center justify-between gap-3">
         <button
           onClick={() => setCollapsed(v => !v)}
-          className="flex items-center gap-3 flex-1 min-w-0 text-left"
+          className="flex flex-col sm:flex-row sm:items-center gap-3 flex-1 min-w-0 text-left"
         >
-          <div className="w-8 h-8 rounded-[10px] bg-[#DBEAFE] flex items-center justify-center shrink-0">
-            <Sparkles className="w-4 h-4 text-[#2563EB]" />
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-[10px] bg-[#DBEAFE] flex items-center justify-center shrink-0">
+              <Sparkles className="w-4 h-4 text-[#2563EB]" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-semibold text-[#0F172A] text-sm leading-tight">Get started with FieldFlow</p>
+              <p className="text-xs text-[#94A3B8] mt-1 sm:mt-0.5">{completedCount} of {steps.length} steps complete</p>
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-[#0F172A] text-sm">Get started with FieldFlow</p>
-            <p className="text-xs text-[#94A3B8] mt-0.5">{completedCount} of {steps.length} steps complete</p>
-          </div>
-          <div className="flex items-center gap-2.5 shrink-0">
-            <div className="flex items-center gap-2">
-              <div className="w-24 h-1.5 bg-[#F1F5F9] rounded-full overflow-hidden">
+          <div className="flex items-center gap-2.5 w-full sm:w-auto sm:shrink-0">
+            <div className="flex items-center gap-2 flex-1 sm:flex-none min-w-0">
+              <div className="h-1.5 bg-[#F1F5F9] rounded-full overflow-hidden flex-1 sm:w-24">
                 <div
                   className={`h-full rounded-full transition-all ${pct >= 80 ? "bg-[#16A34A]" : "bg-[#2563EB]"}`}
                   style={{ width: `${pct}%` }}
                 />
               </div>
-              <span className={`text-xs font-bold ${pct >= 80 ? "text-[#16A34A]" : "text-[#2563EB]"}`}>{pct}%</span>
+              <span className={`text-xs font-bold w-9 text-right ${pct >= 80 ? "text-[#16A34A]" : "text-[#2563EB]"}`}>{pct}%</span>
             </div>
             <ChevronDown className={`w-4 h-4 text-[#94A3B8] transition-transform ${collapsed ? "" : "rotate-180"}`} />
           </div>

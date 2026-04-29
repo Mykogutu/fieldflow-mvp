@@ -36,15 +36,15 @@ export async function requireAdmin(): Promise<JwtPayload> {
 export async function validateCredentials(
   phone: string,
   password: string
-): Promise<{ userId: string; role: "ADMIN" | "TECHNICIAN"; phone: string } | null> {
+): Promise<{ userId: string; role: "ADMIN" | "TECHNICIAN"; phone: string; workspaceId: string } | null> {
   const user = await prisma.user.findUnique({
     where: { phone },
-    select: { id: true, phone: true, password: true, role: true, isActive: true },
+    select: { id: true, workspaceId: true, phone: true, password: true, role: true, isActive: true },
   });
   if (!user || !user.password || !user.isActive) return null;
   const valid = await bcrypt.compare(password, user.password);
   if (!valid) return null;
-  return { userId: user.id, role: user.role as "ADMIN" | "TECHNICIAN", phone: user.phone };
+  return { userId: user.id, role: user.role as "ADMIN" | "TECHNICIAN", phone: user.phone, workspaceId: user.workspaceId };
 }
 
 export function setCookieToken(token: string) {

@@ -237,7 +237,7 @@ async function getDashboardData(weekStart: Date) {
     prisma.setting.findFirst({ where: { workspaceId, key: "industry" } }),
     prisma.setting.findFirst({ where: { workspaceId, key: "job_types" } }),
     prisma.setting.findFirst({ where: { workspaceId, key: "zones" } }),
-    prisma.setting.findFirst({ where: { workspaceId, key: "document_types" } }),
+    prisma.setting.findFirst({ where: { workspaceId, key: "enabled_documents" } }),
     prisma.user.count({ where: { workspaceId, role: "TECHNICIAN" } }),
     prisma.client.count({ where: { workspaceId } }),
     prisma.asset.count({ where: { workspaceId } }),
@@ -285,6 +285,9 @@ export default async function DashboardPage({
   const weekStart = getWeekStart(searchParams?.week);
   const data = await getDashboardData(weekStart);
   const revenue = data.monthRevenue._sum.amount ?? 0;
+  const collectionRate = data.totalInvoicedMonth > 0
+    ? Math.round((revenue / data.totalInvoicedMonth) * 100)
+    : 0;
 
   const calendarWorkers: CalendarWorker[] = data.workers;
   const calendarJobsList: CalendarJob[] = data.calendarJobs.map((j) => ({
@@ -442,57 +445,44 @@ export default async function DashboardPage({
         {/* Top Services */}
         <TopServicesPanel services={data.topServices} />
 
-        {/* Invoice Summary */}
+        {/* Payment Snapshot */}
         <div className="ff-card overflow-hidden xl:col-span-1">
           <div className="px-5 py-3.5 border-b border-[#F1F5F9] flex items-center justify-between">
-            <h2 className="ff-section-title">Invoice Summary</h2>
+            <h2 className="ff-section-title">Payment Snapshot</h2>
             <Link href="/admin/invoices" className="text-xs text-[#2563EB] hover:text-[#1D4ED8] font-medium flex items-center gap-1">
               View all invoices <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
           <div className="p-5">
-            {/* Donut-style summary */}
-            <div className="flex items-center justify-between gap-6">
-              {/* Visual ring */}
-              <div className="relative w-24 h-24 shrink-0">
-                <svg viewBox="0 0 80 80" className="w-full h-full -rotate-90">
-                  <circle cx="40" cy="40" r="30" fill="none" stroke="#F1F5F9" strokeWidth="12" />
-                  {revenue > 0 && (
-                    <circle
-                      cx="40" cy="40" r="30"
-                      fill="none"
-                      stroke="#16A34A"
-                      strokeWidth="12"
-                      strokeDasharray={`${(revenue / (data.totalInvoicedMonth || 1)) * 188.5} 188.5`}
-                      strokeLinecap="round"
-                    />
-                  )}
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <p className="text-[10px] text-[#64748B] leading-none">KES</p>
-                  <p className="text-sm font-bold text-[#0F172A] leading-tight mt-0.5">
-                    {revenue >= 1000 ? `${(revenue / 1000).toFixed(0)}K` : revenue.toString()}
-                  </p>
-                  <p className="text-[9px] text-[#94A3B8] leading-none mt-0.5">Total Invoiced</p>
+            <div className="space-y-4">
+              <div className="rounded-[14px] border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Collection Rate</p>
+                    <p className="mt-1 text-3xl font-black text-[#0F172A]">{collectionRate}%</p>
+                  </div>
+                  <div className="w-10 h-10 rounded-[12px] bg-[#DCFCE7] flex items-center justify-center shrink-0">
+                    <ReceiptText className="w-5 h-5 text-[#16A34A]" />
+                  </div>
+                </div>
+                <div className="mt-3 h-2 rounded-full bg-[#E2E8F0] overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-[#16A34A]"
+                    style={{ width: `${Math.min(100, collectionRate)}%` }}
+                  />
                 </div>
               </div>
 
-              {/* Legend */}
-              <div className="flex-1 space-y-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2 gap-3">
                 {[
-                  { label: "Total Invoiced", value: formatKES(data.totalInvoicedMonth), color: "#2563EB" },
-                  { label: "Paid",            value: formatKES(revenue),                color: "#16A34A" },
-                  { label: "Outstanding",     value: formatKES(data.outstanding),        color: "#D97706" },
-                  { label: "Overdue",         value: data.overdueCount > 0 ? `${data.overdueCount} invoice${data.overdueCount !== 1 ? "s" : ""}` : "None", color: data.overdueCount > 0 ? "#DC2626" : "#94A3B8" },
-                ].map((row) => (
-                  <div key={row.label} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: row.color }} />
-                      <span className="text-sm text-[#334155]">{row.label}</span>
-                    </div>
-                    <span className="text-sm font-semibold" style={{ color: row.color === "#94A3B8" ? "#94A3B8" : row.color === "#2563EB" ? "#0F172A" : row.color }}>
-                      {row.value}
-                    </span>
+                  { label: "Invoiced", value: formatKES(data.totalInvoicedMonth), tone: "text-[#2563EB]", bg: "bg-[#EFF6FF]" },
+                  { label: "Collected", value: formatKES(revenue), tone: "text-[#16A34A]", bg: "bg-[#F0FDF4]" },
+                  { label: "Outstanding", value: formatKES(data.outstanding), tone: data.outstanding > 0 ? "text-[#D97706]" : "text-[#64748B]", bg: data.outstanding > 0 ? "bg-[#FFFBEB]" : "bg-[#F8FAFC]" },
+                  { label: "Overdue", value: data.overdueCount > 0 ? `${data.overdueCount}` : "None", tone: data.overdueCount > 0 ? "text-[#DC2626]" : "text-[#64748B]", bg: data.overdueCount > 0 ? "bg-[#FEF2F2]" : "bg-[#F8FAFC]" },
+                ].map((item) => (
+                  <div key={item.label} className={`rounded-[12px] ${item.bg} px-3 py-3`}>
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{item.label}</p>
+                    <p className={`mt-1 text-sm font-black leading-tight ${item.tone}`}>{item.value}</p>
                   </div>
                 ))}
               </div>

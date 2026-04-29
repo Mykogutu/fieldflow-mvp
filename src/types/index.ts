@@ -26,6 +26,7 @@ export interface JwtPayload {
   userId: string;
   role: Role;
   phone: string;
+  workspaceId?: string;
 }
 
 export interface AIResponse {

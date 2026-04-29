@@ -39,12 +39,34 @@ const DOCUMENT_OPTIONS: {
   key: string; label: string; Icon: LucideIcon;
   iconBg: string; iconColor: string; description: string;
 }[] = [
-  { key: "invoice",     label: "Invoice",                Icon: FileText,    iconBg: "bg-[#EFF6FF]",   iconColor: "text-[#2563EB]",   description: "Auto-generated PDF sent to the client when a job is completed" },
-  { key: "job_card",    label: "Job Card",               Icon: Clipboard,   iconBg: "bg-[#F1F5F9]", iconColor: "text-[#64748B]",  description: "Full job record with timeline, worker details, and client verification" },
-  { key: "warranty",    label: "Warranty Certificate",   Icon: ShieldCheck, iconBg: "bg-[#EFF6FF]",   iconColor: "text-[#2563EB]",  description: "Warranty document issued to the client after job verification" },
-  { key: "certificate", label: "Completion Certificate", Icon: Award,       iconBg: "bg-[#F0FDF4]",  iconColor: "text-[#16A34A]",  description: "Formal service completion certificate (e.g. for installation jobs)" },
-  { key: "quotation",   label: "Quotation",              Icon: FileEdit,    iconBg: "bg-[#FFFBEB]",  iconColor: "text-[#D97706]",  description: "Price estimate sent to the client before work begins" },
+  { key: "invoice", label: "Invoice", Icon: FileText, iconBg: "bg-[#EFF6FF]", iconColor: "text-[#2563EB]", description: "Payment request generated when a worker reports completion." },
+  { key: "job_card", label: "Job Card", Icon: Clipboard, iconBg: "bg-[#F1F5F9]", iconColor: "text-[#64748B]", description: "Full job record with timeline, worker details, and client verification." },
+  { key: "warranty", label: "Warranty Certificate", Icon: ShieldCheck, iconBg: "bg-[#EFF6FF]", iconColor: "text-[#2563EB]", description: "Warranty terms issued to the client after verification." },
+  { key: "completion_certificate", label: "Completion Certificate", Icon: Award, iconBg: "bg-[#F0FDF4]", iconColor: "text-[#16A34A]", description: "Formal completion proof for installations or contracted work." },
+  { key: "quotation", label: "Quotation", Icon: FileEdit, iconBg: "bg-[#FFFBEB]", iconColor: "text-[#D97706]", description: "Price estimate prepared before a job is approved." },
+  { key: "service_report", label: "Service Report", Icon: FileText, iconBg: "bg-[#F5F3FF]", iconColor: "text-[#7C3AED]", description: "Operational report covering what was done on site." },
+  { key: "installation_report", label: "Installation Report", Icon: Clipboard, iconBg: "bg-[#EEF2FF]", iconColor: "text-[#4F46E5]", description: "Installation details for solar, tracking, equipment, and similar jobs." },
+  { key: "fuel_calibration_report", label: "Fuel Calibration Report", Icon: Gauge, iconBg: "bg-[#FFFBEB]", iconColor: "text-[#D97706]", description: "Calibration readings and verification for fuel monitoring jobs." },
+  { key: "device_replacement_report", label: "Device Replacement Report", Icon: RefreshCw, iconBg: "bg-[#FFF7ED]", iconColor: "text-[#EA580C]", description: "Tracks removed and installed devices during replacement work." },
+  { key: "client_confirmation_receipt", label: "Client Confirmation Receipt", Icon: CheckCircle2, iconBg: "bg-[#F0FDF4]", iconColor: "text-[#16A34A]", description: "Receipt showing OTP confirmation as the client signature." },
+  { key: "delivery_note", label: "Delivery Note", Icon: Truck, iconBg: "bg-[#ECFEFF]", iconColor: "text-[#0891B2]", description: "Proof of delivered items, visits, or fleet service handovers." },
+  { key: "compliance_certificate", label: "Compliance Certificate", Icon: ShieldCheck, iconBg: "bg-[#F1F5F9]", iconColor: "text-[#475569]", description: "Formal compliance proof for regulated service categories." },
 ];
+
+const DOC_PREVIEW_TYPES: Record<string, string> = {
+  invoice: "INVOICE",
+  job_card: "JOB_CARD",
+  warranty: "WARRANTY_CERTIFICATE",
+  completion_certificate: "CLIENT_CONFIRMATION_RECEIPT",
+  quotation: "OTHER",
+  service_report: "SERVICE_REPORT",
+  installation_report: "INSTALLATION_REPORT",
+  fuel_calibration_report: "FUEL_CALIBRATION_REPORT",
+  device_replacement_report: "DEVICE_REPLACEMENT_REPORT",
+  client_confirmation_receipt: "CLIENT_CONFIRMATION_RECEIPT",
+  delivery_note: "DELIVERY_NOTE",
+  compliance_certificate: "COMPLIANCE_CERTIFICATE",
+};
 
 // ── Tab config ────────────────────────────────────────────────────────────────
 type Tab = "general" | "company" | "operations" | "documents" | "automations" | "branding" | "whatsapp" | "users" | "billing" | "data";
@@ -323,6 +345,8 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
   const [showLogoOnDocs, setShowLogoOnDocs]       = useState(settings.show_logo_on_docs !== "false");
   const [brandColorHeader, setBrandColorHeader]   = useState(settings.brand_color_header !== "false");
   const [showPoweredBy, setShowPoweredBy]         = useState(settings.show_powered_by !== "false");
+  const [includeOtpStamp, setIncludeOtpStamp]     = useState(settings.include_otp_stamp !== "false");
+  const [showCompanyNameInMessages, setShowCompanyNameInMessages] = useState(settings.show_company_name_in_messages !== "false");
 
   // ── Automations tab ───────────────────────────────────────────────────────
   const [briefingTime, setBriefingTime]           = useState(settings.briefing_time ?? "06:00");
@@ -332,12 +356,18 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
   const [slaHours, setSlaHours]                   = useState(settings.sla_hours ?? "24");
   const [weeklyEarnings, setWeeklyEarnings]       = useState(settings.weekly_earnings !== "false");
   const [reviewRequests, setReviewRequests]       = useState(settings.review_requests !== "false");
+  const [quoteFollowUps, setQuoteFollowUps]       = useState(settings.quote_follow_ups === "true");
 
   // ── Documents tab ─────────────────────────────────────────────────────────
   const DEFAULT_DOCS = ["invoice", "job_card", "warranty"];
   const [enabledDocs, setEnabledDocs] = useState<string[]>(safeJson<string[]>(settings.enabled_documents, DEFAULT_DOCS));
+  const [previewDoc, setPreviewDoc] = useState(enabledDocs[0] ?? "invoice");
   function toggleDoc(key: string) {
-    setEnabledDocs(prev => prev.includes(key) ? prev.filter(d => d !== key) : [...prev, key]);
+    setEnabledDocs(prev => {
+      const next = prev.includes(key) ? prev.filter(d => d !== key) : [...prev, key];
+      if (!next.includes(previewDoc)) setPreviewDoc(next[0] ?? key);
+      return next;
+    });
   }
 
   // ── Edit modal ────────────────────────────────────────────────────────────
@@ -399,6 +429,8 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
           show_logo_on_docs:    String(showLogoOnDocs),
           brand_color_header:   String(brandColorHeader),
           show_powered_by:      String(showPoweredBy),
+          include_otp_stamp:    String(includeOtpStamp),
+          show_company_name_in_messages: String(showCompanyNameInMessages),
           default_warranty:     defaultWarranty,
           job_types:            JSON.stringify(jobTypes),
           zones:                JSON.stringify(zones),
@@ -410,6 +442,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
           sla_hours:            slaHours,
           weekly_earnings:      String(weeklyEarnings),
           review_requests:      String(reviewRequests),
+          quote_follow_ups:     String(quoteFollowUps),
           emoji: (INDUSTRY_TEMPLATES[industry] ?? INDUSTRY_TEMPLATES.OTHER).emoji,
         }),
       });
@@ -538,9 +571,9 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                     <h3 className="text-sm font-semibold text-[#0F172A]">Need Help?</h3>
                   </div>
                   <p className="text-[11px] text-[#94A3B8] leading-relaxed mb-3">Browse our documentation or contact support for assistance.</p>
-                  <button className="w-full text-xs font-semibold py-2.5 rounded-[8px] border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#334155] transition-colors flex items-center justify-center gap-1.5">
+                  <a href="/help" className="w-full text-xs font-semibold py-2.5 rounded-[8px] border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#334155] transition-colors flex items-center justify-center gap-1.5">
                     <ExternalLink className="w-3.5 h-3.5" /> Go to Help Center
-                  </button>
+                  </a>
                 </div>
               </div>
             </div>
@@ -704,17 +737,49 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                       const on = enabledDocs.includes(doc.key);
                       return (
                         <div key={doc.key}
-                          className="flex items-center justify-between gap-3 py-3 px-4 rounded-[12px] border border-[#E2E8F0] hover:border-[#CBD5E1] transition-colors">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className={`w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0 ${doc.iconBg}`}>
-                              <doc.Icon className={`w-4 h-4 ${doc.iconColor}`} />
+                          className="rounded-[12px] border border-[#E2E8F0] hover:border-[#CBD5E1] transition-colors">
+                          <div className="flex items-center justify-between gap-3 py-3 px-4">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className={`w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0 ${doc.iconBg}`}>
+                                <doc.Icon className={`w-4 h-4 ${doc.iconColor}`} />
+                              </div>
+                              <div>
+                                <p className="text-sm font-semibold text-[#0F172A]">{doc.label}</p>
+                                <p className="text-xs text-[#94A3B8] mt-0.5 leading-snug">{doc.description}</p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="text-sm font-semibold text-[#0F172A]">{doc.label}</p>
-                              <p className="text-xs text-[#94A3B8] mt-0.5 leading-snug">{doc.description}</p>
-                            </div>
+                            <Toggle on={on} onToggle={() => toggleDoc(doc.key)} />
                           </div>
-                          <Toggle on={on} onToggle={() => toggleDoc(doc.key)} />
+                          {on && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 border-t border-[#F1F5F9] bg-[#F8FAFC] px-4 py-3">
+                              <div>
+                                <label className="block text-[11px] font-semibold text-[#475569] mb-1.5">Default template label</label>
+                                <input defaultValue={`${doc.label} - Standard`} className="ff-input text-xs bg-white" />
+                              </div>
+                              <div>
+                                <label className="block text-[11px] font-semibold text-[#475569] mb-1.5">Custom footer text</label>
+                                <input placeholder="Optional footer for this document" className="ff-input text-xs bg-white" />
+                              </div>
+                              <div className="md:col-span-2">
+                                <label className="block text-[11px] font-semibold text-[#475569] mb-1.5">Default terms</label>
+                                <textarea rows={2} placeholder="Optional terms shown on this document" className="ff-input text-xs bg-white resize-none" />
+                              </div>
+                              <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                <label className="flex items-center gap-2 text-[11px] font-medium text-[#475569]">
+                                  <input type="checkbox" defaultChecked className="rounded border-[#CBD5E1]" />
+                                  Include company logo
+                                </label>
+                                <label className="flex items-center gap-2 text-[11px] font-medium text-[#475569]">
+                                  <input type="checkbox" defaultChecked={["job_card", "client_confirmation_receipt"].includes(doc.key)} className="rounded border-[#CBD5E1]" />
+                                  Include OTP stamp
+                                </label>
+                                <label className="flex items-center gap-2 text-[11px] font-medium text-[#475569]">
+                                  <input type="checkbox" defaultChecked={["invoice", "job_card", "warranty", "completion_certificate", "client_confirmation_receipt"].includes(doc.key)} className="rounded border-[#CBD5E1]" />
+                                  Auto-send after verification
+                                </label>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -730,6 +795,35 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
               </div>
 
               <div className="space-y-5">
+                <SectionCard title="Template Preview" subtitle="Open an A4 preview using your current company name, brand color, and footer.">
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-[#475569] mb-1.5">Enabled document</label>
+                      <select
+                        value={previewDoc}
+                        onChange={(e) => setPreviewDoc(e.target.value)}
+                        className="ff-input text-sm"
+                      >
+                        {DOCUMENT_OPTIONS.filter((doc) => enabledDocs.includes(doc.key)).map((doc) => (
+                          <option key={doc.key} value={doc.key}>{doc.label}</option>
+                        ))}
+                      </select>
+                      {enabledDocs.length === 0 && (
+                        <p className="mt-2 text-xs text-[#DC2626]">Enable at least one document to preview a template.</p>
+                      )}
+                    </div>
+                    <a
+                      href={`/api/documents/template-preview?type=${DOC_PREVIEW_TYPES[previewDoc] ?? previewDoc}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={`ff-btn-primary inline-flex w-full items-center justify-center gap-2 px-3 py-2.5 text-sm ${enabledDocs.length === 0 ? "pointer-events-none opacity-50" : ""}`}
+                    >
+                      <Eye className="w-4 h-4" />
+                      Preview Template
+                    </a>
+                  </div>
+                </SectionCard>
+
                 {/* Warranty defaults */}
                 <SectionCard title="Warranty Defaults" subtitle="Applied to new jobs unless overridden per job.">
                   <div className="space-y-3">
@@ -758,18 +852,19 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                         <p className="text-sm font-semibold text-[#0F172A]">Company logo on PDFs</p>
                         <p className="text-[11px] text-[#94A3B8] mt-0.5">Show your logo at the top of every document</p>
                       </div>
-                      <Toggle on={true} onToggle={() => {}} />
+                      <Toggle on={showLogoOnDocs} onToggle={() => setShowLogoOnDocs(v => !v)} />
                     </div>
                     <div className="flex items-center justify-between gap-3 py-2.5 border-b border-[#F1F5F9]">
                       <div>
                         <p className="text-sm font-semibold text-[#0F172A]">Brand color header</p>
                         <p className="text-[11px] text-[#94A3B8] mt-0.5">Use your brand color in document headers</p>
                       </div>
-                      <Toggle on={true} onToggle={() => {}} />
+                      <Toggle on={brandColorHeader} onToggle={() => setBrandColorHeader(v => !v)} />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-[#475569] mb-1.5">PDF footer text <span className="font-normal text-[#94A3B8]">(optional)</span></label>
-                      <input placeholder={`${companyName} · ${phone}`} className="ff-input text-sm" />
+                      <input value={pdfFooter} onChange={e => setPdfFooter(e.target.value)}
+                        placeholder={`${companyName} · ${phone}`} className="ff-input text-sm" />
                     </div>
                   </div>
                 </SectionCard>
@@ -819,7 +914,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                       <p className="text-sm font-semibold text-[#0F172A]">Quote follow-ups</p>
                       <p className="text-[11px] text-[#94A3B8] mt-0.5">Follow up on unanswered quotations after 24h</p>
                     </div>
-                    <Toggle on={false} onToggle={() => {}} />
+                    <Toggle on={quoteFollowUps} onToggle={() => setQuoteFollowUps(v => !v)} />
                   </div>
                 </SectionCard>
 
@@ -950,7 +1045,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                         <p className="text-sm font-semibold text-[#0F172A]">Include OTP verification stamp</p>
                         <p className="text-[11px] text-[#94A3B8] mt-0.5">Show client signature block on job cards</p>
                       </div>
-                      <Toggle on={true} onToggle={() => {}} />
+                      <Toggle on={includeOtpStamp} onToggle={() => setIncludeOtpStamp(v => !v)} />
                     </div>
                   </div>
                   <div className="mt-3 pt-3 border-t border-[#F1F5F9]">
@@ -1004,7 +1099,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                       <p className="text-sm font-semibold text-[#0F172A]">Show company name in messages</p>
                       <p className="text-[11px] text-[#94A3B8] mt-0.5">Append your name at the end of WhatsApp messages</p>
                     </div>
-                    <Toggle on={true} onToggle={() => {}} />
+                    <Toggle on={showCompanyNameInMessages} onToggle={() => setShowCompanyNameInMessages(v => !v)} />
                   </div>
                   <div className="flex items-center justify-between gap-3 py-2.5">
                     <div>
@@ -1029,7 +1124,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
                     </div>
                     <div>
                       <p className="text-sm font-bold text-green-900">WhatsApp Business</p>
-                      <p className="text-xs text-[#15803D] mt-0.5">Powered by Twilio</p>
+                      <p className="text-xs text-[#15803D] mt-0.5">WhatsApp Business API</p>
                     </div>
                     <span className="ml-auto text-[10px] font-bold bg-green-200 text-[#166534] px-2 py-0.5 rounded-full">Connected</span>
                   </div>
@@ -1050,7 +1145,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
               </div>
 
               <div className="space-y-5">
-                <SectionCard title="Message Templates" subtitle="Twilio-approved templates for outbound notifications.">
+                <SectionCard title="Message Templates" subtitle="WhatsApp-approved templates for outbound notifications.">
                   <div className="space-y-2">
                     {[
                       { label: "Job Assignment",          status: "approved", desc: "Sent when admin assigns a job to a worker"          },

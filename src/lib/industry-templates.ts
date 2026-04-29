@@ -406,7 +406,7 @@ export const INDUSTRY_TEMPLATES: Record<IndustryKey, IndustryTemplate> = {
   // changes, only this template + Asset rows.
   FUEL_TRACKER: {
     key: "FUEL_TRACKER",
-    displayName: "Tracking & Fuel Monitoring",
+    displayName: "Tracking and Fuel Monitoring",
     workerTitle: "Technician",
     workerTitlePlural: "Technicians",
     jobLabel: "Job",
@@ -442,7 +442,7 @@ export const INDUSTRY_TEMPLATES: Record<IndustryKey, IndustryTemplate> = {
 
   OTHER: {
     key: "OTHER",
-    displayName: "Other / Custom",
+    displayName: "General Field Services",
     workerTitle: "Technician",
     workerTitlePlural: "Technicians",
     jobLabel: "Job",

@@ -24,6 +24,14 @@ export function generateJobCardNumber(seq: number): string {
   return `JC-${year}-${String(seq).padStart(4, "0")}`;
 }
 
+export function friendlyJobNumber(raw: string | null | undefined, date?: Date | string | null): string {
+  const value = raw ?? "";
+  if (value && !/^c[a-z0-9]{18,}$/i.test(value)) return value;
+  const year = date ? new Date(date).getFullYear() : new Date().getFullYear();
+  const suffix = (value || "0000").slice(-4).toUpperCase().padStart(4, "0");
+  return `JOB-${year}-${suffix}`;
+}
+
 export function otpExpiresAt(): Date {
   const d = new Date();
   d.setHours(d.getHours() + 24);

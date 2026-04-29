@@ -86,8 +86,8 @@ export function AICopilotFloat() {
     <>
       {/* ── Chat panel ── */}
       <div
-        className={`fixed z-50 right-3 left-3 sm:left-auto sm:w-[360px] sm:right-4 lg:right-6
-          bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col
+        className={`hidden lg:flex fixed z-50 right-3 left-3 sm:left-auto sm:w-[360px] sm:right-4 lg:right-6
+          bg-white rounded-2xl shadow-2xl border border-gray-200 flex-col
           overflow-hidden transition-all duration-200 ease-out
           bottom-[8.5rem] sm:bottom-[5.5rem] lg:bottom-[4.5rem]
           ${open
@@ -220,9 +220,9 @@ export function AICopilotFloat() {
       <button
         onClick={() => setOpen((v) => !v)}
         aria-label={open ? "Close AI Copilot" : "Open AI Copilot"}
-        className={`fixed z-50 bottom-[4.5rem] right-3 lg:bottom-6 lg:right-6
+        className={`hidden lg:flex fixed z-50 bottom-[4.5rem] right-3 lg:bottom-6 lg:right-6
           w-[46px] h-[46px] lg:w-[52px] lg:h-[52px] rounded-2xl shadow-lg shadow-blue-500/25
-          flex items-center justify-center
+          items-center justify-center
           transition-all duration-200
           ${open
             ? "bg-slate-800 hover:bg-slate-700 rotate-0 scale-95"

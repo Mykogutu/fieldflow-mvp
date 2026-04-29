@@ -12,7 +12,7 @@ import {
   Edit3, Flag, RotateCcw, Star, History, Hash, Building2,
   Navigation,
 } from "lucide-react";
-import { formatKES, formatDate, statusLabel } from "@/lib/utils";
+import { formatKES, formatDate, statusLabel, friendlyJobNumber } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
   updateJobStatus, rescheduleJob, reassignJob,
@@ -49,6 +49,8 @@ const DOC_CONFIG: Record<string, { label: string; Icon: React.ElementType; color
   INVOICE:                     { label: "Invoice",              Icon: FileText,    color: "text-[#2563EB]",   bg: "bg-[#EFF6FF]"   },
   JOB_CARD:                    { label: "Job Card",             Icon: Clipboard,   color: "text-[#475569]",  bg: "bg-[#F1F5F9]" },
   WARRANTY_CERTIFICATE:        { label: "Warranty",             Icon: ShieldCheck, color: "text-[#16A34A]",  bg: "bg-[#F0FDF4]"  },
+  COMPLETION_CERTIFICATE:      { label: "Completion Certificate", Icon: Award,     color: "text-[#16A34A]",  bg: "bg-[#F0FDF4]"  },
+  QUOTATION:                   { label: "Quotation",            Icon: FileText,    color: "text-[#D97706]",  bg: "bg-[#FFFBEB]"  },
   INSTALLATION_REPORT:         { label: "Installation Report",  Icon: FileCheck,   color: "text-[#4F46E5]", bg: "bg-[#EEF2FF]" },
   SERVICE_REPORT:               { label: "Service Report",       Icon: Award,       color: "text-[#9333EA]", bg: "bg-[#F5F3FF]" },
   FUEL_CALIBRATION_REPORT:     { label: "Fuel Calibration",     Icon: Package,     color: "text-[#D97706]",  bg: "bg-[#FFFBEB]"  },
@@ -65,15 +67,19 @@ type Invoice  = { id: string; invoiceNumber: string; amount: number; status: str
 type JobEvent = { id: string; type: string; note: string | null; createdAt: Date };
 type Document = { id: string; type: string; title: string | null; pdfUrl: string | null; sentAt: Date | null; sentVia: string | null; generatedAt: Date };
 
+type EnabledDocumentOption = { key: string; type: string; label: string };
+
 export type JobDetailData = {
   id: string; jobNumber: string; jobType: string; status: string; priority: string;
   clientName: string; clientPhone: string; location: string | null; zone: string | null;
+  createdAt?: Date | string;
   description: string | null; scheduledDate: Date | null;
   quotedAmount: number | null; finalAmount: number | null;
   otpCode: string | null; verifiedAt: Date | null; completedAt: Date | null;
   postponeReason: string | null;
   workers: Worker[]; invoice: Invoice | null; events: JobEvent[];
   asset: Asset | null; documents: Document[]; allWorkers: Worker[];
+  enabledDocumentOptions?: EnabledDocumentOption[];
 };
 
 type TabId = "timeline" | "documents" | "details" | "notes" | "photos" | "payments";
@@ -241,7 +247,7 @@ function EditJobModal({ job, onClose }: { job: JobDetailData; onClose: () => voi
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-white rounded-[16px] shadow-2xl w-full max-w-lg max-h-[90dvh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#E2E8F0] shrink-0">
-          <h3 className="font-bold text-[#0F172A]">Edit Job · {job.jobNumber}</h3>
+          <h3 className="font-bold text-[#0F172A]">Edit Job · {friendlyJobNumber(job.jobNumber, job.createdAt)}</h3>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[#F8FAFC] text-[#94A3B8]">
             <X className="w-4 h-4" />
           </button>
@@ -440,24 +446,53 @@ function TimelineTab({ events }: { events: JobEvent[] }) {
 }
 
 // ── Documents Tab ──────────────────────────────────────────────────────────────
-function DocumentsTab({ docs, clientPhone, clientName }: {
-  docs: Document[]; clientPhone: string; clientName: string;
+function DocumentsTab({ docs, clientPhone, clientName, enabledOptions }: {
+  docs: Document[]; clientPhone: string; clientName: string; enabledOptions: EnabledDocumentOption[];
 }) {
+  const options = enabledOptions.length
+    ? enabledOptions
+    : [
+        { key: "invoice", type: "INVOICE", label: "Invoice" },
+        { key: "job_card", type: "JOB_CARD", label: "Job Card" },
+        { key: "warranty", type: "WARRANTY_CERTIFICATE", label: "Warranty Certificate" },
+      ];
+
+  const optionPanel = (
+    <div className="border-b border-[#E2E8F0] bg-[#F8FAFC] px-5 py-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-semibold text-[#0F172A]">Generate document</p>
+          <p className="mt-0.5 text-xs text-[#94A3B8]">Enabled document types from Settings appear here.</p>
+        </div>
+        <select className="ff-input max-w-xs bg-white text-sm">
+          {options.map((option) => (
+            <option key={option.key} value={option.type}>{option.label}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+
   if (docs.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="w-12 h-12 rounded-2xl bg-[#F1F5F9] flex items-center justify-center mb-3">
-          <FileText className="w-5 h-5 text-[#94A3B8]" />
+      <>
+        {optionPanel}
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="w-12 h-12 rounded-2xl bg-[#F1F5F9] flex items-center justify-center mb-3">
+            <FileText className="w-5 h-5 text-[#94A3B8]" />
+          </div>
+          <p className="text-sm font-medium text-[#64748B]">No documents yet</p>
+          <p className="text-xs text-[#94A3B8] mt-1">Documents are auto-generated when the job is verified</p>
         </div>
-        <p className="text-sm font-medium text-[#64748B]">No documents yet</p>
-        <p className="text-xs text-[#94A3B8] mt-1">Documents are auto-generated when the job is verified</p>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="p-5 space-y-2">
-      {docs.map(doc => {
+    <>
+      {optionPanel}
+      <div className="p-5 space-y-2">
+        {docs.map(doc => {
         const cfg = DOC_CONFIG[doc.type] ?? DOC_CONFIG.OTHER;
         const waText = `Hi ${clientName}, please find your ${cfg.label} attached.`;
         return (
@@ -494,8 +529,9 @@ function DocumentsTab({ docs, clientPhone, clientName }: {
             </div>
           </div>
         );
-      })}
-    </div>
+        })}
+      </div>
+    </>
   );
 }
 
@@ -757,6 +793,7 @@ export default function JobDetailClient({ job }: { job: JobDetailData }) {
   const isPaid = inv?.status === "PAID";
   const isVerified = job.status === "VERIFIED" || job.status === "CLOSED";
   const noteCount = (job.description ? 1 : 0) + (job.postponeReason ? 1 : 0);
+  const displayJobNumber = friendlyJobNumber(job.jobNumber, job.createdAt);
 
   const tabs: { id: TabId; label: string; count?: number }[] = [
     { id: "timeline", label: "Timeline", count: job.events.length },
@@ -776,7 +813,7 @@ export default function JobDetailClient({ job }: { job: JobDetailData }) {
           <ArrowLeft className="w-3.5 h-3.5" /> Jobs
         </Link>
         <span>/</span>
-        <span className="font-mono text-[#64748B] font-medium">{job.jobNumber}</span>
+        <span className="font-mono text-[#64748B] font-medium">{displayJobNumber}</span>
       </div>
 
       {/* ── Header Card ────────────────────────────────────────────────────── */}
@@ -785,12 +822,12 @@ export default function JobDetailClient({ job }: { job: JobDetailData }) {
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-2">
               <span className="font-mono text-xs bg-[#F8FAFC] border border-[#E2E8F0] text-[#64748B] px-2.5 py-1 rounded-[6px] font-medium">
-                {job.jobNumber}
+                {displayJobNumber}
               </span>
               <StatusBadge status={job.status} />
               {job.priority !== "NORMAL" && (
                 <span className={`text-xs px-2.5 py-1 rounded-[6px] font-semibold ${priorityBadge(job.priority)}`}>
-                  {job.priority === "EMERGENCY" ? "🚨 Emergency" : job.priority === "HIGH" ? "⚠️ High Priority" : job.priority}
+                  {job.priority === "EMERGENCY" ? "Emergency" : job.priority === "HIGH" ? "High Priority" : job.priority}
                 </span>
               )}
             </div>
@@ -994,12 +1031,12 @@ export default function JobDetailClient({ job }: { job: JobDetailData }) {
         {/* Left: Tab Card */}
         <div className="flex-1 bg-white rounded-[16px] border border-[#E2E8F0] shadow-card overflow-hidden min-w-0">
           {/* Tab Bar */}
-          <div className="border-b border-[#E2E8F0] px-4 overflow-x-auto scrollbar-none">
-            <div className="flex gap-0 min-w-max">
+          <div className="border-b border-[#E2E8F0] px-4 py-3 overflow-x-auto scrollbar-none">
+            <div className="flex gap-2 min-w-max">
               {tabs.map(tab => (
                 <button key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`ff-tab ${activeTab === tab.id ? "ff-tab-active" : "ff-tab-inactive"}`}>
+                  className={`ff-tab min-h-9 px-4 py-2 ${activeTab === tab.id ? "ff-tab-active" : "ff-tab-inactive"}`}>
                   {tab.label}
                   {tab.count !== undefined && tab.count > 0 && (
                     <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-semibold
@@ -1015,7 +1052,12 @@ export default function JobDetailClient({ job }: { job: JobDetailData }) {
           {/* Tab Content */}
           {activeTab === "timeline" && <TimelineTab events={job.events} />}
           {activeTab === "documents" && (
-            <DocumentsTab docs={job.documents} clientPhone={job.clientPhone} clientName={job.clientName} />
+            <DocumentsTab
+              docs={job.documents}
+              clientPhone={job.clientPhone}
+              clientName={job.clientName}
+              enabledOptions={job.enabledDocumentOptions ?? []}
+            />
           )}
           {activeTab === "details" && <DetailsTab job={job} />}
           {activeTab === "notes" && <NotesTab job={job} />}

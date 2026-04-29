@@ -19,7 +19,7 @@ export async function getInvoices(filter?: { status?: string; page?: number }) {
   const [invoices, total] = await Promise.all([
     prisma.invoice.findMany({
       where,
-      include: { job: { select: { jobType: true, location: true, workers: { select: { name: true } } } } },
+      include: { job: { select: { id: true, jobNumber: true, jobType: true, location: true, workers: { select: { name: true } } } } },
       orderBy: { createdAt: "desc" },
       take,
       skip,

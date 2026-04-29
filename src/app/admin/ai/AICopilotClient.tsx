@@ -62,10 +62,10 @@ const QUICK_ACTIONS = [
 ];
 
 const RESOURCES = [
-  { icon: BookOpen,      title: "How to use AI Copilot",     sub: "Learn the basics",           href: "#" },
-  { icon: MessageSquare, title: "Prompt examples",           sub: "See example questions",      href: "#" },
-  { icon: HelpCircle,    title: "Give feedback",             sub: "Help us improve AI Copilot", href: "#" },
-  { icon: Sparkles,      title: "AI Copilot roadmap",        sub: "See what's coming next",     href: "#" },
+  { icon: BookOpen, title: "How to use AI Copilot", sub: "Learn the basics", href: "/help" },
+  { icon: MessageSquare, title: "Prompt examples", sub: "See example questions", href: "/admin/ai" },
+  { icon: HelpCircle, title: "Give feedback", sub: "Help us improve AI Copilot", href: "/admin/settings" },
+  { icon: Sparkles, title: "AI Copilot roadmap", sub: "See what's coming next", href: "/help" },
 ];
 
 // ── Spinner ───────────────────────────────────────────────────────────────────

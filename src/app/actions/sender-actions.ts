@@ -37,7 +37,7 @@ export async function createSender(input: SenderInput) {
   const workspaceId = await currentWorkspaceId();
   const phoneNumber = normalizePhone(input.phoneNumber);
   if (!phoneNumber || !input.displayName || !input.twilioAccountSid || !input.twilioAuthToken) {
-    throw new Error("phoneNumber, displayName, and Twilio credentials are required");
+    throw new Error("phoneNumber, displayName, and WhatsApp gateway credentials are required");
   }
 
   // If this is the workspace's first sender, force it to be the default.

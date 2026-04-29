@@ -247,7 +247,7 @@ export default function WhatsAppSendersClient({ senders }: { senders: WhatsAppSe
               <p className="text-xs text-[#94A3B8] mt-0.5">
                 {selectedTier === "BYO_WABA"
                   ? "Embedded Signup is the production path — this manual form is for testing."
-                  : "Provide the Twilio subaccount credentials for this number."}
+                  : "Provide the WhatsApp gateway credentials for this number."}
               </p>
             </div>
             <button onClick={() => setShowForm(false)}
@@ -266,11 +266,11 @@ export default function WhatsAppSendersClient({ senders }: { senders: WhatsAppSe
                 <input className="ff-input text-sm" placeholder="AquaTech Plumbing"
                   value={form.displayName} onChange={e => setForm({ ...form, displayName: e.target.value })} required />
               </Field>
-              <Field label="Twilio Account SID">
+              <Field label="WhatsApp Account SID">
                 <input className="ff-input text-sm" placeholder="AC…"
                   value={form.twilioAccountSid} onChange={e => setForm({ ...form, twilioAccountSid: e.target.value })} required />
               </Field>
-              <Field label="Twilio Auth Token">
+              <Field label="WhatsApp Auth Token">
                 <input className="ff-input text-sm" type="password" placeholder="••••••••"
                   value={form.twilioAuthToken} onChange={e => setForm({ ...form, twilioAuthToken: e.target.value })} required />
               </Field>

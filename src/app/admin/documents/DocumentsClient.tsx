@@ -14,13 +14,15 @@ const DOC_CONFIG: Record<string, { label: string; Icon: React.ElementType; color
   INVOICE:                     { label: "Invoice",                   Icon: FileText,    color: "text-[#2563EB]",   bg: "bg-[#EFF6FF]"   },
   JOB_CARD:                    { label: "Job Card",                  Icon: Clipboard,   color: "text-[#475569]",  bg: "bg-[#F1F5F9]" },
   WARRANTY_CERTIFICATE:        { label: "Warranty Certificate",      Icon: ShieldCheck, color: "text-[#16A34A]",  bg: "bg-[#F0FDF4]"  },
+  COMPLETION_CERTIFICATE:      { label: "Completion Certificate",    Icon: Award,       color: "text-[#16A34A]",  bg: "bg-[#F0FDF4]"  },
+  QUOTATION:                   { label: "Quotation",                 Icon: FileEdit,    color: "text-[#D97706]",  bg: "bg-[#FFFBEB]"  },
   INSTALLATION_REPORT:         { label: "Installation Report",       Icon: FileCheck,   color: "text-[#4F46E5]", bg: "bg-[#EEF2FF]" },
   SERVICE_REPORT:              { label: "Service Report",            Icon: Award,       color: "text-[#9333EA]", bg: "bg-[#F5F3FF]" },
   FUEL_CALIBRATION_REPORT:     { label: "Fuel Calibration Report",   Icon: Package,     color: "text-[#D97706]",  bg: "bg-[#FFFBEB]"  },
   DEVICE_REPLACEMENT_REPORT:   { label: "Device Replacement Report", Icon: Package,     color: "text-[#EA580C]", bg: "bg-[#FFF7ED]" },
   CLIENT_CONFIRMATION_RECEIPT: { label: "Client Confirmation",       Icon: CheckSquare, color: "text-[#16A34A]",  bg: "bg-[#F0FDF4]"  },
   DELIVERY_NOTE:               { label: "Delivery Note",             Icon: Truck,       color: "text-[#0891B2]",   bg: "bg-[#ECFEFF]"   },
-  COMPLIANCE_CERTIFICATE:      { label: "Compliance Certificate",    Icon: FileEdit,    color: "text-teal-600",   bg: "bg-teal-50"   },
+  COMPLIANCE_CERTIFICATE:      { label: "Compliance Certificate",    Icon: FileEdit,    color: "text-[#475569]",   bg: "bg-[#F1F5F9]"   },
   OTHER:                       { label: "Document",                  Icon: FileText,    color: "text-[#64748B]",  bg: "bg-[#F1F5F9]" },
 };
 
@@ -37,6 +39,7 @@ interface Props {
   docs: Doc[]; total: number;
   typeCounts: { type: string; _count: { _all: number } }[];
   typeFilter?: string;
+  enabledDocumentOptions: { key: string; type: string; label: string }[];
 }
 
 // ── Mark Sent button ──────────────────────────────────────────────────────────
@@ -89,12 +92,14 @@ function MarkSentButton({ doc }: { doc: Doc }) {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-export default function DocumentsClient({ docs, total, typeCounts, typeFilter }: Props) {
+export default function DocumentsClient({ docs, total, typeCounts, typeFilter, enabledDocumentOptions }: Props) {
   const countMap = Object.fromEntries(typeCounts.map(t => [t.type, t._count._all]));
   const sentCount = docs.filter(d => d.sentAt).length;
   const unsentCount = docs.filter(d => !d.sentAt).length;
 
-  const activeTypes = ALL_TYPES.filter(t => countMap[t]);
+  const activeTypes = enabledDocumentOptions.length
+    ? enabledDocumentOptions.map((option) => option.type)
+    : ALL_TYPES.filter(t => countMap[t]);
 
   return (
     <div className="space-y-5">
@@ -124,13 +129,38 @@ export default function DocumentsClient({ docs, total, typeCounts, typeFilter }:
         ))}
       </div>
 
+      <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <label className="block">
+            <span className="block text-[11px] font-semibold text-[#475569] mb-1.5">Type</span>
+            <select defaultValue={typeFilter ?? ""} className="ff-input text-xs">
+              <option value="">All enabled document types</option>
+              {enabledDocumentOptions.map((option) => (
+                <option key={option.key} value={option.type}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+          {[
+            { label: "Client", placeholder: "Search client" },
+            { label: "Job", placeholder: "Search job" },
+            { label: "Date", placeholder: "Any date" },
+            { label: "Status", placeholder: "Any status" },
+          ].map((filter) => (
+            <label key={filter.label} className="block">
+              <span className="block text-[11px] font-semibold text-[#475569] mb-1.5">{filter.label}</span>
+              <input placeholder={filter.placeholder} className="ff-input text-xs" />
+            </label>
+          ))}
+        </div>
+      </div>
+
       {/* ── Tab bar + table card ──────────────────────────────────────────── */}
       <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card overflow-hidden">
         {/* Tab bar */}
-        <div className="border-b border-[#E2E8F0] px-4 overflow-x-auto scrollbar-none">
-          <div className="flex gap-0 min-w-max">
+        <div className="border-b border-[#E2E8F0] px-4 py-3 overflow-x-auto scrollbar-none">
+          <div className="flex gap-2 min-w-max">
             <Link href="/admin/documents"
-              className={`ff-tab ${!typeFilter ? "ff-tab-active" : "ff-tab-inactive"}`}>
+              className={`ff-tab inline-flex min-h-9 items-center px-4 py-2 ${!typeFilter ? "ff-tab-active" : "ff-tab-inactive"}`}>
               All
               <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-semibold
                 ${!typeFilter ? "bg-[#2563EB]/15 text-[#2563EB]" : "bg-[#F1F5F9] text-[#64748B]"}`}>
@@ -139,7 +169,7 @@ export default function DocumentsClient({ docs, total, typeCounts, typeFilter }:
             </Link>
             {activeTypes.map(t => (
               <Link key={t} href={`/admin/documents?type=${t}`}
-                className={`ff-tab ${typeFilter === t ? "ff-tab-active" : "ff-tab-inactive"}`}>
+                className={`ff-tab inline-flex min-h-9 items-center px-4 py-2 ${typeFilter === t ? "ff-tab-active" : "ff-tab-inactive"}`}>
                 {DOC_CONFIG[t]?.label ?? t}
                 <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-semibold
                   ${typeFilter === t ? "bg-[#2563EB]/15 text-[#2563EB]" : "bg-[#F1F5F9] text-[#64748B]"}`}>
@@ -237,6 +267,13 @@ export default function DocumentsClient({ docs, total, typeCounts, typeFilter }:
                               </a>
                             </>
                           )}
+                          <button
+                            type="button"
+                            className="p-1.5 rounded-[6px] border border-[#E2E8F0] text-[#64748B] hover:border-[#2563EB]/50 hover:text-[#2563EB] hover:bg-[#EFF6FF] transition-colors"
+                            title="More actions"
+                          >
+                            <MoreHorizontal className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </td>
                     </tr>
