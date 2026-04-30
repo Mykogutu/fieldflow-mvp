@@ -114,6 +114,28 @@ type WhatsAppSummary = {
   source: string;
 };
 
+type DataAction = {
+  action: "clear_job_history" | "reset_settings" | "delete_workspace";
+  title: string;
+  description: string;
+  confirmation: string;
+  enabled: boolean;
+};
+
+type BillingSummary = {
+  planName: string;
+  planPrice: string;
+  planStatus: string;
+  workerLimit: number;
+  jobLimit: number;
+  pdfLimit: number;
+  whatsappLimit: number;
+  activeWorkerCount: number;
+  jobsThisMonth: number;
+  pdfsThisMonth: number;
+  whatsappMessagesThisMonth: number;
+};
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function safeJson<T>(raw: string | undefined, fallback: T): T {
   if (!raw) return fallback;
@@ -412,10 +434,12 @@ export default function SettingsClient({
   settings,
   teamMembers,
   whatsappSummary,
+  billingSummary,
 }: {
   settings: Record<string, string>;
   teamMembers: TeamMember[];
   whatsappSummary: WhatsAppSummary;
+  billingSummary: BillingSummary;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -492,6 +516,10 @@ export default function SettingsClient({
   const [analyticsUsage, setAnalyticsUsage] = useState(settings.analytics_usage !== "false");
   const [productUpdatesEmail, setProductUpdatesEmail] = useState(settings.product_updates_email !== "false");
   const [requireTwoFactor, setRequireTwoFactor] = useState(settings.require_two_factor === "true");
+  const [dataAction, setDataAction] = useState<DataAction | null>(null);
+  const [dataActionInput, setDataActionInput] = useState("");
+  const [dataActionStatus, setDataActionStatus] = useState("");
+  const [isRunningDataAction, setIsRunningDataAction] = useState(false);
 
   // ── Documents tab ─────────────────────────────────────────────────────────
   const DEFAULT_DOCS = ["invoice", "job_card", "warranty"];
@@ -548,6 +576,30 @@ export default function SettingsClient({
       setWhatsappTestStatus(response.ok ? "Test message sent." : data.error ?? "Unable to send test message.");
     } finally {
       setIsSendingWhatsappTest(false);
+    }
+  }
+
+  async function runDataAction() {
+    if (!dataAction || !dataAction.enabled) return;
+    setDataActionStatus("");
+    setIsRunningDataAction(true);
+    try {
+      const response = await fetch("/api/settings/data-actions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: dataAction.action, confirmation: dataActionInput }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setDataActionStatus(data.error ?? "Unable to complete action.");
+        return;
+      }
+      setDataActionStatus(data.message ?? "Action completed.");
+      setDataAction(null);
+      setDataActionInput("");
+      router.refresh();
+    } finally {
+      setIsRunningDataAction(false);
     }
   }
 
@@ -1631,18 +1683,20 @@ export default function SettingsClient({
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-xs font-semibold text-blue-200 uppercase tracking-wide mb-1">Current Plan</p>
-                      <p className="text-2xl font-bold">Starter</p>
-                      <p className="text-sm text-blue-200 mt-0.5">Up to 3 workers · 100 jobs/month</p>
+                      <p className="text-2xl font-bold">{billingSummary.planName}</p>
+                      <p className="text-sm text-blue-200 mt-0.5">Up to {billingSummary.workerLimit} workers · {billingSummary.jobLimit} jobs/month</p>
                     </div>
-                    <span className="text-[10px] font-bold bg-white/20 text-white px-2.5 py-1 rounded-full">Active</span>
+                    <span className="text-[10px] font-bold bg-white/20 text-white px-2.5 py-1 rounded-full">{billingSummary.planStatus}</span>
                   </div>
                   <div className="mt-4 pt-4 border-t border-white/20 flex items-center justify-between">
                     <div>
-                      <p className="text-2xl font-bold">$0<span className="text-sm font-normal text-blue-200">/mo</span></p>
-                      <p className="text-xs text-blue-200 mt-0.5">Free tier · no credit card required</p>
+                      <p className="text-2xl font-bold">{billingSummary.planPrice}<span className="text-sm font-normal text-blue-200">{billingSummary.planPrice === "Free" ? "" : "/mo"}</span></p>
+                      <p className="text-xs text-blue-200 mt-0.5">
+                        {billingSummary.planPrice === "Free" ? "Free tier · no credit card required" : "Billing is tracked from workspace settings"}
+                      </p>
                     </div>
-                    <button className="bg-white text-[#2563EB] text-sm font-semibold px-4 py-2 rounded-[10px] hover:bg-[#EFF6FF] transition-colors">
-                      Upgrade plan
+                    <button disabled className="bg-white/80 text-[#2563EB] text-sm font-semibold px-4 py-2 rounded-[10px] cursor-not-allowed">
+                      Billing upgrade not active
                     </button>
                   </div>
                 </div>
@@ -1669,8 +1723,8 @@ export default function SettingsClient({
                         <div className="flex items-center gap-3">
                           <p className="text-sm font-bold text-[#0F172A]">{plan.price}</p>
                           {!plan.active && (
-                            <button className="text-[11px] font-semibold px-2.5 py-1.5 rounded-[6px] border border-[#2563EB]/30 text-[#2563EB] hover:bg-[#EFF6FF] transition-colors">
-                              Select
+                            <button disabled className="text-[11px] font-semibold px-2.5 py-1.5 rounded-[6px] border border-[#E2E8F0] text-[#94A3B8] bg-[#F8FAFC] cursor-not-allowed">
+                              Not active
                             </button>
                           )}
                           {plan.active && <span className="text-[11px] font-semibold text-[#2563EB]">Current</span>}
@@ -1695,10 +1749,10 @@ export default function SettingsClient({
                 <SectionCard title="Usage This Month">
                   <div className="space-y-3">
                     {[
-                      { label: "Jobs created",  used: 24,  total: 100,  color: "bg-[#2563EB]" },
-                      { label: "Workers",        used: 2,   total: 3,    color: "bg-[#22C55E]" },
-                      { label: "PDFs generated", used: 38,  total: 100,  color: "bg-[#8B5CF6]" },
-                      { label: "WhatsApp msgs",  used: 142, total: 500,  color: "bg-[#F59E0B]" },
+                      { label: "Jobs created",  used: billingSummary.jobsThisMonth, total: billingSummary.jobLimit,  color: "bg-[#2563EB]" },
+                      { label: "Workers",        used: billingSummary.activeWorkerCount, total: billingSummary.workerLimit, color: "bg-[#22C55E]" },
+                      { label: "PDFs generated", used: billingSummary.pdfsThisMonth, total: billingSummary.pdfLimit,  color: "bg-[#8B5CF6]" },
+                      { label: "WhatsApp msgs",  used: billingSummary.whatsappMessagesThisMonth, total: billingSummary.whatsappLimit,  color: "bg-[#F59E0B]" },
                     ].map(({ label, used, total, color }) => (
                       <div key={label}>
                         <div className="flex justify-between text-xs mb-1">
@@ -1706,7 +1760,7 @@ export default function SettingsClient({
                           <span className="font-semibold text-[#334155]">{used} / {total}</span>
                         </div>
                         <div className="h-1.5 bg-[#F1F5F9] rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full ${color}`} style={{ width: `${Math.min(100, (used / total) * 100)}%` }} />
+                          <div className={`h-full rounded-full ${color}`} style={{ width: `${Math.min(100, total > 0 ? (used / total) * 100 : 0)}%` }} />
                         </div>
                       </div>
                     ))}
@@ -1717,8 +1771,8 @@ export default function SettingsClient({
                   <div className="text-center py-6">
                     <CreditCard className="w-7 h-7 text-[#E2E8F0] mx-auto mb-2" />
                     <p className="text-xs text-[#94A3B8]">No payment method added</p>
-                    <button className="mt-3 text-xs font-semibold text-[#2563EB] hover:text-[#1D4ED8] transition-colors">
-                      + Add payment method
+                    <button disabled className="mt-3 text-xs font-semibold text-[#94A3B8] cursor-not-allowed">
+                      Payment setup not active
                     </button>
                   </div>
                 </SectionCard>
@@ -1770,6 +1824,15 @@ export default function SettingsClient({
                   <ControlledToggleRow icon={Bell} label="Product updates by email" subtitle="Receive release notes and feature announcements" on={productUpdatesEmail} onToggle={() => setProductUpdatesEmail(v => !v)} />
                   <ControlledToggleRow icon={Shield} label="Two-factor auth required" subtitle="Saved for admin access policy enforcement" on={requireTwoFactor} onToggle={() => setRequireTwoFactor(v => !v)} />
                 </SectionCard>
+                {dataActionStatus && (
+                  <div className={`rounded-[12px] border px-4 py-3 text-sm ${
+                    dataActionStatus.includes("Unable") || dataActionStatus.includes("Type")
+                      ? "border-[#FECACA] bg-[#FEF2F2] text-[#DC2626]"
+                      : "border-[#BBF7D0] bg-[#F0FDF4] text-[#15803D]"
+                  }`}>
+                    {dataActionStatus}
+                  </div>
+                )}
 
                 {/* Danger zone */}
                 <div className="bg-white rounded-[16px] border border-[#FECACA] overflow-hidden">
@@ -1782,17 +1845,33 @@ export default function SettingsClient({
                   </div>
                   <div className="px-5 py-4 space-y-3">
                     {[
-                      { label: "Delete all job history",    desc: "Permanently remove all jobs, photos, and job cards",       action: "Delete jobs"    },
-                      { label: "Reset workspace settings",  desc: "Revert all settings to factory defaults",                   action: "Reset settings" },
-                      { label: "Delete workspace",          desc: "Permanently delete your workspace and all associated data",  action: "Delete workspace"},
-                    ].map(({ label, desc }) => (
-                      <div key={label} className="flex items-center justify-between gap-4 py-2.5 border-b border-red-50 last:border-0">
+                      { action: "clear_job_history", title: "Delete all job history", desc: "Permanently remove jobs, invoices, job cards, and job notifications", confirmation: "DELETE JOB HISTORY", enabled: true },
+                      { action: "reset_settings", title: "Reset workspace settings", desc: "Restore industry defaults and reopen onboarding for review", confirmation: "RESET SETTINGS", enabled: true },
+                      { action: "delete_workspace", title: "Delete workspace", desc: "Permanently delete your workspace and all associated data", confirmation: "DELETE WORKSPACE", enabled: false },
+                    ].map(({ action, title, desc, confirmation, enabled }) => (
+                      <div key={action} className="flex items-center justify-between gap-4 py-2.5 border-b border-red-50 last:border-0">
                         <div>
-                          <p className="text-sm font-semibold text-[#0F172A]">{label}</p>
+                          <p className="text-sm font-semibold text-[#0F172A]">{title}</p>
                           <p className="text-[11px] text-[#94A3B8] mt-0.5">{desc}</p>
                         </div>
-                        <button disabled className="shrink-0 text-[11px] font-semibold px-2.5 py-1.5 rounded-[6px] border border-[#FECACA] text-[#DC2626]/70 bg-[#FFF1F2] cursor-not-allowed whitespace-nowrap" title="Requires a confirmation workflow before activation">
-                          Confirmation required
+                        <button
+                          type="button"
+                          disabled={!enabled}
+                          onClick={() => {
+                            setDataAction({
+                              action: action as DataAction["action"],
+                              title,
+                              description: desc,
+                              confirmation,
+                              enabled,
+                            });
+                            setDataActionInput("");
+                            setDataActionStatus("");
+                          }}
+                          className="shrink-0 text-[11px] font-semibold px-2.5 py-1.5 rounded-[6px] border border-[#FECACA] text-[#DC2626] bg-[#FFF1F2] hover:bg-[#FEE2E2] cursor-pointer disabled:text-[#DC2626]/60 disabled:cursor-not-allowed whitespace-nowrap"
+                          title={enabled ? `Type ${confirmation} to confirm` : "Workspace deletion requires a separate support-assisted flow"}
+                        >
+                          {enabled ? "Confirm" : "Support only"}
                         </button>
                       </div>
                     ))}
@@ -1807,6 +1886,55 @@ export default function SettingsClient({
 
       {editing && (
         <EditModal label={editing.label} value={editing.value} onClose={() => setEditing(null)} onSave={editing.onSave} />
+      )}
+
+      {dataAction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-[16px] border border-[#FECACA] bg-white shadow-2xl">
+            <div className="border-b border-[#FEE2E2] bg-[#FFF1F2] px-5 py-4">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#FEE2E2]">
+                  <AlertTriangle className="h-4 w-4 text-[#DC2626]" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-[#991B1B]">{dataAction.title}</h3>
+                  <p className="mt-1 text-xs leading-5 text-[#B91C1C]">{dataAction.description}</p>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-4 p-5">
+              <p className="text-sm leading-6 text-[#475569]">
+                Type <span className="font-mono font-bold text-[#0F172A]">{dataAction.confirmation}</span> to continue.
+              </p>
+              <input
+                value={dataActionInput}
+                onChange={(event) => setDataActionInput(event.target.value)}
+                className="ff-input text-sm"
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDataAction(null);
+                    setDataActionInput("");
+                  }}
+                  className="ff-btn-secondary flex-1 justify-center text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={runDataAction}
+                  disabled={isRunningDataAction || dataActionInput !== dataAction.confirmation}
+                  className="flex-1 justify-center rounded-[10px] border border-[#DC2626] bg-[#DC2626] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#B91C1C] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isRunningDataAction ? "Working..." : "Confirm action"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
