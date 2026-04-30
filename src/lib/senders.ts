@@ -14,6 +14,7 @@
 
 import twilio from "twilio";
 import type { Twilio } from "twilio";
+import crypto from "node:crypto";
 import { prisma } from "./prisma";
 import { normalizePhone } from "./utils";
 import { currentWorkspaceId } from "./workspace";
@@ -21,6 +22,35 @@ import type { WhatsAppSender, BrandingTier, SenderStatus } from "@prisma/client"
 
 // Re-export so callers don't need to depend on @prisma/client directly.
 export type { WhatsAppSender, BrandingTier, SenderStatus };
+
+const ENCRYPTION_PREFIX = "ff1:";
+
+function encryptionKey() {
+  const secret = process.env.JWT_SECRET ?? process.env.NEXTAUTH_SECRET ?? "fieldflow-local-dev-secret";
+  return crypto.createHash("sha256").update(secret).digest();
+}
+
+export function encryptTwilioToken(token: string) {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv("aes-256-gcm", encryptionKey(), iv);
+  const encrypted = Buffer.concat([cipher.update(token, "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return `${ENCRYPTION_PREFIX}${Buffer.concat([iv, tag, encrypted]).toString("base64")}`;
+}
+
+export function decryptTwilioToken(encryptedToken: string | null | undefined, legacyToken?: string | null) {
+  if (!encryptedToken?.startsWith(ENCRYPTION_PREFIX)) {
+    return legacyToken ?? encryptedToken ?? "";
+  }
+
+  const payload = Buffer.from(encryptedToken.slice(ENCRYPTION_PREFIX.length), "base64");
+  const iv = payload.subarray(0, 12);
+  const tag = payload.subarray(12, 28);
+  const encrypted = payload.subarray(28);
+  const decipher = crypto.createDecipheriv("aes-256-gcm", encryptionKey(), iv);
+  decipher.setAuthTag(tag);
+  return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
+}
 
 /**
  * Virtual sender used when no DB row matches and we have to fall back to
@@ -115,7 +145,8 @@ const clientCache = new Map<string, Twilio>();
 export function getTwilioClient(sender: WhatsAppSender): Twilio {
   const cached = clientCache.get(sender.twilioAccountSid);
   if (cached) return cached;
-  const client = twilio(sender.twilioAccountSid, sender.twilioAuthToken);
+  const authToken = decryptTwilioToken(sender.twilioAuthTokenEncrypted, sender.twilioAuthToken);
+  const client = twilio(sender.twilioAccountSid, authToken);
   clientCache.set(sender.twilioAccountSid, client);
   return client;
 }

@@ -12,6 +12,8 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { normalizePhone } from "@/lib/utils";
 import { currentWorkspaceId } from "@/lib/workspace";
+import { encryptTwilioToken } from "@/lib/senders";
+import { ensureDefaultWhatsAppTemplates } from "@/lib/whatsapp-templates";
 import type { BrandingTier } from "@prisma/client";
 
 export interface SenderInput {
@@ -30,7 +32,49 @@ export async function getSenders() {
   return prisma.whatsAppSender.findMany({
     where: { workspaceId },
     orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }],
+    select: {
+      id: true,
+      workspaceId: true,
+      provider: true,
+      phoneNumber: true,
+      messagingServiceSid: true,
+      senderIdentifier: true,
+      wabaId: true,
+      displayName: true,
+      profilePhotoUrl: true,
+      brandingTier: true,
+      status: true,
+      isVerified: true,
+      isDefault: true,
+      lastVerifiedAt: true,
+      createdAt: true,
+      updatedAt: true,
+    },
   });
+}
+
+export async function getWhatsAppTemplates() {
+  const workspaceId = await currentWorkspaceId();
+  const defaultSender = await prisma.whatsAppSender.findFirst({
+    where: { workspaceId },
+    orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }],
+    select: { id: true },
+  });
+  await ensureDefaultWhatsAppTemplates(workspaceId, defaultSender?.id);
+  return prisma.whatsAppTemplate.findMany({
+    where: { workspaceId },
+    orderBy: [{ templateKey: "asc" }, { createdAt: "asc" }],
+  });
+}
+
+export async function toggleWhatsAppTemplate(id: string, isEnabled: boolean) {
+  const workspaceId = await currentWorkspaceId();
+  const result = await prisma.whatsAppTemplate.updateMany({
+    where: { id, workspaceId },
+    data: { isEnabled },
+  });
+  if (result.count === 0) throw new Error("WhatsApp template not found");
+  revalidatePath("/admin/settings/whatsapp");
 }
 
 export async function createSender(input: SenderInput) {
@@ -58,7 +102,8 @@ export async function createSender(input: SenderInput) {
       phoneNumber,
       displayName: input.displayName,
       twilioAccountSid: input.twilioAccountSid,
-      twilioAuthToken: input.twilioAuthToken,
+      twilioAuthToken: "__encrypted__",
+      twilioAuthTokenEncrypted: encryptTwilioToken(input.twilioAuthToken),
       brandingTier: input.brandingTier,
       wabaId: input.wabaId ?? null,
       profilePhotoUrl: input.profilePhotoUrl ?? null,

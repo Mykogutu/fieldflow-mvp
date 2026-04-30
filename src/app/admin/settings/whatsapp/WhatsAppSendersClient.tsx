@@ -2,14 +2,47 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  createSender, deleteSender, setDefaultSender,
+  createSender, deleteSender, setDefaultSender, toggleWhatsAppTemplate,
 } from "@/app/actions/sender-actions";
-import type { WhatsAppSender, BrandingTier } from "@prisma/client";
+import type { BrandingTier, SenderStatus } from "@prisma/client";
 import {
   MessageCircle, Plus, X, Check, Trash2, Star, AlertTriangle,
-  Shield, Zap, Phone, ChevronLeft,
+  Shield, Zap, Phone, ChevronLeft, Send, FileText,
 } from "lucide-react";
 import Link from "next/link";
+
+type SenderRow = {
+  id: string;
+  workspaceId: string;
+  provider: string;
+  phoneNumber: string;
+  messagingServiceSid: string | null;
+  senderIdentifier: string | null;
+  wabaId: string | null;
+  displayName: string;
+  profilePhotoUrl: string | null;
+  brandingTier: BrandingTier;
+  status: SenderStatus;
+  isVerified: boolean;
+  isDefault: boolean;
+  lastVerifiedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type TemplateRow = {
+  id: string;
+  templateKey: string;
+  templateName: string;
+  providerTemplateSid: string | null;
+  category: string;
+  language: string;
+  approvalStatus: string;
+  status: string;
+  isEnabled: boolean;
+  lastSyncedAt: Date | null;
+  updatedAt: Date;
+};
 
 // ── Tier definitions ──────────────────────────────────────────────────────────
 const TIERS: { key: BrandingTier; title: string; blurb: string; badge: string; badgeBg: string; badgeText: string }[] = [
@@ -54,6 +87,22 @@ function SenderStatusBadge({ status, verified }: { status: string; verified: boo
   );
 }
 
+function TemplateStatusBadge({ status }: { status: string }) {
+  const normalized = status.toUpperCase();
+  const config: Record<string, { bg: string; text: string; label: string }> = {
+    APPROVED: { bg: "bg-[#F0FDF4]", text: "text-[#16A34A]", label: "Approved" },
+    PENDING: { bg: "bg-[#FFFBEB]", text: "text-[#D97706]", label: "Pending" },
+    DRAFT: { bg: "bg-[#F1F5F9]", text: "text-[#64748B]", label: "Draft" },
+    REJECTED: { bg: "bg-[#FFF1F2]", text: "text-[#DC2626]", label: "Rejected" },
+  };
+  const current = config[normalized] ?? { bg: "bg-[#F1F5F9]", text: "text-[#64748B]", label: status || "Draft" };
+  return (
+    <span className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full ${current.bg} ${current.text}`}>
+      {current.label}
+    </span>
+  );
+}
+
 // ── Tier badge ────────────────────────────────────────────────────────────────
 function TierBadge({ tier }: { tier: BrandingTier }) {
   const config: Record<BrandingTier, { label: string; bg: string; text: string }> = {
@@ -80,11 +129,13 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-export default function WhatsAppSendersClient({ senders }: { senders: WhatsAppSender[] }) {
+export default function WhatsAppSendersClient({ senders, templates }: { senders: SenderRow[]; templates: TemplateRow[] }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [selectedTier, setSelectedTier] = useState<BrandingTier>("SHARED");
   const [showForm, setShowForm] = useState(false);
+  const [testPhone, setTestPhone] = useState("");
+  const [testState, setTestState] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [form, setForm] = useState({
     phoneNumber: "", displayName: "",
     twilioAccountSid: "", twilioAuthToken: "",
@@ -105,6 +156,26 @@ export default function WhatsAppSendersClient({ senders }: { senders: WhatsAppSe
       }
     });
   }
+
+  async function sendTemplateTest(e: React.FormEvent) {
+    e.preventDefault();
+    setTestState("sending");
+    const response = await fetch("/api/whatsapp/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: testPhone }),
+    });
+    setTestState(response.ok ? "sent" : "error");
+  }
+
+  function toggleTemplate(id: string, enabled: boolean) {
+    startTransition(async () => {
+      await toggleWhatsAppTemplate(id, enabled);
+      router.refresh();
+    });
+  }
+
+  const unapprovedCount = templates.filter(t => t.isEnabled && (t.approvalStatus || t.status).toUpperCase() !== "APPROVED").length;
 
   return (
     <div className="space-y-5 max-w-4xl">
@@ -235,6 +306,91 @@ export default function WhatsAppSendersClient({ senders }: { senders: WhatsAppSe
           </div>
         )}
       </div>
+
+      <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card overflow-hidden">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 px-5 py-4 border-b border-[#E2E8F0]">
+          <div className="flex items-start gap-2">
+            <FileText className="w-4 h-4 text-[#2563EB] mt-0.5" />
+            <div>
+              <h2 className="font-semibold text-sm text-[#0F172A]">WhatsApp Templates</h2>
+              <p className="text-xs text-[#64748B] mt-0.5">Twilio Content Template keys used by live FieldFlow events.</p>
+            </div>
+          </div>
+          {unapprovedCount > 0 && (
+            <div className="flex items-center gap-2 rounded-[10px] border border-[#FDE68A] bg-[#FFFBEB] px-3 py-2 text-xs font-medium text-[#92400E]">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+              {unapprovedCount} enabled template{unapprovedCount === 1 ? "" : "s"} still need Twilio approval.
+            </div>
+          )}
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="ff-table">
+            <thead>
+              <tr>
+                <th>Template</th>
+                <th>Approval</th>
+                <th>Content SID</th>
+                <th>Last Synced</th>
+                <th className="text-right">Enabled</th>
+              </tr>
+            </thead>
+            <tbody>
+              {templates.map(template => {
+                const approval = template.approvalStatus || template.status || "DRAFT";
+                return (
+                  <tr key={template.id}>
+                    <td>
+                      <div className="space-y-0.5">
+                        <p className="text-sm font-semibold text-[#0F172A]">{template.templateKey}</p>
+                        <p className="text-xs text-[#64748B]">{template.templateName} · {template.category} · {template.language}</p>
+                      </div>
+                    </td>
+                    <td><TemplateStatusBadge status={approval} /></td>
+                    <td>
+                      <span className="font-mono text-xs text-[#475569]">
+                        {template.providerTemplateSid ?? "Not synced"}
+                      </span>
+                    </td>
+                    <td className="text-xs text-[#64748B]">
+                      {template.lastSyncedAt ? new Date(template.lastSyncedAt).toLocaleString() : "Never"}
+                    </td>
+                    <td>
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => toggleTemplate(template.id, !template.isEnabled)}
+                          disabled={isPending}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 ${template.isEnabled ? "bg-[#2563EB]" : "bg-[#CBD5E1]"}`}
+                          aria-label={`${template.isEnabled ? "Disable" : "Enable"} ${template.templateKey}`}
+                        >
+                          <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${template.isEnabled ? "translate-x-5" : "translate-x-0.5"}`} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <form onSubmit={sendTemplateTest} className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card p-5">
+        <div className="flex flex-col md:flex-row md:items-end gap-3">
+          <Field label="Test Send">
+            <input className="ff-input text-sm" placeholder="+254700000000"
+              value={testPhone} onChange={e => { setTestPhone(e.target.value); setTestState("idle"); }} required />
+          </Field>
+          <button type="submit" disabled={testState === "sending"}
+            className="ff-btn-primary inline-flex items-center justify-center gap-2 text-sm px-4 py-2.5 disabled:opacity-50">
+            <Send className="w-3.5 h-3.5" />
+            {testState === "sending" ? "Sending..." : "Send test"}
+          </button>
+          {testState === "sent" && <p className="text-xs font-medium text-[#16A34A] pb-2">Test sent using the configured template path.</p>}
+          {testState === "error" && <p className="text-xs font-medium text-[#DC2626] pb-2">Test failed. Check sender status, template approval, and Content SID.</p>}
+        </div>
+      </form>
 
       {/* ── Add form ────────────────────────────────────────────────────── */}
       {showForm && (

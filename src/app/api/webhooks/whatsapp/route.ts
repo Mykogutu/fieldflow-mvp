@@ -3,8 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { parseIntent } from "@/lib/ai-agent";
 import { pickBestWorker } from "@/lib/assignment";
 import {
-  sendWorkerReply,
-  sendJobAssignment,
+  sendJobReassignment,
+  sendJobVerifiedToWorker,
   sendOTPToClient,
   sendPostponeNotice,
 } from "@/lib/twilio";
@@ -189,9 +189,10 @@ async function handleDecline(
     });
 
     if (nextWorker) {
-      await sendJobAssignment(
+      await sendJobReassignment(
         nextWorker.phone,
         {
+          workerName: nextWorker.name,
           clientName: job.clientName,
           jobType: job.jobType,
           location: job.location ?? "—",
@@ -310,6 +311,9 @@ async function handleCompletion(
   await sendOTPToClient(
     job.clientPhone,
     {
+      clientName: job.clientName,
+      jobType: job.jobType,
+      jobId: job.jobNumber,
       workerName: worker.name,
       amount,
       otpCode: otp,
@@ -390,6 +394,13 @@ async function handleOTP(
     jobId: job.id,
     link: `/admin/jobs?id=${job.id}`,
   });
+
+  await sendJobVerifiedToWorker(worker.phone, {
+    workerName: worker.name,
+    clientName: job.clientName,
+    jobType: job.jobType,
+    jobId: job.jobNumber,
+  }, sender);
 
   // Generate and send PDFs
   try {

@@ -1,10 +1,8 @@
 /**
- * Messaging layer — see MVP-STRATEGY.md §17
+ * WhatsApp messaging layer.
  *
- * Every send function takes an optional `sender` (`WhatsAppSender`). When
- * provided, we send from that sender's credentials/number — this is what
- * powers per-tenant branding without forking the codebase. When omitted,
- * we resolve the default sender (env-fallback in single-tenant deployments).
+ * Product events use saved WhatsAppTemplate rows. The lower-level
+ * sendWhatsApp helper remains for direct replies and manual tests.
  */
 
 import {
@@ -15,9 +13,12 @@ import {
   type WhatsAppSender,
 } from "./senders";
 import { prisma } from "./prisma";
+import { currentWorkspaceId } from "./workspace";
+import { sendWhatsAppTemplate, type WhatsAppTemplateKey } from "./whatsapp-templates";
 
 type WhatsAppSendMeta = {
   messageType?: string;
+  eventType?: string;
   jobId?: string;
   clientId?: string;
   workerId?: string;
@@ -33,6 +34,11 @@ async function resolveSender(
 ): Promise<WhatsAppSender | null> {
   if (sender) return sender;
   return await getDefaultSender();
+}
+
+async function workspaceIdFor(sender?: WhatsAppSender | null) {
+  const s = await resolveSender(sender);
+  return s?.workspaceId ?? (await currentWorkspaceId());
 }
 
 async function isWhatsAppFlowEnabled(
@@ -108,6 +114,7 @@ async function logWhatsAppMessage(
         templateId: meta.templateId,
         direction: "OUTBOUND",
         messageType: meta.messageType ?? "FREEFORM",
+        eventType: meta.eventType ?? meta.messageType ?? "FREEFORM",
         jobId: meta.jobId,
         clientId: meta.clientId,
         workerId: meta.workerId,
@@ -128,6 +135,7 @@ async function logWhatsAppMessage(
 export async function sendJobAssignment(
   workerPhone: string,
   params: {
+    workerName?: string;
     clientName: string;
     jobType: string;
     location: string;
@@ -136,22 +144,86 @@ export async function sendJobAssignment(
   },
   sender?: WhatsAppSender | null
 ): Promise<void> {
-  if (!(await isWhatsAppFlowEnabled("whatsapp_job_assignment_notifications", sender))) return;
+  await sendTemplate(
+    "JOB_ASSIGNED_WORKER",
+    workerPhone,
+    {
+      worker_name: params.workerName ?? "Technician",
+      job_type: params.jobType,
+      client_name: params.clientName,
+      location: params.location,
+      scheduled_time: params.scheduledDate,
+    },
+    "JOB_ASSIGNED",
+    sender,
+    { jobId: params.jobId }
+  );
+}
 
-  const body =
-    `🔔 *New Job Assigned*\n\n` +
-    `Client: ${params.clientName}\n` +
-    `Type: ${params.jobType}\n` +
-    `Location: ${params.location}\n` +
-    `Scheduled: ${params.scheduledDate}\n\n` +
-    `Reply *ACCEPT* to confirm or *DECLINE* if unavailable.`;
+export async function sendTechnicianAssignedToClient(
+  clientPhone: string,
+  params: {
+    clientName: string;
+    companyName: string;
+    jobType: string;
+    scheduledDate: string;
+    technicianName: string;
+    technicianPhone: string;
+    jobId: string;
+  },
+  sender?: WhatsAppSender | null
+): Promise<void> {
+  await sendTemplate(
+    "TECHNICIAN_ASSIGNED_CLIENT",
+    clientPhone,
+    {
+      client_name: params.clientName,
+      company_name: params.companyName,
+      job_type: params.jobType,
+      scheduled_time: params.scheduledDate,
+      technician_name: params.technicianName,
+      technician_phone: params.technicianPhone,
+    },
+    "TECHNICIAN_ASSIGNED_CLIENT",
+    sender,
+    { jobId: params.jobId }
+  );
+}
 
-  await sendWhatsApp(workerPhone, body, sender, { messageType: "JOB_ASSIGNMENT", jobId: params.jobId });
+export async function sendJobReassignment(
+  workerPhone: string,
+  params: {
+    workerName: string;
+    clientName: string;
+    jobType: string;
+    location: string;
+    scheduledDate: string;
+    jobId: string;
+  },
+  sender?: WhatsAppSender | null
+): Promise<void> {
+  await sendTemplate(
+    "JOB_REASSIGNED",
+    workerPhone,
+    {
+      worker_name: params.workerName,
+      job_type: params.jobType,
+      client_name: params.clientName,
+      location: params.location,
+      scheduled_time: params.scheduledDate,
+    },
+    "JOB_REASSIGNED",
+    sender,
+    { jobId: params.jobId }
+  );
 }
 
 export async function sendOTPToClient(
   clientPhone: string,
   params: {
+    clientName: string;
+    jobType: string;
+    jobId: string;
     workerName: string;
     amount: number;
     otpCode: string;
@@ -159,18 +231,94 @@ export async function sendOTPToClient(
   },
   sender?: WhatsAppSender | null
 ): Promise<void> {
-  if (!(await isWhatsAppFlowEnabled("whatsapp_otp_completion_messages", sender))) return;
+  await sendTemplate(
+    "OTP_REQUEST",
+    clientPhone,
+    {
+      client_name: params.clientName,
+      company_name: params.companyName,
+      job_type: params.jobType,
+      job_id: params.jobId,
+      otp_code: params.otpCode,
+    },
+    "OTP_REQUEST",
+    sender,
+    { jobId: params.jobId }
+  );
+}
 
-  // Tenant brand sits in the body so SHARED-tier messages still feel like
-  // they came from the workspace, not from FieldFlow.
-  const body =
-    `✅ *Service Complete — ${params.companyName}*\n\n` +
-    `${params.companyName} has completed your service.\n` +
-    `Amount: KES ${params.amount.toLocaleString()}\n\n` +
-    `🔐 *Service Code: ${params.otpCode}*\n\n` +
-    `Share this code with the technician AFTER payment to confirm the service.`;
+export async function sendJobVerifiedToWorker(
+  workerPhone: string,
+  params: {
+    workerName: string;
+    clientName: string;
+    jobType: string;
+    jobId: string;
+  },
+  sender?: WhatsAppSender | null
+): Promise<void> {
+  await sendTemplate(
+    "JOB_VERIFIED",
+    workerPhone,
+    {
+      worker_name: params.workerName,
+      job_type: params.jobType,
+      client_name: params.clientName,
+      job_id: params.jobId,
+    },
+    "JOB_VERIFIED",
+    sender,
+    { jobId: params.jobId }
+  );
+}
 
-  await sendWhatsApp(clientPhone, body, sender, { messageType: "SERVICE_COMPLETION_OTP" });
+export async function sendInvoiceReadyToClient(
+  clientPhone: string,
+  params: {
+    clientName: string;
+    invoiceNumber: string;
+    amount: string;
+    jobId: string;
+  },
+  sender?: WhatsAppSender | null
+): Promise<void> {
+  await sendTemplate(
+    "INVOICE_READY",
+    clientPhone,
+    {
+      client_name: params.clientName,
+      invoice_number: params.invoiceNumber,
+      amount: params.amount,
+      job_id: params.jobId,
+    },
+    "INVOICE_READY",
+    sender,
+    { jobId: params.jobId }
+  );
+}
+
+export async function sendQuotationReadyToClient(
+  clientPhone: string,
+  params: {
+    clientName: string;
+    quotationNumber: string;
+    jobType: string;
+    amount: string;
+  },
+  sender?: WhatsAppSender | null
+): Promise<void> {
+  await sendTemplate(
+    "QUOTATION_READY",
+    clientPhone,
+    {
+      client_name: params.clientName,
+      quotation_number: params.quotationNumber,
+      job_type: params.jobType,
+      amount: params.amount,
+    },
+    "QUOTATION_READY",
+    sender
+  );
 }
 
 export async function sendDocsToClient(
@@ -180,20 +328,24 @@ export async function sendDocsToClient(
     invoiceUrl?: string;
     jobCardUrl?: string;
     companyName: string;
+    invoiceNumber?: string;
+    amount?: string;
+    jobId?: string;
   },
   sender?: WhatsAppSender | null
 ): Promise<void> {
-  if (!(await isWhatsAppFlowEnabled("whatsapp_document_delivery", sender))) return;
   if (!(await isWhatsAppFlowEnabled("document_send_whatsapp", sender))) return;
 
-  const parts = [
-    `✅ *Service Verified — ${params.companyName}*\n`,
-    `Dear ${params.clientName}, thank you for using our services.\n`,
-  ];
-  if (params.invoiceUrl) parts.push(`📄 Invoice: ${params.invoiceUrl}`);
-  if (params.jobCardUrl) parts.push(`📋 Job Card: ${params.jobCardUrl}`);
-  parts.push("\nThank you for your business!");
-  await sendWhatsApp(clientPhone, parts.join("\n"), sender, { messageType: "DOCUMENT_DELIVERY" });
+  await sendInvoiceReadyToClient(
+    clientPhone,
+    {
+      clientName: params.clientName,
+      invoiceNumber: params.invoiceNumber ?? params.invoiceUrl ?? "Invoice",
+      amount: params.amount ?? "See invoice",
+      jobId: params.jobId ?? params.jobCardUrl ?? params.companyName,
+    },
+    sender
+  );
 }
 
 export async function sendPostponeNotice(
@@ -204,7 +356,7 @@ export async function sendPostponeNotice(
   if (!(await isWhatsAppFlowEnabled("whatsapp_client_notifications", sender))) return;
 
   const body =
-    `📅 *Appointment Update — ${params.companyName}*\n\n` +
+    `Appointment Update - ${params.companyName}\n\n` +
     `Your appointment has been postponed.\n` +
     `Reason: ${params.reason}\n\n` +
     `We will contact you shortly to reschedule.`;
@@ -217,4 +369,54 @@ export async function sendWorkerReply(
   sender?: WhatsAppSender | null
 ): Promise<void> {
   await sendWhatsApp(phone, message, sender, { messageType: "WORKER_REPLY" });
+}
+
+export async function sendDailyBriefing(
+  workerPhone: string,
+  params: {
+    workerName: string;
+    jobCount: number;
+    firstJobType: string;
+    firstClientName: string;
+    firstLocation: string;
+    firstScheduledTime: string;
+    workerId?: string;
+  },
+  sender?: WhatsAppSender | null
+): Promise<void> {
+  await sendTemplate(
+    "DAILY_BRIEFING",
+    workerPhone,
+    {
+      worker_name: params.workerName,
+      job_count: params.jobCount,
+      first_job_type: params.firstJobType,
+      first_client_name: params.firstClientName,
+      first_location: params.firstLocation,
+      first_scheduled_time: params.firstScheduledTime,
+    },
+    "DAILY_BRIEFING",
+    sender,
+    { workerId: params.workerId }
+  );
+}
+
+async function sendTemplate(
+  templateKey: WhatsAppTemplateKey,
+  toPhone: string,
+  variables: Record<string, string | number>,
+  eventType: string,
+  sender?: WhatsAppSender | null,
+  meta: { jobId?: string; clientId?: string; workerId?: string } = {}
+) {
+  const workspaceId = await workspaceIdFor(sender);
+  await sendWhatsAppTemplate({
+    workspaceId,
+    templateKey,
+    to: toPhone,
+    variables,
+    eventType,
+    sender,
+    ...meta,
+  });
 }

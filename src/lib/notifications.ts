@@ -37,6 +37,9 @@ export async function deliverJobVerifiedDocs(
     {
       clientName: job.clientName,
       invoiceUrl,
+      invoiceNumber: job.invoice?.invoiceNumber,
+      amount: job.invoice ? `KES ${job.invoice.amount.toLocaleString()}` : undefined,
+      jobId: job.jobNumber,
       companyName,
     },
     sender

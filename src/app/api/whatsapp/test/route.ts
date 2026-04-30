@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { getDefaultSender } from "@/lib/senders";
-import { sendWhatsApp } from "@/lib/twilio";
+import { sendWhatsAppTemplate } from "@/lib/whatsapp-templates";
 import { normalizePhone } from "@/lib/utils";
 import { currentWorkspaceId } from "@/lib/workspace";
 
@@ -21,11 +21,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No active WhatsApp sender is configured." }, { status: 400 });
     }
 
-    const message = String(body?.message || "FieldFlow test message. Your WhatsApp sender is working.");
-    const sent = await sendWhatsApp(phone, message, sender, { messageType: "TEST" });
+    const sent = await sendWhatsAppTemplate({
+      workspaceId,
+      templateKey: "JOB_ASSIGNED_WORKER",
+      to: phone,
+      sender,
+      eventType: "TEST",
+      variables: {
+        worker_name: "FieldFlow Test",
+        job_type: "Template Test",
+        client_name: "Pilot Client",
+        location: "Nairobi",
+        scheduled_time: "Today",
+      },
+    });
 
-    if (!sent) {
-      return NextResponse.json({ error: "WhatsApp provider rejected the test message." }, { status: 502 });
+    if (!sent.ok) {
+      return NextResponse.json({ error: sent.error ?? "WhatsApp provider rejected the test message." }, { status: 502 });
     }
 
     return NextResponse.json({

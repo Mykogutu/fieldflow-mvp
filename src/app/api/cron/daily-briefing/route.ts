@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { sendWhatsApp } from "@/lib/twilio";
+import { sendDailyBriefing } from "@/lib/twilio";
 import { formatDate } from "@/lib/utils";
 import { currentWorkspaceId } from "@/lib/workspace";
 
@@ -49,19 +49,16 @@ export async function GET(req: NextRequest) {
 
     if (!jobs.length) continue;
 
-    const firstName = worker.name.split(" ")[0];
-    const jobLines = jobs.map(
-      (j, i) =>
-        `${i + 1}. ${j.jobType} — ${j.clientName}\n   📍 ${j.location ?? "—"}\n   ⏰ ${formatDate(j.scheduledDate)}`
-    );
-
-    const message =
-      `☀️ Good morning, ${firstName}!\n\n` +
-      `📋 Today's Jobs (${jobs.length}):\n\n` +
-      jobLines.join("\n\n") +
-      `\n\nReply "Accept" to confirm all, or "Accept 1" for specific jobs.`;
-
-    await sendWhatsApp(worker.phone, message);
+    const firstJob = jobs[0];
+    await sendDailyBriefing(worker.phone, {
+      workerName: worker.name.split(" ")[0] ?? worker.name,
+      workerId: worker.id,
+      jobCount: jobs.length,
+      firstJobType: firstJob.jobType,
+      firstClientName: firstJob.clientName,
+      firstLocation: firstJob.location ?? "Location TBD",
+      firstScheduledTime: formatDate(firstJob.scheduledDate),
+    });
     sent++;
   }
 

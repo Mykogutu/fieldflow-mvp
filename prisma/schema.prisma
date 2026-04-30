@@ -320,11 +320,14 @@ model WhatsAppTemplate {
   workspaceId         String
   senderId            String?
   sender              WhatsAppSender?      @relation(fields: [senderId], references: [id], onDelete: SetNull)
+  templateKey         String               @default("")
   templateName        String
   providerTemplateSid String?
   language            String               @default("en")
   category            String               @default("UTILITY")
   status              String               @default("DRAFT")
+  approvalStatus      String               @default("DRAFT")
+  isEnabled           Boolean              @default(true)
   useCase             String
   body                String
   headerType          String?
@@ -337,8 +340,10 @@ model WhatsAppTemplate {
 
   @@index([workspaceId])
   @@index([senderId])
+  @@index([templateKey])
   @@index([useCase])
   @@index([status])
+  @@index([approvalStatus])
 }
 
 model WhatsAppMessageLog {
@@ -350,6 +355,7 @@ model WhatsAppMessageLog {
   template           WhatsAppTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
   direction          String            @default("OUTBOUND")
   messageType        String            @default("FREEFORM")
+  eventType          String?
   jobId              String?
   clientId           String?
   workerId           String?
@@ -369,6 +375,7 @@ model WhatsAppMessageLog {
   @@index([jobId])
   @@index([status])
   @@index([messageType])
+  @@index([eventType])
 }
 
 enum BrandingTier {

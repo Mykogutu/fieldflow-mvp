@@ -1,8 +1,8 @@
 "use server";
 import { prisma } from "@/lib/prisma";
 import { requireDashboardAccess, requireOperator } from "@/lib/auth";
-import { sendJobAssignment } from "@/lib/twilio";
-import { createNotification } from "@/lib/notifications";
+import { sendJobAssignment, sendJobReassignment, sendTechnicianAssignedToClient } from "@/lib/twilio";
+import { createNotification, getCompanyName } from "@/lib/notifications";
 import { pickBestWorker } from "@/lib/assignment";
 import { normalizePhone, formatDate } from "@/lib/utils";
 import { currentWorkspaceId } from "@/lib/workspace";
@@ -88,10 +88,20 @@ export async function createJob(formData: FormData) {
     });
     if (worker) {
       await sendJobAssignment(worker.phone, {
+        workerName: worker.name,
         clientName: d.clientName,
         jobType: d.jobType,
         location: d.location ?? "—",
         scheduledDate: d.scheduledDate ? formatDate(new Date(d.scheduledDate)) : "TBD",
+        jobId: job.id,
+      });
+      await sendTechnicianAssignedToClient(clientPhone, {
+        clientName: d.clientName,
+        companyName: await getCompanyName(),
+        jobType: d.jobType,
+        scheduledDate: d.scheduledDate ? formatDate(new Date(d.scheduledDate)) : "TBD",
+        technicianName: worker.name,
+        technicianPhone: worker.phone,
         jobId: job.id,
       });
     }
@@ -201,11 +211,22 @@ export async function reassignJob(jobId: string, workerId: string) {
     },
   });
 
-  await sendJobAssignment(worker.phone, {
+  await sendJobReassignment(worker.phone, {
+    workerName: worker.name,
     clientName: job.clientName,
     jobType: job.jobType,
     location: job.location ?? "—",
     scheduledDate: formatDate(job.scheduledDate),
+    jobId: job.id,
+  });
+
+  await sendTechnicianAssignedToClient(job.clientPhone, {
+    clientName: job.clientName,
+    companyName: await getCompanyName(),
+    jobType: job.jobType,
+    scheduledDate: formatDate(job.scheduledDate),
+    technicianName: worker.name,
+    technicianPhone: worker.phone,
     jobId: job.id,
   });
 
