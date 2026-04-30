@@ -14,10 +14,25 @@ import {
   Sparkles,
   Settings,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import type { Role } from "@/types";
+
+type NavItem = {
+  href: string;
+  label: string;
+  Icon: LucideIcon;
+  exact?: boolean;
+  adminOnly?: boolean;
+};
+
+type NavGroup = {
+  label: string;
+  items: NavItem[];
+};
 
 // ── Nav structure with grouping ───────────────────────────────────────────────
 
-const NAV_GROUPS = [
+const NAV_GROUPS: NavGroup[] = [
   {
     label: "Main",
     items: [
@@ -32,7 +47,7 @@ const NAV_GROUPS = [
     items: [
       { href: "/admin/documents",    label: "Documents",    Icon: FileText  },
       { href: "/admin/invoices",     label: "Invoices",     Icon: Receipt   },
-      { href: "/admin/workers",      label: "Workers",      Icon: HardHat   },
+      { href: "/admin/workers",      label: "Workers",      Icon: HardHat, adminOnly: true },
       { href: "/admin/expenses",     label: "Expenses",     Icon: Wallet    },
       { href: "/admin/notifications",label: "Notifications",Icon: Bell      },
     ],
@@ -46,14 +61,14 @@ const NAV_GROUPS = [
   {
     label: "Admin",
     items: [
-      { href: "/admin/settings", label: "Settings", Icon: Settings },
+      { href: "/admin/settings", label: "Settings", Icon: Settings, adminOnly: true },
     ],
   },
 ];
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function NavLinks() {
+export function NavLinks({ role = "ADMIN" }: { role?: Role }) {
   const pathname = usePathname();
 
   return (
@@ -67,7 +82,7 @@ export function NavLinks() {
 
           {/* Items */}
           <div className="space-y-0.5">
-            {group.items.map(({ href, label, Icon, exact }) => {
+            {group.items.filter((item) => !item.adminOnly || role === "ADMIN").map(({ href, label, Icon, exact }) => {
               const active = exact ? pathname === href : pathname.startsWith(href);
               return (
                 <Link

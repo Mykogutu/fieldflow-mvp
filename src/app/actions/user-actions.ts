@@ -1,18 +1,19 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdmin, requireDashboardAccess } from "@/lib/auth";
 import { hashPassword } from "@/lib/auth";
 import { normalizePhone } from "@/lib/utils";
 import { currentWorkspaceId } from "@/lib/workspace";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import type { Role } from "@/types";
 
 const createSchema = z.object({
   name: z.string().min(1),
   phone: z.string().min(9),
   email: z.string().email().optional().or(z.literal("")),
   password: z.string().min(6),
-  role: z.enum(["ADMIN", "TECHNICIAN"]).default("TECHNICIAN"),
+  role: z.enum(["ADMIN", "MANAGER", "VIEWER", "TECHNICIAN"]).default("TECHNICIAN"),
   baseZone: z.string().optional(),
 });
 
@@ -65,8 +66,8 @@ export async function updateUser(formData: FormData) {
   return { ok: true };
 }
 
-export async function getUsers(role?: "ADMIN" | "TECHNICIAN") {
-  await requireAdmin();
+export async function getUsers(role?: Role) {
+  await requireDashboardAccess();
   const workspaceId = await currentWorkspaceId();
   return prisma.user.findMany({
     where: role ? { workspaceId, role } : { workspaceId },

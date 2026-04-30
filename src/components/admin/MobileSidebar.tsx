@@ -4,13 +4,15 @@ import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { NavLinks } from "./NavLinks";
 import LogoutButton from "./LogoutButton";
+import type { Role } from "@/types";
 
 interface Props {
   companyName: string;
   industryLabel: string;
+  role: Role;
 }
 
-export function MobileSidebar({ companyName, industryLabel }: Props) {
+export function MobileSidebar({ companyName, industryLabel, role }: Props) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -78,7 +80,7 @@ export function MobileSidebar({ companyName, industryLabel }: Props) {
 
         {/* Navigation */}
         <div className="flex-1 overflow-y-auto">
-          <NavLinks />
+          <NavLinks role={role} />
         </div>
 
         {/* Sign Out */}

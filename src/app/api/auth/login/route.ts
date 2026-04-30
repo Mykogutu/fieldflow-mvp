@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { validateCredentials, signToken } from "@/lib/auth";
+import { validateCredentials, signToken, canAccessDashboard } from "@/lib/auth";
 import { normalizePhone } from "@/lib/utils";
 import { z } from "zod";
 
@@ -23,8 +23,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
-    if (user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    if (!canAccessDashboard(user.role)) {
+      return NextResponse.json({ error: "Workers use WhatsApp and do not need dashboard access." }, { status: 403 });
     }
 
     const token = signToken({ userId: user.userId, role: user.role, phone: user.phone, workspaceId: user.workspaceId });

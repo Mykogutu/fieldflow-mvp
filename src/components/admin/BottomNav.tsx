@@ -2,21 +2,31 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Wrench, Users, HardHat, Settings } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import type { Role } from "@/types";
 
-const ITEMS = [
+type BottomNavItem = {
+  href: string;
+  label: string;
+  Icon: LucideIcon;
+  exact?: boolean;
+  adminOnly?: boolean;
+};
+
+const ITEMS: BottomNavItem[] = [
   { href: "/admin",          label: "Home",    Icon: LayoutDashboard, exact: true },
   { href: "/admin/jobs",     label: "Jobs",    Icon: Wrench                       },
   { href: "/admin/clients",  label: "Clients", Icon: Users                        },
-  { href: "/admin/workers",  label: "Workers", Icon: HardHat                      },
-  { href: "/admin/settings", label: "Settings",Icon: Settings                     },
+  { href: "/admin/workers",  label: "Workers", Icon: HardHat, adminOnly: true     },
+  { href: "/admin/settings", label: "Settings",Icon: Settings, adminOnly: true    },
 ];
 
-export function BottomNav() {
+export function BottomNav({ role = "ADMIN" }: { role?: Role }) {
   const pathname = usePathname();
   return (
     <nav className="lg:hidden fixed bottom-0 inset-x-0 bg-white border-t border-[#E2E8F0] z-30 safe-bottom">
       <div className="flex items-stretch">
-        {ITEMS.map(({ href, label, Icon, exact }) => {
+        {ITEMS.filter((item) => !item.adminOnly || role === "ADMIN").map(({ href, label, Icon, exact }) => {
           const active = exact ? pathname === href : pathname.startsWith(href);
           return (
             <Link

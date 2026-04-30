@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { canAccessDashboard, getSession } from "@/lib/auth";
 import { currentWorkspaceId } from "@/lib/workspace";
 import { parseJobIntake } from "@/lib/ai-ops";
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
-  if (!session || session.role !== "ADMIN") {
+  if (!session || !canAccessDashboard(session.role)) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 

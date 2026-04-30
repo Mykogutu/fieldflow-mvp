@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { canAccessDashboard, getSession } from "@/lib/auth";
 import { generateDocumentTemplateSamplePDF, renderDocumentTemplateHtml } from "@/lib/document-templates";
 import { prisma } from "@/lib/prisma";
 import { currentWorkspaceId } from "@/lib/workspace";
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session || session.role !== "ADMIN") {
+    if (!session || !canAccessDashboard(session.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

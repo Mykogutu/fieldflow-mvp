@@ -2,10 +2,12 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { prisma } from "./prisma";
-import type { JwtPayload } from "@/types";
+import type { JwtPayload, Role } from "@/types";
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 const COOKIE_NAME = "ff_token";
+const DASHBOARD_ROLES: Role[] = ["ADMIN", "MANAGER", "VIEWER"];
+const OPERATOR_ROLES: Role[] = ["ADMIN", "MANAGER"];
 
 export function signToken(payload: JwtPayload): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
@@ -26,8 +28,20 @@ export async function getSession(): Promise<JwtPayload | null> {
 }
 
 export async function requireAdmin(): Promise<JwtPayload> {
+  return requireRole(["ADMIN"]);
+}
+
+export async function requireDashboardAccess(): Promise<JwtPayload> {
+  return requireRole(DASHBOARD_ROLES);
+}
+
+export async function requireOperator(): Promise<JwtPayload> {
+  return requireRole(OPERATOR_ROLES);
+}
+
+export async function requireRole(roles: Role[]): Promise<JwtPayload> {
   const session = await getSession();
-  if (!session || session.role !== "ADMIN") {
+  if (!session || !roles.includes(session.role)) {
     throw new Error("Unauthorized");
   }
   return session;
@@ -36,7 +50,7 @@ export async function requireAdmin(): Promise<JwtPayload> {
 export async function validateCredentials(
   phone: string,
   password: string
-): Promise<{ userId: string; role: "ADMIN" | "TECHNICIAN"; phone: string; workspaceId: string } | null> {
+): Promise<{ userId: string; role: Role; phone: string; workspaceId: string } | null> {
   const user = await prisma.user.findUnique({
     where: { phone },
     select: { id: true, workspaceId: true, phone: true, password: true, role: true, isActive: true },
@@ -44,7 +58,11 @@ export async function validateCredentials(
   if (!user || !user.password || !user.isActive) return null;
   const valid = await bcrypt.compare(password, user.password);
   if (!valid) return null;
-  return { userId: user.id, role: user.role as "ADMIN" | "TECHNICIAN", phone: user.phone, workspaceId: user.workspaceId };
+  return { userId: user.id, role: user.role as Role, phone: user.phone, workspaceId: user.workspaceId };
+}
+
+export function canAccessDashboard(role: Role): boolean {
+  return DASHBOARD_ROLES.includes(role);
 }
 
 export function setCookieToken(token: string) {

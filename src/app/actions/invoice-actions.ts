@@ -1,12 +1,12 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/auth";
+import { requireDashboardAccess, requireOperator } from "@/lib/auth";
 import { currentWorkspaceId } from "@/lib/workspace";
 import { revalidatePath } from "next/cache";
 import type { Prisma } from "@prisma/client";
 
 export async function getInvoices(filter?: { status?: string; page?: number }) {
-  await requireAdmin();
+  await requireDashboardAccess();
   const workspaceId = await currentWorkspaceId();
   const page = filter?.page ?? 1;
   const pageSizeSetting = await prisma.setting.findFirst({
@@ -40,7 +40,7 @@ function clampPageSize(value: number) {
 }
 
 export async function updateInvoiceStatus(invoiceId: string, status: "PENDING" | "PAID" | "CANCELLED") {
-  await requireAdmin();
+  await requireOperator();
   const workspaceId = await currentWorkspaceId();
   const result = await prisma.invoice.updateMany({
     where: { id: invoiceId, workspaceId },

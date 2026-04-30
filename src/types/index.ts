@@ -1,4 +1,4 @@
-export type Role = "ADMIN" | "TECHNICIAN";
+export type Role = "ADMIN" | "MANAGER" | "VIEWER" | "TECHNICIAN";
 
 export type JobStatus =
   | "ASSIGNED"

@@ -387,6 +387,8 @@ enum SenderStatus {
 
 enum Role {
   ADMIN
+  MANAGER
+  VIEWER
   TECHNICIAN
 }
 

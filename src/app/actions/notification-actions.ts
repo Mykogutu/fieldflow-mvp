@@ -1,11 +1,11 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/auth";
+import { requireDashboardAccess } from "@/lib/auth";
 import { currentWorkspaceId } from "@/lib/workspace";
 import { revalidatePath } from "next/cache";
 
 export async function getNotifications(limit = 20) {
-  await requireAdmin();
+  await requireDashboardAccess();
   const workspaceId = await currentWorkspaceId();
   return prisma.notification.findMany({
     where: { workspaceId },
@@ -15,13 +15,13 @@ export async function getNotifications(limit = 20) {
 }
 
 export async function getUnreadCount() {
-  await requireAdmin();
+  await requireDashboardAccess();
   const workspaceId = await currentWorkspaceId();
   return prisma.notification.count({ where: { workspaceId, isRead: false } });
 }
 
 export async function markAsRead(id: string) {
-  await requireAdmin();
+  await requireDashboardAccess();
   const workspaceId = await currentWorkspaceId();
   const result = await prisma.notification.updateMany({
     where: { id, workspaceId },
@@ -33,7 +33,7 @@ export async function markAsRead(id: string) {
 }
 
 export async function markAllAsRead() {
-  await requireAdmin();
+  await requireDashboardAccess();
   const workspaceId = await currentWorkspaceId();
   await prisma.notification.updateMany({
     where: { workspaceId, isRead: false },

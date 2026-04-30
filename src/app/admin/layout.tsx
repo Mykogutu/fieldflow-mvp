@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { getSession } from "@/lib/auth";
+import { canAccessDashboard, getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { currentWorkspaceId } from "@/lib/workspace";
 import LogoutButton from "@/components/admin/LogoutButton";
@@ -35,7 +35,7 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const session = await getSession();
-  if (!session || session.role !== "ADMIN") redirect("/login");
+  if (!session || !canAccessDashboard(session.role)) redirect("/login");
 
   const workspaceId = await currentWorkspaceId();
   const pathname = headers().get("x-pathname") ?? "";
@@ -86,7 +86,7 @@ export default async function AdminLayout({
           </div>
         </div>
 
-        <NavLinks />
+        <NavLinks role={session.role} />
 
         <div className="p-3 border-t border-[#0B2550]">
           <LogoutButton />
@@ -95,7 +95,7 @@ export default async function AdminLayout({
 
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <header className="bg-white border-b border-[#E2E8F0] px-4 lg:px-5 py-2.5 flex items-center gap-3 shrink-0">
-          <MobileSidebar companyName={companyName} industryLabel={industryLabel} />
+          <MobileSidebar companyName={companyName} industryLabel={industryLabel} role={session.role} />
           <PageHeader />
 
           <div className="flex-1 max-w-sm mx-2 hidden md:block">
@@ -145,7 +145,7 @@ export default async function AdminLayout({
         </footer>
       </div>
 
-      <BottomNav />
+      <BottomNav role={session.role} />
     </div>
   );
 }

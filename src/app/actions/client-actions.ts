@@ -1,6 +1,6 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/auth";
+import { requireDashboardAccess, requireOperator } from "@/lib/auth";
 import { currentWorkspaceId } from "@/lib/workspace";
 import { normalizePhone } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
@@ -18,7 +18,7 @@ const clientSchema = z.object({
 });
 
 export async function createClient(formData: FormData) {
-  await requireAdmin();
+  await requireOperator();
   const workspaceId = await currentWorkspaceId();
   const raw = Object.fromEntries(formData.entries());
   const parsed = clientSchema.safeParse(raw);
@@ -52,7 +52,7 @@ export async function createClient(formData: FormData) {
 }
 
 export async function updateClient(formData: FormData) {
-  await requireAdmin();
+  await requireOperator();
   const workspaceId = await currentWorkspaceId();
   const id = formData.get("id") as string;
   if (!id) return { error: "Missing client ID" };
@@ -90,7 +90,7 @@ export async function updateClient(formData: FormData) {
 }
 
 export async function deactivateClient(id: string) {
-  await requireAdmin();
+  await requireOperator();
   const workspaceId = await currentWorkspaceId();
   await prisma.client.update({ where: { id, workspaceId }, data: { isActive: false } });
   revalidatePath("/admin/clients");
@@ -98,6 +98,7 @@ export async function deactivateClient(id: string) {
 }
 
 export async function getClients(search?: string) {
+  await requireDashboardAccess();
   const workspaceId = await currentWorkspaceId();
   return prisma.client.findMany({
     where: {
@@ -119,6 +120,7 @@ export async function getClients(search?: string) {
 }
 
 export async function getClientsWithStats(search?: string, filter?: "unpaid" | "active" | "all") {
+  await requireDashboardAccess();
   const workspaceId = await currentWorkspaceId();
 
   const clients = await prisma.client.findMany({

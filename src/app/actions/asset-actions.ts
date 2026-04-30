@@ -1,6 +1,6 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/auth";
+import { requireDashboardAccess, requireOperator } from "@/lib/auth";
 import { normalizePhone } from "@/lib/utils";
 import { currentWorkspaceId } from "@/lib/workspace";
 import { revalidatePath } from "next/cache";
@@ -36,7 +36,7 @@ function emptyToUndefined<T extends Record<string, unknown>>(obj: T): Partial<T>
 }
 
 export async function getAssets(filters?: { search?: string; assetType?: string }) {
-  await requireAdmin();
+  await requireDashboardAccess();
   const workspaceId = await currentWorkspaceId();
   const where: Record<string, unknown> = { workspaceId };
   if (filters?.search) {
@@ -61,13 +61,13 @@ export async function getAssets(filters?: { search?: string; assetType?: string 
 }
 
 export async function getAssetById(id: string) {
-  await requireAdmin();
+  await requireDashboardAccess();
   const workspaceId = await currentWorkspaceId();
   return prisma.asset.findFirst({ where: { id, workspaceId } });
 }
 
 export async function getAssetWithJobs(id: string) {
-  await requireAdmin();
+  await requireDashboardAccess();
   const workspaceId = await currentWorkspaceId();
   const asset = await prisma.asset.findFirst({
     where: { id, workspaceId },
@@ -85,7 +85,7 @@ export async function getAssetWithJobs(id: string) {
 }
 
 export async function getAssetTypes(): Promise<string[]> {
-  await requireAdmin();
+  await requireDashboardAccess();
   const workspaceId = await currentWorkspaceId();
   const rows = await prisma.asset.findMany({
     where: { workspaceId },
@@ -97,7 +97,7 @@ export async function getAssetTypes(): Promise<string[]> {
 }
 
 export async function createAsset(formData: FormData) {
-  await requireAdmin();
+  await requireOperator();
   const workspaceId = await currentWorkspaceId();
   const parsed = createSchema.safeParse(Object.fromEntries(formData.entries()));
   if (!parsed.success) return { error: parsed.error.message };
@@ -122,7 +122,7 @@ export async function createAsset(formData: FormData) {
 }
 
 export async function updateAsset(formData: FormData) {
-  await requireAdmin();
+  await requireOperator();
   const workspaceId = await currentWorkspaceId();
   const parsed = updateSchema.safeParse(Object.fromEntries(formData.entries()));
   if (!parsed.success) return { error: parsed.error.message };
@@ -141,7 +141,7 @@ export async function updateAsset(formData: FormData) {
 }
 
 export async function deleteAsset(id: string) {
-  await requireAdmin();
+  await requireOperator();
   const workspaceId = await currentWorkspaceId();
   const linkedJobs = await prisma.job.count({ where: { assetId: id, workspaceId } });
   if (linkedJobs > 0) {

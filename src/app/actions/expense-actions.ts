@@ -1,6 +1,6 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/auth";
+import { requireDashboardAccess, requireOperator } from "@/lib/auth";
 import { currentWorkspaceId } from "@/lib/workspace";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -16,7 +16,7 @@ const schema = z.object({
 });
 
 export async function createExpense(formData: FormData) {
-  await requireAdmin();
+  await requireOperator();
   const workspaceId = await currentWorkspaceId();
   const parsed = schema.safeParse(Object.fromEntries(formData.entries()));
   if (!parsed.success) return { error: parsed.error.message };
@@ -37,7 +37,7 @@ export async function createExpense(formData: FormData) {
 }
 
 export async function getExpenses(filter?: { category?: string; page?: number }) {
-  await requireAdmin();
+  await requireDashboardAccess();
   const workspaceId = await currentWorkspaceId();
   const page = filter?.page ?? 1;
   const take = 20;
@@ -54,7 +54,7 @@ export async function getExpenses(filter?: { category?: string; page?: number })
 }
 
 export async function deleteExpense(id: string) {
-  await requireAdmin();
+  await requireOperator();
   const workspaceId = await currentWorkspaceId();
   const result = await prisma.expense.deleteMany({ where: { id, workspaceId } });
   if (result.count === 0) return { error: "Expense not found" };

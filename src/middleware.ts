@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET ?? "");
+const DASHBOARD_ROLES = ["ADMIN", "MANAGER", "VIEWER"];
+const ADMIN_ONLY_PREFIXES = ["/admin/settings", "/admin/workers"];
 
 async function verifyEdgeToken(token: string): Promise<{ role?: string } | null> {
   try {
@@ -33,7 +35,10 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL("/login", req.url));
     }
     const payload = await verifyEdgeToken(token);
-    if (!payload || payload.role !== "ADMIN") {
+    if (!payload?.role || !DASHBOARD_ROLES.includes(payload.role)) {
+      return NextResponse.redirect(new URL("/login", req.url));
+    }
+    if (ADMIN_ONLY_PREFIXES.some((prefix) => pathname.startsWith(prefix)) && payload.role !== "ADMIN") {
       return NextResponse.redirect(new URL("/login", req.url));
     }
   }

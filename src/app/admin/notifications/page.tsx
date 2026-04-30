@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/auth";
+import { requireDashboardAccess } from "@/lib/auth";
 import { currentWorkspaceId } from "@/lib/workspace";
 import NotificationsClient from "./NotificationsClient";
 
@@ -8,7 +8,7 @@ export default async function NotificationsPage({
 }: {
   searchParams?: { filter?: string; page?: string };
 }) {
-  await requireAdmin();
+  await requireDashboardAccess();
   const workspaceId = await currentWorkspaceId();
 
   const filter = searchParams?.filter ?? "all";

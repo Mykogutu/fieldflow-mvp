@@ -1,11 +1,11 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/auth";
+import { requireDashboardAccess, requireOperator } from "@/lib/auth";
 import { currentWorkspaceId } from "@/lib/workspace";
 import { revalidatePath } from "next/cache";
 
 export async function markDocumentSent(docId: string, via: "WHATSAPP" | "EMAIL" | "MANUAL") {
-  await requireAdmin();
+  await requireOperator();
   const workspaceId = await currentWorkspaceId();
 
   const result = await prisma.document.updateMany({
@@ -20,7 +20,7 @@ export async function markDocumentSent(docId: string, via: "WHATSAPP" | "EMAIL" 
 }
 
 export async function getDocuments(filter?: { type?: string; page?: number }) {
-  await requireAdmin();
+  await requireDashboardAccess();
   const workspaceId = await currentWorkspaceId();
   const page = filter?.page ?? 1;
   const take = 50;

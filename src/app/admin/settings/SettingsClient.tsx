@@ -14,6 +14,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { INDUSTRY_LIST, INDUSTRY_TEMPLATES, type IndustryKey } from "@/lib/industry-templates";
+import { createUser } from "@/app/actions/user-actions";
+import type { Role } from "@/types";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const INDUSTRY_ICONS: Record<string, LucideIcon> = {
@@ -88,7 +90,7 @@ type TeamMember = {
   name: string;
   email: string | null;
   phone: string;
-  role: "ADMIN" | "TECHNICIAN";
+  role: Role;
   isActive: boolean;
 };
 
@@ -429,6 +431,20 @@ function StatusPill({ status }: { status: "connected" | "disconnected" | "option
   return <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#F1F5F9] text-[#94A3B8] border border-[#E2E8F0]">Optional</span>;
 }
 
+function roleLabel(role: Role): string {
+  if (role === "ADMIN") return "Admin";
+  if (role === "MANAGER") return "Manager";
+  if (role === "VIEWER") return "Viewer";
+  return "Worker";
+}
+
+function rolePillClass(role: Role): string {
+  if (role === "ADMIN") return "bg-[#EFF6FF] text-[#2563EB] border border-[#DBEAFE]";
+  if (role === "MANAGER") return "bg-[#F0FDF4] text-[#16A34A] border border-[#BBF7D0]";
+  if (role === "VIEWER") return "bg-[#F5F3FF] text-[#7C3AED] border border-[#DDD6FE]";
+  return "bg-[#F1F5F9] text-[#64748B] border border-[#E2E8F0]";
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function SettingsClient({
   settings,
@@ -445,6 +461,8 @@ export default function SettingsClient({
   const [isPending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
   const [tab, setTab] = useState<Tab>("general");
+  const [showInvite, setShowInvite] = useState(false);
+  const [inviteFeedback, setInviteFeedback] = useState<{ type: "ok" | "error"; msg: string } | null>(null);
 
   // ── General tab ───────────────────────────────────────────────────────────
   const [companyName, setCompanyName]     = useState(settings.company_name ?? "FieldFlow Demo");
@@ -702,6 +720,21 @@ export default function SettingsClient({
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
+      router.refresh();
+    });
+  }
+
+  function inviteTeamMember(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    startTransition(async () => {
+      const result = await createUser(formData);
+      if (result?.error) {
+        setInviteFeedback({ type: "error", msg: result.error });
+        return;
+      }
+      setInviteFeedback({ type: "ok", msg: "Team member added." });
+      setShowInvite(false);
       router.refresh();
     });
   }
@@ -1576,16 +1609,26 @@ export default function SettingsClient({
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-sm font-semibold text-[#0F172A]">Team Members</h3>
-                    <p className="text-xs text-[#94A3B8] mt-0.5">Admins can manage everything. Workers access the WhatsApp interface.</p>
+                    <p className="text-xs text-[#94A3B8] mt-0.5">Admins manage settings, managers run operations, viewers can inspect, and workers use WhatsApp.</p>
                   </div>
                   <button
-                    disabled
-                    className="inline-flex items-center gap-1.5 rounded-[10px] border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2 text-sm font-semibold text-[#94A3B8] cursor-not-allowed"
-                    title="Use the Workers page to add WhatsApp-first workers"
+                    type="button"
+                    onClick={() => { setInviteFeedback(null); setShowInvite(true); }}
+                    className="inline-flex items-center gap-1.5 rounded-[10px] border border-[#DBEAFE] bg-[#EFF6FF] px-3 py-2 text-sm font-semibold text-[#2563EB] hover:bg-[#DBEAFE]"
                   >
                     <UserPlus className="w-3.5 h-3.5" /> Invite
                   </button>
                 </div>
+
+                {inviteFeedback && (
+                  <div className={`rounded-[12px] border px-4 py-3 text-sm ${
+                    inviteFeedback.type === "ok"
+                      ? "border-[#BBF7D0] bg-[#F0FDF4] text-[#15803D]"
+                      : "border-[#FECACA] bg-[#FEF2F2] text-[#DC2626]"
+                  }`}>
+                    {inviteFeedback.msg}
+                  </div>
+                )}
 
                 <div className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card overflow-hidden">
                   {/* Header */}
@@ -1607,9 +1650,8 @@ export default function SettingsClient({
                         </div>
                       </div>
                       <div className="w-20 flex justify-center">
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full
-                          ${m.role === "ADMIN" ? "bg-[#EFF6FF] text-[#2563EB] border border-[#DBEAFE]" : "bg-[#F1F5F9] text-[#64748B] border border-[#E2E8F0]"}`}>
-                          {m.role === "ADMIN" ? "Admin" : "Worker"}
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${rolePillClass(m.role)}`}>
+                          {roleLabel(m.role)}
                         </span>
                       </div>
                       <div className="w-16 flex justify-end">
@@ -1638,6 +1680,8 @@ export default function SettingsClient({
                   <div className="space-y-3">
                     {[
                       { role: "Admin", icon: Crown, color: "text-[#2563EB]", bg: "bg-[#EFF6FF]", perms: ["Full dashboard access", "Create & manage jobs", "View invoices & reports", "Manage workers & settings"] },
+                      { role: "Manager", icon: Users, color: "text-[#16A34A]", bg: "bg-[#F0FDF4]", perms: ["Create and update jobs", "Manage clients and assets", "View invoices and documents", "No billing or settings access"] },
+                      { role: "Viewer", icon: Eye, color: "text-[#7C3AED]", bg: "bg-[#F5F3FF]", perms: ["Read-only dashboard access", "View jobs, clients, assets, invoices, and documents", "No edits or destructive actions"] },
                       { role: "Worker / Technician", icon: Wrench, color: "text-[#64748B]", bg: "bg-[#F1F5F9]", perms: ["WhatsApp interface only", "Accept & complete jobs", "View own job schedule", "Report completion via OTP"] },
                     ].map(({ role, icon: Icon, color, bg, perms }) => (
                       <div key={role} className="p-3.5 rounded-[12px] border border-[#E2E8F0]">
@@ -1883,6 +1927,63 @@ export default function SettingsClient({
 
         </div>
       </div>
+
+      {showInvite && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-[16px] shadow-2xl w-full max-w-md">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#E2E8F0]">
+              <div>
+                <h3 className="font-semibold text-[#0F172A]">Invite Team Member</h3>
+                <p className="text-xs text-[#94A3B8] mt-0.5">Create an account with the correct dashboard role.</p>
+              </div>
+              <button onClick={() => setShowInvite(false)} className="p-1.5 rounded-lg hover:bg-[#F8FAFC] text-[#94A3B8]">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <form onSubmit={inviteTeamMember} className="p-5 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#475569] mb-1.5">Full Name</label>
+                  <input name="name" required className="ff-input text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#475569] mb-1.5">Role</label>
+                  <select name="role" defaultValue="MANAGER" className="ff-input text-sm">
+                    <option value="ADMIN">Admin</option>
+                    <option value="MANAGER">Manager</option>
+                    <option value="VIEWER">Viewer</option>
+                    <option value="TECHNICIAN">Worker</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#475569] mb-1.5">Phone</label>
+                  <input name="phone" required placeholder="+254..." className="ff-input text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#475569] mb-1.5">Email</label>
+                  <input name="email" type="email" placeholder="optional" className="ff-input text-sm" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[#475569] mb-1.5">Temporary Password</label>
+                <input name="password" type="password" required minLength={6} className="ff-input text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[#475569] mb-1.5">Base Zone</label>
+                <input name="baseZone" placeholder="Optional, mainly for workers" className="ff-input text-sm" />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button type="button" onClick={() => setShowInvite(false)} className="ff-btn-secondary flex-1 justify-center text-sm">Cancel</button>
+                <button type="submit" disabled={isPending} className="ff-btn-primary flex-1 justify-center text-sm disabled:opacity-50">
+                  {isPending ? "Adding..." : "Add Member"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {editing && (
         <EditModal label={editing.label} value={editing.value} onClose={() => setEditing(null)} onSave={editing.onSave} />

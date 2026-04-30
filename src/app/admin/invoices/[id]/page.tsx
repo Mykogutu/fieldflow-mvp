@@ -11,7 +11,7 @@ import {
   User,
   Wrench,
 } from "lucide-react";
-import { requireAdmin } from "@/lib/auth";
+import { requireDashboardAccess } from "@/lib/auth";
 import { currentWorkspaceId } from "@/lib/workspace";
 import { prisma } from "@/lib/prisma";
 import { formatDate, formatKES } from "@/lib/utils";
@@ -27,7 +27,7 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 export default async function InvoiceDetailPage({ params }: { params: { id: string } }) {
-  await requireAdmin();
+  await requireDashboardAccess();
   const workspaceId = await currentWorkspaceId();
 
   const invoice = await prisma.invoice.findFirst({
