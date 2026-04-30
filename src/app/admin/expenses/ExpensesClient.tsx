@@ -114,7 +114,7 @@ export default function ExpensesClient({ expenses, total, currentCategory }: {
                 onClick={() => {
                   const sp = new URLSearchParams();
                   if (tab.key !== "ALL") sp.set("category", tab.key);
-                  router.push(`/admin/expenses?${sp}`);
+                  router.push(`/admin/expenses?${sp}`, { scroll: false });
                 }}
                 className={`ff-tab min-h-9 px-4 py-2 ${activeTab === tab.key ? "ff-tab-active" : "ff-tab-inactive"}`}>
                 {tab.label}

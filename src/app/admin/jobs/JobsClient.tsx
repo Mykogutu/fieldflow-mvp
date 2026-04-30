@@ -146,7 +146,7 @@ export default function JobsClient({
     const sp = new URLSearchParams();
     if (params.status) sp.set("status", params.status);
     if (params.search) sp.set("search", params.search);
-    router.push(`/admin/jobs?${sp.toString()}`);
+    router.push(`/admin/jobs?${sp.toString()}`, { scroll: false });
   }
 
   async function handleCreate(e: React.FormEvent<HTMLFormElement>) {

@@ -117,7 +117,7 @@ type WhatsAppSummary = {
 };
 
 type DataAction = {
-  action: "clear_job_history" | "reset_settings" | "delete_workspace";
+  action: "clear_job_history" | "reset_workspace" | "delete_workspace";
   title: string;
   description: string;
   confirmation: string;
@@ -1890,7 +1890,7 @@ export default function SettingsClient({
                   <div className="px-5 py-4 space-y-3">
                     {[
                       { action: "clear_job_history", title: "Delete all job history", desc: "Permanently remove jobs, invoices, job cards, and job notifications", confirmation: "DELETE JOB HISTORY", enabled: true },
-                      { action: "reset_settings", title: "Reset workspace settings", desc: "Restore industry defaults and reopen onboarding for review", confirmation: "RESET SETTINGS", enabled: true },
+                      { action: "reset_workspace", title: "Reset workspace", desc: "Clear jobs, clients, assets, workers, invoices, expenses, notifications, and reopen onboarding", confirmation: "RESET WORKSPACE", enabled: true },
                       { action: "delete_workspace", title: "Delete workspace", desc: "Permanently delete your workspace and all associated data", confirmation: "DELETE WORKSPACE", enabled: false },
                     ].map(({ action, title, desc, confirmation, enabled }) => (
                       <div key={action} className="flex items-center justify-between gap-4 py-2.5 border-b border-red-50 last:border-0">

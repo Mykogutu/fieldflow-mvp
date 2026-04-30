@@ -242,7 +242,7 @@ export default function ClientsClient({ clients, total, labels }: { clients: Cli
     const sp = new URLSearchParams();
     if (search) sp.set("search", search);
     if (activeFilter !== "all") sp.set("filter", activeFilter);
-    router.push(`/admin/clients?${sp.toString()}`);
+    router.push(`/admin/clients?${sp.toString()}`, { scroll: false });
   }
 
   function handleFilter(f: typeof activeFilter) {
@@ -250,7 +250,7 @@ export default function ClientsClient({ clients, total, labels }: { clients: Cli
     const sp = new URLSearchParams();
     if (search) sp.set("search", search);
     if (f !== "all") sp.set("filter", f);
-    router.push(`/admin/clients?${sp.toString()}`);
+    router.push(`/admin/clients?${sp.toString()}`, { scroll: false });
   }
 
   async function handleCreate(e: React.FormEvent<HTMLFormElement>) {

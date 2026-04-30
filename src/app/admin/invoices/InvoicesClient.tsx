@@ -30,7 +30,7 @@ export default function InvoicesClient({
   function navigate(status: string) {
     const sp = new URLSearchParams();
     if (status && status !== "ALL") sp.set("status", status);
-    router.push(`/admin/invoices?${sp.toString()}`);
+    router.push(`/admin/invoices?${sp.toString()}`, { scroll: false });
   }
 
   async function markPaid(id: string) {

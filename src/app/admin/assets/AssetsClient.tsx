@@ -400,7 +400,7 @@ export default function AssetsClient({ assets, knownTypes, zones, currentSearch,
   function updateFilter(key: string, value: string) {
     const next = new URLSearchParams(params.toString());
     if (value) next.set(key, value); else next.delete(key);
-    router.push(`/admin/assets?${next.toString()}`);
+    router.push(`/admin/assets?${next.toString()}`, { scroll: false });
   }
 
   async function handleCreate(e: React.FormEvent<HTMLFormElement>) {

@@ -4,11 +4,11 @@ import { getTemplate, type DocumentType } from "@/lib/industry-templates";
 import { prisma } from "@/lib/prisma";
 import { currentWorkspaceId } from "@/lib/workspace";
 
-type DataAction = "clear_job_history" | "reset_settings";
+type DataAction = "clear_job_history" | "reset_workspace";
 
 const CONFIRMATIONS: Record<DataAction, string> = {
   clear_job_history: "DELETE JOB HISTORY",
-  reset_settings: "RESET SETTINGS",
+  reset_workspace: "RESET WORKSPACE",
 };
 
 const documentKeyMap: Record<DocumentType, string> = {
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
       return clearJobHistory(workspaceId);
     }
 
-    return resetWorkspaceSettings(workspaceId);
+    return resetWorkspaceData(workspaceId);
   } catch (error) {
     console.error("[SettingsDataAction]", error);
     return NextResponse.json({ error: "Unable to complete data action." }, { status: 500 });
@@ -73,6 +73,23 @@ async function clearJobHistory(workspaceId: string) {
     message: `Deleted ${jobIds.length} job${jobIds.length === 1 ? "" : "s"} and related job history.`,
     deletedJobs: jobIds.length,
   });
+}
+
+async function resetWorkspaceData(workspaceId: string) {
+  await prisma.$transaction([
+    prisma.document.deleteMany({ where: { workspaceId } }),
+    prisma.invoice.deleteMany({ where: { workspaceId } }),
+    prisma.notification.deleteMany({ where: { workspaceId } }),
+    prisma.jobEvent.deleteMany({ where: { workspaceId } }),
+    prisma.expense.deleteMany({ where: { workspaceId } }),
+    prisma.whatsAppMessageLog.deleteMany({ where: { workspaceId } }),
+    prisma.job.deleteMany({ where: { workspaceId } }),
+    prisma.client.deleteMany({ where: { workspaceId } }),
+    prisma.asset.deleteMany({ where: { workspaceId } }),
+    prisma.user.deleteMany({ where: { workspaceId, role: "TECHNICIAN" } }),
+  ]);
+
+  return resetWorkspaceSettings(workspaceId);
 }
 
 async function resetWorkspaceSettings(workspaceId: string) {

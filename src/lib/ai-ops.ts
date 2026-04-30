@@ -64,6 +64,41 @@ async function ai(prompt: string, temperature = 0.3): Promise<string> {
   return result.response.text().trim();
 }
 
+function getAIErrorMessage(error: unknown): string {
+  const message =
+    error instanceof Error ? error.message : typeof error === "string" ? error : "Unknown AI error";
+  const normalizedMessage = message.toLowerCase();
+
+  if (normalizedMessage.includes("google_api_key not set")) {
+    return "AI is not configured yet. Add a valid Google AI API key to GOOGLE_API_KEY.";
+  }
+
+  if (
+    normalizedMessage.includes("method doesn't allow unregistered callers") ||
+    normalizedMessage.includes("403 forbidden")
+  ) {
+    return "The Google AI key is present, but Gemini is rejecting it. Enable the Generative Language API for this key and make sure the key is allowed to call Gemini.";
+  }
+
+  if (normalizedMessage.includes("api key not valid") || normalizedMessage.includes("invalid api key")) {
+    return "The Google AI key is invalid. Replace GOOGLE_API_KEY with a valid Gemini API key.";
+  }
+
+  if (
+    normalizedMessage.includes("quota") ||
+    normalizedMessage.includes("rate limit") ||
+    normalizedMessage.includes("resource exhausted")
+  ) {
+    return "The Google AI service is reachable, but this key has hit a quota or rate limit. Check the API project's quota and billing settings.";
+  }
+
+  if (normalizedMessage.includes("fetch") || normalizedMessage.includes("network")) {
+    return "FieldFlow could not reach Google AI just now. Check the network connection and try again.";
+  }
+
+  return "AI could not generate a response right now. Check that the Google AI key is enabled for Gemini and try again.";
+}
+
 /** Extract the first JSON array or object from a raw AI response */
 function extractJSON(raw: string, wantArray: true): string;
 function extractJSON(raw: string, wantArray: false): string;
@@ -508,7 +543,7 @@ export async function answerCopilot(
     return await ai(prompt, 0.3);
   } catch (err) {
     console.error("[ai-ops] copilot error:", err);
-    return "Something went wrong. Please try again.";
+    return getAIErrorMessage(err);
   }
 }
 
@@ -581,7 +616,7 @@ Top 3 follow-up tasks based on today's outcomes`;
     return await ai(prompt, 0.25);
   } catch (err) {
     console.error("[ai-ops] briefing error:", err);
-    return "Could not generate briefing at this time.";
+    return getAIErrorMessage(err);
   }
 }
 

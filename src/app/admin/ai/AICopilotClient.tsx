@@ -88,7 +88,7 @@ export default function AICopilotClient({ userName = "Admin" }: { userName?: str
   const [showMoreChips, setShowMoreChips] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
-  const chatBottomRef = useRef<HTMLDivElement>(null);
+  const chatThreadRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadInsights();
@@ -99,7 +99,12 @@ export default function AICopilotClient({ userName = "Admin" }: { userName?: str
   }, []);
 
   useEffect(() => {
-    chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const thread = chatThreadRef.current;
+    if (!thread) return;
+    thread.scrollTo({
+      top: thread.scrollHeight,
+      behavior: "smooth",
+    });
   }, [chatHistory, loading]);
 
   async function loadInsights() {
@@ -204,7 +209,10 @@ export default function AICopilotClient({ userName = "Admin" }: { userName?: str
 
           {/* Chat message thread */}
           {chatActive && (
-            <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+            <div
+              ref={chatThreadRef}
+              className="space-y-3 max-h-[380px] overflow-y-auto pr-1"
+            >
               {chatHistory.map((msg, i) => (
                 <div key={i} className={`flex gap-2.5 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                   {msg.role === "assistant" && (
@@ -230,7 +238,6 @@ export default function AICopilotClient({ userName = "Admin" }: { userName?: str
                   </div>
                 </div>
               )}
-              <div ref={chatBottomRef} />
             </div>
           )}
 

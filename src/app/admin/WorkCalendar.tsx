@@ -54,7 +54,7 @@ export default function WorkCalendar({
   function navigate(delta: number) {
     const d = new Date(weekStart);
     d.setDate(d.getDate() + delta * 7);
-    router.push(`/admin?week=${d.toISOString().slice(0, 10)}`);
+    router.push(`/admin?week=${d.toISOString().slice(0, 10)}`, { scroll: false });
   }
 
   const label = (d: Date, opts: Intl.DateTimeFormatOptions) =>
@@ -67,6 +67,7 @@ export default function WorkCalendar({
         <h2 className="font-semibold text-slate-900">Work Calendar</h2>
         <div className="flex items-center gap-1 ml-auto">
           <button
+            type="button"
             onClick={() => navigate(-1)}
             className="p-1.5 hover:bg-[#F1F5F9] rounded-lg transition-colors text-[#94A3B8] hover:text-[#334155]"
             aria-label="Previous week"
@@ -74,12 +75,14 @@ export default function WorkCalendar({
             <ChevronLeft className="w-4 h-4" />
           </button>
           <button
-            onClick={() => router.push("/admin")}
+            type="button"
+            onClick={() => router.push("/admin", { scroll: false })}
             className="px-3 py-1.5 text-xs font-medium text-[#475569] hover:bg-[#F1F5F9] rounded-lg transition-colors border border-gray-200 hover:border-gray-300"
           >
             Today
           </button>
           <button
+            type="button"
             onClick={() => navigate(1)}
             className="p-1.5 hover:bg-[#F1F5F9] rounded-lg transition-colors text-[#94A3B8] hover:text-[#334155]"
             aria-label="Next week"
