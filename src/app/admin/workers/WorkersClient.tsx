@@ -12,6 +12,15 @@ interface Worker {
   baseZone: string | null; isActive: boolean;
 }
 
+type WorkerLabels = {
+  worker: string;
+  workers: string;
+};
+
+function lower(label: string) {
+  return label.toLowerCase();
+}
+
 function Field({ label, name, type = "text", placeholder, required, defaultValue }: {
   label: string; name: string; type?: string; placeholder?: string; required?: boolean; defaultValue?: string;
 }) {
@@ -112,7 +121,7 @@ function WorkerCard({ w, onEdit, onDeactivate }: { w: Worker; onEdit: () => void
   );
 }
 
-export default function WorkersClient({ workers, zones }: { workers: Worker[]; zones: string[] }) {
+export default function WorkersClient({ workers, zones, labels }: { workers: Worker[]; zones: string[]; labels: WorkerLabels }) {
   const router = useRouter();
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<Worker | null>(null);
@@ -128,7 +137,7 @@ export default function WorkersClient({ workers, zones }: { workers: Worker[]; z
     startTransition(async () => {
       const res = await createUser(fd);
       if (res.error) setFeedback(res.error);
-      else { setShowAdd(false); setFeedback("Worker added!"); router.refresh(); }
+      else { setShowAdd(false); setFeedback(`${labels.worker} added!`); router.refresh(); }
     });
   }
 
@@ -144,7 +153,7 @@ export default function WorkersClient({ workers, zones }: { workers: Worker[]; z
   }
 
   async function handleDeactivate(id: string) {
-    if (!confirm("Deactivate this worker?")) return;
+    if (!confirm(`Deactivate this ${lower(labels.worker)}?`)) return;
     startTransition(async () => { await deleteUser(id); router.refresh(); });
   }
 
@@ -153,18 +162,18 @@ export default function WorkersClient({ workers, zones }: { workers: Worker[]; z
       {/* ── Page header ─────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="ff-page-title">Workers</h1>
+          <h1 className="ff-page-title">{labels.workers}</h1>
           <p className="ff-page-desc">{workers.length} total · {activeCount} active</p>
         </div>
         <button onClick={() => setShowAdd(true)} className="ff-btn-primary inline-flex items-center gap-2 text-sm px-4 py-2.5">
-          <Plus className="w-4 h-4" /> Add Worker
+          <Plus className="w-4 h-4" /> Add {labels.worker}
         </button>
       </div>
 
       {/* ── Summary metrics ──────────────────────────────────────────────── */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: "Total Workers", value: workers.length.toString(), icon: Users,       color: "text-[#2563EB]", bg: "bg-[#EFF6FF]" },
+          { label: `Total ${labels.workers}`, value: workers.length.toString(), icon: Users,       color: "text-[#2563EB]", bg: "bg-[#EFF6FF]" },
           { label: "Active",        value: activeCount.toString(),    icon: CheckCircle2, color: "text-[#16A34A]", bg: "bg-[#F0FDF4]" },
           { label: "Inactive",      value: inactiveCount.toString(),  icon: XCircle,     color: "text-[#94A3B8]", bg: "bg-[#F1F5F9]" },
         ].map(({ label, value, icon: Icon, color, bg }) => (
@@ -194,9 +203,9 @@ export default function WorkersClient({ workers, zones }: { workers: Worker[]; z
           <div className="w-14 h-14 rounded-2xl bg-[#F1F5F9] flex items-center justify-center">
             <HardHat className="w-6 h-6 text-[#94A3B8]" />
           </div>
-          <p className="text-sm font-semibold text-[#475569]">No workers yet</p>
+          <p className="text-sm font-semibold text-[#475569]">No {lower(labels.workers)} yet</p>
           <button onClick={() => setShowAdd(true)} className="ff-btn-primary text-sm px-4 py-2 inline-flex items-center gap-2">
-            <Plus className="w-4 h-4" /> Add Worker
+            <Plus className="w-4 h-4" /> Add {labels.worker}
           </button>
         </div>
       ) : (
@@ -211,7 +220,7 @@ export default function WorkersClient({ workers, zones }: { workers: Worker[]; z
 
       {/* Add Modal */}
       {showAdd && (
-        <Modal title="Add Worker" onClose={() => setShowAdd(false)}>
+        <Modal title={`Add ${labels.worker}`} onClose={() => setShowAdd(false)}>
           <form onSubmit={handleCreate} className="space-y-3">
             <input type="hidden" name="role" value="TECHNICIAN" />
             <Field label="Full Name" name="name" required />
@@ -228,7 +237,7 @@ export default function WorkersClient({ workers, zones }: { workers: Worker[]; z
             <div className="flex gap-2 pt-2">
               <button type="button" onClick={() => setShowAdd(false)} className="ff-btn-secondary flex-1 text-sm">Cancel</button>
               <button type="submit" disabled={isPending} className="ff-btn-primary flex-1 text-sm disabled:opacity-50">
-                {isPending ? "Adding…" : "Add Worker"}
+                {isPending ? "Adding…" : `Add ${labels.worker}`}
               </button>
             </div>
           </form>
@@ -237,7 +246,7 @@ export default function WorkersClient({ workers, zones }: { workers: Worker[]; z
 
       {/* Edit Modal */}
       {editing && (
-        <Modal title="Edit Worker" onClose={() => setEditing(null)}>
+        <Modal title={`Edit ${labels.worker}`} onClose={() => setEditing(null)}>
           <form onSubmit={handleUpdate} className="space-y-3">
             <input type="hidden" name="id" value={editing.id} />
             <Field label="Name" name="name" defaultValue={editing.name} />

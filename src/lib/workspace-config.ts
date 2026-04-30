@@ -22,6 +22,10 @@ export interface WorkspaceConfig {
   workerTitlePlural: string;
   jobLabel: string;
   jobLabelPlural: string;
+  assetLabel: string;
+  assetLabelPlural: string;
+  clientLabel: string;
+  clientLabelPlural: string;
   jobTypes: string[];
   zones: string[];
   currency: string;
@@ -41,6 +45,10 @@ const DEFAULTS: WorkspaceConfig = {
   workerTitlePlural: "Technicians",
   jobLabel: "Job",
   jobLabelPlural: "Jobs",
+  assetLabel: "Asset",
+  assetLabelPlural: "Assets",
+  clientLabel: "Client",
+  clientLabelPlural: "Clients",
   jobTypes: ["Service Call", "Installation", "Repair"],
   zones: [],
   currency: "KES",
@@ -75,6 +83,10 @@ export async function getWorkspaceConfig(): Promise<WorkspaceConfig> {
     workerTitlePlural: map.worker_title_plural || template.workerTitlePlural,
     jobLabel: map.job_label || template.jobLabel,
     jobLabelPlural: map.job_label_plural || template.jobLabelPlural,
+    assetLabel: map.asset_label || DEFAULTS.assetLabel,
+    assetLabelPlural: map.asset_label_plural || DEFAULTS.assetLabelPlural,
+    clientLabel: map.client_label || DEFAULTS.clientLabel,
+    clientLabelPlural: map.client_label_plural || DEFAULTS.clientLabelPlural,
     jobTypes,
     zones,
     currency: map.currency || template.currencyHint || DEFAULTS.currency,
@@ -148,6 +160,8 @@ export function workspaceContextForAI(cfg: WorkspaceConfig): string {
       industry: cfg.industry,
       workerTitle: cfg.workerTitle,
       jobLabel: cfg.jobLabel,
+      assetLabel: cfg.assetLabel,
+      clientLabel: cfg.clientLabel,
       currency: cfg.currency,
       currencySymbol: cfg.currencySymbol,
       timezone: cfg.timezone,

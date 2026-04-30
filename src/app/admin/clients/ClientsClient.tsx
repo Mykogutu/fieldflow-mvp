@@ -20,6 +20,17 @@ interface Client {
   lastJobDate: Date | null;
 }
 
+type ClientLabels = {
+  client: string;
+  clients: string;
+  job: string;
+  jobs: string;
+};
+
+function lower(label: string) {
+  return label.toLowerCase();
+}
+
 // ── Field helper ──────────────────────────────────────────────────────────────
 function Field({ label, name, type = "text", placeholder, required, defaultValue }: {
   label: string; name: string; type?: string; placeholder?: string; required?: boolean; defaultValue?: string;
@@ -53,8 +64,9 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 }
 
 // ── Client Form ───────────────────────────────────────────────────────────────
-function ClientForm({ isPending, onSubmit, onCancel, defaultValues }: {
+function ClientForm({ isPending, labels, onSubmit, onCancel, defaultValues }: {
   isPending: boolean;
+  labels: ClientLabels;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   onCancel: () => void;
   defaultValues?: Partial<Client>;
@@ -72,7 +84,7 @@ function ClientForm({ isPending, onSubmit, onCancel, defaultValues }: {
       <Field label="Location" name="location" placeholder="Nairobi, Karen…" defaultValue={defaultValues?.location ?? ""} />
       {!defaultValues && <Field label="Notes" name="address" placeholder="Optional notes…" />}
       <div>
-        <label className="block text-xs font-semibold text-[#475569] mb-1.5">Client Type</label>
+        <label className="block text-xs font-semibold text-[#475569] mb-1.5">{labels.client} Type</label>
         <select name="type" defaultValue={defaultValues?.type ?? "INDIVIDUAL"} className="ff-input text-sm">
           <option value="INDIVIDUAL">Individual</option>
           <option value="COMPANY">Company</option>
@@ -81,7 +93,7 @@ function ClientForm({ isPending, onSubmit, onCancel, defaultValues }: {
       <div className="flex gap-2 pt-3">
         <button type="button" onClick={onCancel} className="ff-btn-secondary flex-1 text-sm">Cancel</button>
         <button type="submit" disabled={isPending} className="ff-btn-primary flex-1 text-sm disabled:opacity-50">
-          {isPending ? "Saving…" : defaultValues ? "Save Changes" : "Add Client"}
+          {isPending ? "Saving…" : defaultValues ? "Save Changes" : `Add ${labels.client}`}
         </button>
       </div>
     </form>
@@ -106,7 +118,7 @@ function ClientAvatar({ name, size = "md" }: { name: string; size?: "sm" | "md" 
 }
 
 // ── Client Row (table) ────────────────────────────────────────────────────────
-function ClientRow({ c, onEdit }: { c: Client; onEdit: () => void }) {
+function ClientRow({ c, labels, onEdit }: { c: Client; labels: ClientLabels; onEdit: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   return (
     <tr className="group hover:bg-[#FAFBFD] transition-colors">
@@ -177,7 +189,7 @@ function ClientRow({ c, onEdit }: { c: Client; onEdit: () => void }) {
               <div className="absolute right-0 top-full mt-1 bg-white rounded-[10px] border border-[#E2E8F0] shadow-card py-1 z-20 w-40">
                 <button onClick={() => { setMenuOpen(false); onEdit(); }}
                   className="flex items-center gap-2 px-3 py-1.5 text-xs text-[#334155] hover:bg-[#F8FAFC] w-full text-left">
-                  <Briefcase className="w-3.5 h-3.5" /> Edit Client
+                  <Briefcase className="w-3.5 h-3.5" /> Edit {labels.client}
                 </button>
                 {c.email && (
                   <a href={`mailto:${c.email}`} onClick={() => setMenuOpen(false)}
@@ -201,7 +213,7 @@ function ClientRow({ c, onEdit }: { c: Client; onEdit: () => void }) {
 }
 
 // ── Main Component ─────────────────────────────────────────────────────────────
-export default function ClientsClient({ clients, total }: { clients: Client[]; total: number }) {
+export default function ClientsClient({ clients, total, labels }: { clients: Client[]; total: number; labels: ClientLabels }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<"all" | "active" | "unpaid" | "company" | "individual">("all");
@@ -248,7 +260,7 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
       const res = await createClient(fd);
       if (res.error) { setFeedback({ type: "error", msg: res.error }); return; }
       setShowAdd(false);
-      setFeedback({ type: "ok", msg: "Client added successfully." });
+      setFeedback({ type: "ok", msg: `${labels.client} added successfully.` });
       router.refresh();
     });
   }
@@ -261,13 +273,13 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
       const res = await updateClient(fd);
       if (res.error) { setFeedback({ type: "error", msg: res.error }); return; }
       setEditing(null);
-      setFeedback({ type: "ok", msg: "Client updated." });
+      setFeedback({ type: "ok", msg: `${labels.client} updated.` });
       router.refresh();
     });
   }
 
   async function handleDeactivate(id: string) {
-    if (!confirm("Deactivate this client?")) return;
+    if (!confirm(`Deactivate this ${lower(labels.client)}?`)) return;
     startTransition(async () => { await deactivateClient(id); router.refresh(); });
   }
 
@@ -277,22 +289,22 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
       {/* ── Page header ──────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="ff-page-title">Clients</h1>
-          <p className="ff-page-desc">Manage client profiles, balances, and service history.</p>
+          <h1 className="ff-page-title">{labels.clients}</h1>
+          <p className="ff-page-desc">Manage {lower(labels.client)} profiles, balances, and service history.</p>
         </div>
         <button onClick={() => setShowAdd(true)}
           className="ff-btn-primary inline-flex items-center gap-2 text-sm px-4 py-2.5">
-          <Plus className="w-4 h-4" /> Add Client
+          <Plus className="w-4 h-4" /> Add {labels.client}
         </button>
       </div>
 
       {/* ── 4 Metric cards ───────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
         {[
-          { label: "Total Clients",       value: total,                                           sub: "All time registered clients", Icon: Users,     iconBg: "bg-[#EFF6FF]",   iconColor: "text-[#2563EB]", href: "/admin/clients"                  },
-          { label: "Active Clients",      value: activeCount,                                     sub: "Currently active clients",    Icon: UserCheck, iconBg: "bg-[#F0FDF4]",  iconColor: "text-[#16A34A]", href: "/admin/clients?filter=active"    },
-          { label: "Outstanding Balance", value: totalOutstanding > 0 ? formatKES(totalOutstanding) : "Clear", sub: `Across ${unpaidClients.length} client${unpaidClients.length !== 1 ? "s" : ""}`, Icon: DollarSign, iconBg: totalOutstanding > 0 ? "bg-[#FFF1F2]" : "bg-[#F0FDF4]", iconColor: totalOutstanding > 0 ? "text-[#DC2626]" : "text-[#16A34A]", href: "/admin/clients?filter=unpaid" },
-          { label: "New This Month",      value: newThisMonth,                                    sub: "New clients this month",      Icon: UserPlus,  iconBg: "bg-[#F5F3FF]", iconColor: "text-[#7C3AED]", href: "/admin/clients"                  },
+          { label: `Total ${labels.clients}`,       value: total,                                           sub: `All time registered ${lower(labels.clients)}`, Icon: Users,     iconBg: "bg-[#EFF6FF]",   iconColor: "text-[#2563EB]", href: "/admin/clients"                  },
+          { label: `Active ${labels.clients}`,      value: activeCount,                                     sub: `Currently active ${lower(labels.clients)}`,    Icon: UserCheck, iconBg: "bg-[#F0FDF4]",  iconColor: "text-[#16A34A]", href: "/admin/clients?filter=active"    },
+          { label: "Outstanding Balance", value: totalOutstanding > 0 ? formatKES(totalOutstanding) : "Clear", sub: `Across ${unpaidClients.length} ${lower(unpaidClients.length === 1 ? labels.client : labels.clients)}`, Icon: DollarSign, iconBg: totalOutstanding > 0 ? "bg-[#FFF1F2]" : "bg-[#F0FDF4]", iconColor: totalOutstanding > 0 ? "text-[#DC2626]" : "text-[#16A34A]", href: "/admin/clients?filter=unpaid" },
+          { label: "New This Month",      value: newThisMonth,                                    sub: `New ${lower(labels.clients)} this month`,      Icon: UserPlus,  iconBg: "bg-[#F5F3FF]", iconColor: "text-[#7C3AED]", href: "/admin/clients"                  },
         ].map(m => (
           <Link key={m.label} href={m.href}
             className="bg-white rounded-[16px] border border-[#E2E8F0] shadow-card p-3.5 sm:p-5 flex items-center gap-2.5 sm:gap-4 hover:border-[#2563EB]/30 hover:shadow-card-hover transition-all group">
@@ -333,7 +345,7 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
             <form onSubmit={handleSearch} className="relative w-full sm:flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94A3B8]" />
               <input value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="Search by name, phone, company..."
+                placeholder={`Search by name, phone, ${lower(labels.client)} company...`}
                 className="ff-input pl-9 text-sm w-full" />
             </form>
             {/* Segment filter — horizontally scrollable on mobile */}
@@ -356,19 +368,19 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
           {/* ── Mobile card list (sm:hidden) ──────────────────────────────── */}
           <div className="ff-card overflow-hidden sm:hidden">
             <div className="px-4 py-3 border-b border-[#E2E8F0] flex items-center justify-between">
-              <p className="text-sm font-semibold text-[#0F172A]">All Clients</p>
-              <p className="text-xs text-[#94A3B8]">{filteredClients.length} client{filteredClients.length !== 1 ? "s" : ""}</p>
+              <p className="text-sm font-semibold text-[#0F172A]">All {labels.clients}</p>
+              <p className="text-xs text-[#94A3B8]">{filteredClients.length} {lower(filteredClients.length === 1 ? labels.client : labels.clients)}</p>
             </div>
             {filteredClients.length === 0 ? (
               <div className="py-16 flex flex-col items-center gap-3">
                 <div className="w-12 h-12 rounded-2xl bg-[#F1F5F9] flex items-center justify-center">
                   <Users className="w-5 h-5 text-[#94A3B8]" />
                 </div>
-                <p className="text-sm font-semibold text-[#475569]">No clients found</p>
-                <p className="text-xs text-[#94A3B8]">Try a different filter or add a new client</p>
+                <p className="text-sm font-semibold text-[#475569]">No {lower(labels.clients)} found</p>
+                <p className="text-xs text-[#94A3B8]">Try a different filter or add a new {lower(labels.client)}</p>
                 <button onClick={() => setShowAdd(true)}
                   className="ff-btn-primary text-sm px-4 py-2 mt-1 inline-flex items-center gap-2">
-                  <Plus className="w-4 h-4" /> Add Client
+                  <Plus className="w-4 h-4" /> Add {labels.client}
                 </button>
               </div>
             ) : (
@@ -395,7 +407,7 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
                             <MapPin className="w-3 h-3 shrink-0" />{c.location}
                           </span>
                         )}
-                        <span className="text-[11px] text-[#64748B]">{c.jobCount} job{c.jobCount !== 1 ? "s" : ""}</span>
+                        <span className="text-[11px] text-[#64748B]">{c.jobCount} {lower(c.jobCount === 1 ? labels.job : labels.jobs)}</span>
                         {c.outstanding > 0 && (
                           <span className="text-[11px] font-bold text-[#DC2626]">{formatKES(c.outstanding)} due</span>
                         )}
@@ -412,9 +424,9 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
           <div className="ff-card overflow-hidden hidden sm:block">
             {/* Table header */}
             <div className="px-4 py-3 border-b border-[#E2E8F0] flex items-center justify-between">
-              <p className="text-sm font-semibold text-[#0F172A]">All Clients</p>
+              <p className="text-sm font-semibold text-[#0F172A]">All {labels.clients}</p>
               <p className="text-xs text-[#94A3B8]">
-                {filteredClients.length} client{filteredClients.length !== 1 ? "s" : ""} · Sorted by last activity
+                {filteredClients.length} {lower(filteredClients.length === 1 ? labels.client : labels.clients)} · Sorted by last activity
               </p>
             </div>
 
@@ -423,11 +435,11 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
                 <div className="w-12 h-12 rounded-2xl bg-[#F1F5F9] flex items-center justify-center">
                   <Users className="w-5 h-5 text-[#94A3B8]" />
                 </div>
-                <p className="text-sm font-semibold text-[#475569]">No clients found</p>
-                <p className="text-xs text-[#94A3B8]">Try a different filter or add a new client</p>
+                <p className="text-sm font-semibold text-[#475569]">No {lower(labels.clients)} found</p>
+                <p className="text-xs text-[#94A3B8]">Try a different filter or add a new {lower(labels.client)}</p>
                 <button onClick={() => setShowAdd(true)}
                   className="ff-btn-primary text-sm px-4 py-2 mt-1 inline-flex items-center gap-2">
-                  <Plus className="w-4 h-4" /> Add Client
+                  <Plus className="w-4 h-4" /> Add {labels.client}
                 </button>
               </div>
             ) : (
@@ -443,18 +455,18 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
                 </colgroup>
                 <thead>
                   <tr>
-                    <th>Client</th>
+                    <th>{labels.client}</th>
                     <th>Type</th>
                     <th>Location</th>
-                    <th>Jobs</th>
+                    <th>{labels.jobs}</th>
                     <th>Outstanding Balance</th>
-                    <th>Last Job</th>
+                    <th>Last {labels.job}</th>
                     <th className="text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredClients.map(c => (
-                    <ClientRow key={c.id} c={c} onEdit={() => setEditing(c)} />
+                    <ClientRow key={c.id} c={c} labels={labels} onEdit={() => setEditing(c)} />
                   ))}
                 </tbody>
               </table>
@@ -469,7 +481,7 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
           <div className="ff-card overflow-hidden">
             <div className="px-4 py-3.5 border-b border-[#E2E8F0] flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-semibold text-[#0F172A]">Clients needing follow up</h3>
+                <h3 className="text-sm font-semibold text-[#0F172A]">{labels.clients} needing follow up</h3>
                 {unpaidClients.length > 0 && (
                   <span className="text-[10px] bg-[#FEE2E2] text-[#B91C1C] px-1.5 py-0.5 rounded-full font-bold">
                     {unpaidClients.length}
@@ -484,7 +496,7 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
             <div className="divide-y divide-[#F1F5F9]">
               {unpaidClients.length === 0 ? (
                 <div className="px-4 py-6 text-center">
-                  <p className="text-xs text-[#94A3B8]">All clients are up to date</p>
+                  <p className="text-xs text-[#94A3B8]">All {lower(labels.clients)} are up to date</p>
                 </div>
               ) : (
                 unpaidClients.slice(0, 3).map(c => (
@@ -518,8 +530,8 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
             </div>
             <div className="divide-y divide-[#F1F5F9]">
               {([
-                { label: "Add Client",              Icon: UserPlus,  href: null as string | null,       onClick: () => setShowAdd(true) },
-                { label: "Create Job for Client",   Icon: Briefcase, href: "/admin/jobs",              onClick: null as (() => void) | null },
+                { label: `Add ${labels.client}`,              Icon: UserPlus,  href: null as string | null,       onClick: () => setShowAdd(true) },
+                { label: `Create ${labels.job} for ${labels.client}`,   Icon: Briefcase, href: "/admin/jobs",              onClick: null as (() => void) | null },
                 { label: "Send Payment Reminder",   Icon: Bell,      href: "/admin/invoices?status=OVERDUE", onClick: null as (() => void) | null },
                 { label: "View Unpaid Invoices",    Icon: FileText,  href: "/admin/invoices?status=PENDING", onClick: null as (() => void) | null },
               ]).map((action, i) => {
@@ -546,15 +558,16 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
 
       {/* ── Add Modal ───────────────────────────────────────────────────── */}
       {showAdd && (
-        <Modal title="Add Client" onClose={() => setShowAdd(false)}>
-          <ClientForm isPending={isPending} onSubmit={handleCreate} onCancel={() => setShowAdd(false)} />
+        <Modal title={`Add ${labels.client}`} onClose={() => setShowAdd(false)}>
+          <ClientForm labels={labels} isPending={isPending} onSubmit={handleCreate} onCancel={() => setShowAdd(false)} />
         </Modal>
       )}
 
       {/* ── Edit Modal ──────────────────────────────────────────────────── */}
       {editing && (
-        <Modal title="Edit Client" onClose={() => setEditing(null)}>
+        <Modal title={`Edit ${labels.client}`} onClose={() => setEditing(null)}>
           <ClientForm
+            labels={labels}
             isPending={isPending}
             onSubmit={handleUpdate}
             onCancel={() => setEditing(null)}
@@ -564,7 +577,7 @@ export default function ClientsClient({ clients, total }: { clients: Client[]; t
             <button
               onClick={() => { setEditing(null); handleDeactivate(editing.id); }}
               className="w-full text-xs text-[#DC2626] hover:text-[#B91C1C] py-2 transition-colors">
-              Deactivate client
+              Deactivate {lower(labels.client)}
             </button>
           </div>
         </Modal>

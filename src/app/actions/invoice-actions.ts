@@ -9,7 +9,11 @@ export async function getInvoices(filter?: { status?: string; page?: number }) {
   await requireAdmin();
   const workspaceId = await currentWorkspaceId();
   const page = filter?.page ?? 1;
-  const take = 20;
+  const pageSizeSetting = await prisma.setting.findFirst({
+    where: { workspaceId, key: "items_per_page" },
+    select: { value: true },
+  });
+  const take = clampPageSize(Number.parseInt(pageSizeSetting?.value ?? "20", 10));
   const skip = (page - 1) * take;
   const where: Prisma.InvoiceWhereInput = { workspaceId };
   if (filter?.status && filter.status !== "ALL") {
@@ -28,6 +32,11 @@ export async function getInvoices(filter?: { status?: string; page?: number }) {
   ]);
 
   return { invoices, total, page, pages: Math.ceil(total / take) };
+}
+
+function clampPageSize(value: number) {
+  if (!Number.isFinite(value)) return 20;
+  return Math.min(100, Math.max(10, value));
 }
 
 export async function updateInvoiceStatus(invoiceId: string, status: "PENDING" | "PAID" | "CANCELLED") {

@@ -45,6 +45,20 @@ interface Job {
   asset: { id: string; name: string; assetType: string } | null;
 }
 interface ClientOption { id: string; name: string; phone: string }
+type JobLabels = {
+  worker: string;
+  workers: string;
+  job: string;
+  jobs: string;
+  asset: string;
+  assets: string;
+  client: string;
+  clients: string;
+};
+
+function lower(label: string) {
+  return label.toLowerCase();
+}
 
 // ── Industry-specific fields (unchanged) ──────────────────────────────────────
 
@@ -114,12 +128,13 @@ const STATUS_TABS = [
 
 export default function JobsClient({
   jobs, total, pages, workers, jobTypes, zones, assets, industry, clients,
-  currentStatus, currentSearch,
+  currentStatus, currentSearch, labels,
 }: {
   jobs: Job[]; total: number; pages: number;
   workers: Worker[]; jobTypes: string[]; zones: string[];
   assets: AssetOption[]; industry: string; clients: ClientOption[];
   currentStatus?: string; currentSearch?: string;
+  labels: JobLabels;
 }) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
@@ -174,12 +189,12 @@ export default function JobsClient({
         {/* Page header */}
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h1 className="ff-page-title">Jobs</h1>
-            <p className="ff-page-desc">Manage and track field service jobs</p>
+            <h1 className="ff-page-title">{labels.jobs}</h1>
+            <p className="ff-page-desc">Manage and track field service {lower(labels.jobs)}</p>
           </div>
           <button onClick={() => setShowCreate(true)} className={btnPrimary}>
             <Plus className="w-4 h-4" />
-            New Job
+            New {labels.job}
           </button>
         </div>
 
@@ -192,7 +207,7 @@ export default function JobsClient({
         {/* Metric cards */}
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
           {[
-            { label: "Total Jobs",      value: total,         sub: "All time",          iconBg: "bg-[#DBEAFE]", iconColor: "text-[#2563EB]", Icon: Wrench       },
+            { label: `Total ${labels.jobs}`,      value: total,         sub: "All time",          iconBg: "bg-[#DBEAFE]", iconColor: "text-[#2563EB]", Icon: Wrench       },
             { label: "Active",          value: activeCount,   sub: "In progress",        iconBg: "bg-[#DCFCE7]", iconColor: "text-[#16A34A]", Icon: Wrench       },
             { label: "Awaiting OTP",    value: otpCount,      sub: "Waiting for client", iconBg: "bg-[#EDE9FE]", iconColor: "text-[#7C3AED]", Icon: Clock        },
             { label: "Needs Attention", value: attentionCount,sub: "High priority",      iconBg: "bg-[#FEE2E2]", iconColor: "text-[#DC2626]", Icon: AlertTriangle },
@@ -234,7 +249,7 @@ export default function JobsClient({
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
             <input
               type="text"
-              placeholder="Search by client, job, asset, or location..."
+              placeholder={`Search by ${lower(labels.client)}, ${lower(labels.job)}, ${lower(labels.asset)}, or location...`}
               defaultValue={currentSearch}
               onKeyDown={(e) => {
                 if (e.key === "Enter")
@@ -257,10 +272,10 @@ export default function JobsClient({
                 <div className="w-12 h-12 rounded-[12px] bg-[#F1F5F9] flex items-center justify-center">
                   <Wrench className="w-5 h-5 text-[#94A3B8]" />
                 </div>
-                <p className="text-sm font-semibold text-[#334155]">No jobs found</p>
-                <p className="text-xs text-[#94A3B8]">Create your first job to get started</p>
+                <p className="text-sm font-semibold text-[#334155]">No {lower(labels.jobs)} found</p>
+                <p className="text-xs text-[#94A3B8]">Create your first {lower(labels.job)} to get started</p>
                 <button onClick={() => setShowCreate(true)} className={btnPrimary}>
-                  <Plus className="w-4 h-4" /> New Job
+                  <Plus className="w-4 h-4" /> New {labels.job}
                 </button>
               </div>
             </div>
@@ -307,7 +322,7 @@ export default function JobsClient({
                 })}
               </div>
               <div className="px-4 py-3 border-t border-[#F1F5F9]">
-                <p className="text-xs text-[#94A3B8]">Showing {jobs.length} of {total} jobs</p>
+                <p className="text-xs text-[#94A3B8]">Showing {jobs.length} of {total} {lower(labels.jobs)}</p>
               </div>
             </>
           )}
@@ -327,9 +342,9 @@ export default function JobsClient({
             </colgroup>
             <thead>
               <tr>
-                <th>Job</th>
-                <th>Client</th>
-                <th>Worker</th>
+                <th>{labels.job}</th>
+                <th>{labels.client}</th>
+                <th>{labels.worker}</th>
                 <th>Scheduled</th>
                 <th>Status</th>
                 <th>Amount</th>
@@ -401,7 +416,7 @@ export default function JobsClient({
                       <div className="flex items-center justify-end gap-1">
                         <Link href={`/admin/jobs/${job.id}`}
                           className="text-xs text-[#2563EB] hover:text-[#1D4ED8] font-semibold bg-[#DBEAFE] hover:bg-[#BFDBFE] border border-[#DBEAFE] px-2.5 py-1.5 rounded-[8px] transition-colors whitespace-nowrap">
-                          View Job
+                          View {labels.job}
                         </Link>
                         <div className="relative">
                           <button
@@ -415,7 +430,7 @@ export default function JobsClient({
                                 <button
                                   onClick={() => handleStatusChange(job.id, "CANCELLED")}
                                   className="w-full text-left px-3.5 py-2 text-sm text-[#DC2626] hover:bg-[#FEE2E2] transition-colors">
-                                  Cancel Job
+                                  Cancel {labels.job}
                                 </button>
                               )}
                             </div>
@@ -433,10 +448,10 @@ export default function JobsClient({
                       <div className="w-12 h-12 rounded-[12px] bg-[#F1F5F9] flex items-center justify-center">
                         <Wrench className="w-5 h-5 text-[#94A3B8]" />
                       </div>
-                      <p className="text-sm font-semibold text-[#334155]">No jobs found</p>
-                      <p className="text-xs text-[#94A3B8]">Create your first job to get started</p>
+                      <p className="text-sm font-semibold text-[#334155]">No {lower(labels.jobs)} found</p>
+                      <p className="text-xs text-[#94A3B8]">Create your first {lower(labels.job)} to get started</p>
                       <button onClick={() => setShowCreate(true)} className={btnPrimary}>
-                        <Plus className="w-4 h-4" /> New Job
+                        <Plus className="w-4 h-4" /> New {labels.job}
                       </button>
                     </div>
                   </td>
@@ -447,7 +462,7 @@ export default function JobsClient({
 
           {jobs.length > 0 && (
             <div className="px-5 py-3 border-t border-[#F1F5F9] flex items-center justify-between">
-              <p className="text-xs text-[#94A3B8]">Showing 1 to {jobs.length} of {total} jobs</p>
+              <p className="text-xs text-[#94A3B8]">Showing 1 to {jobs.length} of {total} {lower(labels.jobs)}</p>
             </div>
           )}
         </div>
@@ -460,7 +475,7 @@ export default function JobsClient({
         <div className="ff-card overflow-hidden">
           <div className="px-4 py-3 border-b border-[#F1F5F9] flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <p className="text-[13px] font-semibold text-[#0F172A]">Jobs needing attention</p>
+              <p className="text-[13px] font-semibold text-[#0F172A]">{labels.jobs} needing attention</p>
               {attentionJobs.length > 0 && (
                 <span className="px-1.5 py-0.5 bg-[#FEE2E2] text-[#DC2626] text-[10px] font-bold rounded-full">
                   {attentionJobs.length}
@@ -514,7 +529,7 @@ export default function JobsClient({
           </div>
           <div className="divide-y divide-[#F1F5F9]">
             {upcomingJobs.length === 0 ? (
-              <p className="px-4 py-6 text-xs text-[#94A3B8] text-center">No upcoming jobs</p>
+              <p className="px-4 py-6 text-xs text-[#94A3B8] text-center">No upcoming {lower(labels.jobs)}</p>
             ) : (
               upcomingJobs.map((j) => {
                 const s = fmtScheduled(j.scheduledDate);
@@ -543,19 +558,19 @@ export default function JobsClient({
 
       {/* ── Create Job Modal ─────────────────────────────────────────────── */}
       {showCreate && (
-        <JobModal title="New Job" onClose={() => setShowCreate(false)}>
+        <JobModal title={`New ${labels.job}`} onClose={() => setShowCreate(false)}>
           <form onSubmit={handleCreate} className="space-y-3">
             {clients.length > 0 ? (
-              <ClientPicker clients={clients} />
+              <ClientPicker clients={clients} labels={labels} />
             ) : (
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Client Name" name="clientName" required />
-                <Field label="Client Phone" name="clientPhone" placeholder="+254..." required />
+                <Field label={`${labels.client} Name`} name="clientName" required />
+                <Field label={`${labels.client} Phone`} name="clientPhone" placeholder="+254..." required />
               </div>
             )}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-[#334155] mb-1">Job Type</label>
+                <label className="block text-xs font-medium text-[#334155] mb-1">{labels.job} Type</label>
                 <select name="jobType" required className={inputCls}>
                   <option value="">Select type</option>
                   {jobTypes.map((t) => <option key={t} value={t}>{t}</option>)}
@@ -587,17 +602,17 @@ export default function JobsClient({
             <Field label="Description" name="description" />
             {assets.length > 0 && (
               <div>
-                <label className="block text-xs font-medium text-[#334155] mb-1">Linked Asset (optional)</label>
+                <label className="block text-xs font-medium text-[#334155] mb-1">Linked {labels.asset} (optional)</label>
                 <select name="assetId" className={inputCls}>
-                  <option value="">No asset linked</option>
+                  <option value="">No {lower(labels.asset)} linked</option>
                   {assets.map((a) => <option key={a.id} value={a.id}>{a.name} — {a.assetType} ({a.clientName})</option>)}
                 </select>
               </div>
             )}
             <div>
-              <label className="block text-xs font-medium text-[#334155] mb-1">Assign Worker</label>
+              <label className="block text-xs font-medium text-[#334155] mb-1">Assign {labels.worker}</label>
               <select name="workerId" className={inputCls}>
-                <option value="">Auto-assign best worker</option>
+                <option value="">Auto-assign best {lower(labels.worker)}</option>
                 {workers.map((w) => <option key={w.id} value={w.id}>{w.name} ({w.phone})</option>)}
               </select>
             </div>
@@ -622,7 +637,7 @@ export default function JobsClient({
                 Cancel
               </button>
               <button type="submit" disabled={isPending} className={`flex-1 ${btnPrimary} justify-center`}>
-                {isPending ? "Creating…" : "Create Job"}
+                {isPending ? "Creating…" : `Create ${labels.job}`}
               </button>
             </div>
           </form>
@@ -639,7 +654,7 @@ export default function JobsClient({
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function ClientPicker({ clients }: { clients: ClientOption[] }) {
+function ClientPicker({ clients, labels }: { clients: ClientOption[]; labels: JobLabels }) {
   const [mode, setMode] = useState<"pick" | "manual">("pick");
   const [selected, setSelected] = useState<ClientOption | null>(null);
   const cls = "w-full bg-white border border-[#E2E8F0] rounded-[10px] px-3.5 py-2.5 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#2563EB]";
@@ -647,16 +662,16 @@ function ClientPicker({ clients }: { clients: ClientOption[] }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <label className="text-xs font-medium text-[#334155]">Client</label>
+        <label className="text-xs font-medium text-[#334155]">{labels.client}</label>
         <button type="button" onClick={() => { setMode(m => m === "pick" ? "manual" : "pick"); setSelected(null); }}
           className="text-[10px] text-[#2563EB] hover:underline ml-auto">
-          {mode === "pick" ? "Enter manually" : "Pick from clients"}
+          {mode === "pick" ? "Enter manually" : `Pick from ${lower(labels.clients)}`}
         </button>
       </div>
       {mode === "pick" ? (
         <>
           <select className={cls} onChange={(e) => setSelected(clients.find(x => x.id === e.target.value) ?? null)}>
-            <option value="">Select a client…</option>
+            <option value="">Select a {lower(labels.client)}...</option>
             {clients.map(c => <option key={c.id} value={c.id}>{c.name} · {c.phone}</option>)}
           </select>
           {selected && (
@@ -669,8 +684,8 @@ function ClientPicker({ clients }: { clients: ClientOption[] }) {
         </>
       ) : (
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Client Name" name="clientName" required />
-          <Field label="Client Phone" name="clientPhone" placeholder="+254..." required />
+          <Field label={`${labels.client} Name`} name="clientName" required />
+          <Field label={`${labels.client} Phone`} name="clientPhone" placeholder="+254..." required />
         </div>
       )}
     </div>

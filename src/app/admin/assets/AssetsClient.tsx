@@ -25,6 +25,15 @@ interface AssetRow {
   _count: { jobs: number };
 }
 
+type AssetLabels = {
+  asset: string;
+  assets: string;
+  client: string;
+  clients: string;
+  job: string;
+  jobs: string;
+};
+
 const COMMON_ASSET_TYPES = [
   "Plastic Tank", "Steel Tank", "Underground Tank", "Vehicle",
   "Fuel Sensor", "Tracker Device", "Inverter", "Solar Panel", "Building", "Other",
@@ -81,6 +90,10 @@ function Field({ label, name, type = "text", placeholder, required, defaultValue
   );
 }
 
+function lower(label: string) {
+  return label.toLowerCase();
+}
+
 // ── Modal ─────────────────────────────────────────────────────────────────────
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
@@ -99,8 +112,9 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 }
 
 // ── Asset Form ────────────────────────────────────────────────────────────────
-function AssetForm({ zones, allTypes, isPending, initial, onSubmit, onCancel }: {
+function AssetForm({ zones, allTypes, labels, isPending, initial, onSubmit, onCancel }: {
   zones: string[]; allTypes: string[]; isPending: boolean;
+  labels: AssetLabels;
   initial?: AssetRow;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   onCancel: () => void;
@@ -113,18 +127,18 @@ function AssetForm({ zones, allTypes, isPending, initial, onSubmit, onCancel }: 
 
   return (
     <form onSubmit={onSubmit} className="space-y-3">
-      <Field label="Asset Name" name="name" required defaultValue={initial?.name} placeholder="e.g. Mrs. Wanjiku's 5000L tank" />
+      <Field label={`${labels.asset} Name`} name="name" required defaultValue={initial?.name} placeholder={`e.g. Mrs. Wanjiku's 5000L tank`} />
 
       <div>
-        <label className="block text-xs font-semibold text-[#475569] mb-1.5">Asset Type <span className="text-[#F87171]">*</span></label>
+        <label className="block text-xs font-semibold text-[#475569] mb-1.5">{labels.asset} Type <span className="text-[#F87171]">*</span></label>
         <input name="assetType" required list="asset-types" defaultValue={initial?.assetType}
           className="ff-input text-sm" placeholder="Plastic Tank, Vehicle, Inverter…" />
         <datalist id="asset-types">{allTypes.map(t => <option key={t} value={t} />)}</datalist>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Client Name" name="clientName" required defaultValue={initial?.clientName} />
-        <Field label="Client Phone" name="clientPhone" placeholder="+254…" defaultValue={initial?.clientPhone ?? ""} />
+        <Field label={`${labels.client} Name`} name="clientName" required defaultValue={initial?.clientName} />
+        <Field label={`${labels.client} Phone`} name="clientPhone" placeholder="+254…" defaultValue={initial?.clientPhone ?? ""} />
       </div>
 
       <Field label="Location" name="location" defaultValue={initial?.location ?? ""} />
@@ -166,7 +180,7 @@ function AssetForm({ zones, allTypes, isPending, initial, onSubmit, onCancel }: 
           </div>
           <div>
             <label className="block text-xs font-semibold text-[#475569] mb-1.5">
-              Asset Image URL <span className="font-normal text-[#94A3B8]">(optional)</span>
+              {labels.asset} Image URL <span className="font-normal text-[#94A3B8]">(optional)</span>
             </label>
             <input type="url" name="imageUrl" defaultValue={initial?.imageUrl ?? ""}
               placeholder="https://…" className="ff-input text-sm" />
@@ -178,7 +192,7 @@ function AssetForm({ zones, allTypes, isPending, initial, onSubmit, onCancel }: 
       <div className="flex gap-2 pt-2">
         <button type="button" onClick={onCancel} className="ff-btn-secondary flex-1 text-sm">Cancel</button>
         <button type="submit" disabled={isPending} className="ff-btn-primary flex-1 text-sm disabled:opacity-50">
-          {isPending ? "Saving…" : initial ? "Save Changes" : "Add Asset"}
+          {isPending ? "Saving…" : initial ? "Save Changes" : `Add ${labels.asset}`}
         </button>
       </div>
     </form>
@@ -206,7 +220,7 @@ function AssetThumbnail({ asset }: { asset: AssetRow }) {
 }
 
 // ── Asset Card ────────────────────────────────────────────────────────────────
-function AssetCard({ a, onEdit, onDelete }: { a: AssetRow; onEdit: () => void; onDelete: () => void }) {
+function AssetCard({ a, labels, onEdit, onDelete }: { a: AssetRow; labels: AssetLabels; onEdit: () => void; onDelete: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const meta    = assetMeta(a.assetType);
   const warrant = warrantyStatus(a.warrantyExpiryDate);
@@ -228,7 +242,7 @@ function AssetCard({ a, onEdit, onDelete }: { a: AssetRow; onEdit: () => void; o
             <div className="absolute right-0 top-full mt-1 bg-white rounded-[10px] border border-[#E2E8F0] shadow-card py-1 z-20 w-36">
               <Link href={`/admin/assets/${a.id}`} onClick={() => setMenuOpen(false)}
                 className="flex items-center gap-2 px-3 py-1.5 text-xs text-[#334155] hover:bg-[#F8FAFC]">
-                <Package className="w-3.5 h-3.5" /> View Asset
+                <Package className="w-3.5 h-3.5" /> View {labels.asset}
               </Link>
               <button onClick={() => { setMenuOpen(false); onEdit(); }}
                 className="flex items-center gap-2 px-3 py-1.5 text-xs text-[#334155] hover:bg-[#F8FAFC] w-full text-left">
@@ -281,7 +295,7 @@ function AssetCard({ a, onEdit, onDelete }: { a: AssetRow; onEdit: () => void; o
         {/* Stats row */}
         <div className="grid grid-cols-2 gap-0 pt-3 border-t border-[#F1F5F9]">
           <div className="text-center border-r border-[#F1F5F9]">
-            <p className="text-[10px] text-[#94A3B8]">Jobs</p>
+            <p className="text-[10px] text-[#94A3B8]">{labels.jobs}</p>
             <p className="text-sm font-bold text-[#0F172A]">{a._count.jobs}</p>
           </div>
           <div className="text-center">
@@ -296,7 +310,7 @@ function AssetCard({ a, onEdit, onDelete }: { a: AssetRow; onEdit: () => void; o
   );
 }
 
-function AssetRowView({ a, onEdit, onDelete }: { a: AssetRow; onEdit: () => void; onDelete: () => void }) {
+function AssetRowView({ a, labels, onEdit, onDelete }: { a: AssetRow; labels: AssetLabels; onEdit: () => void; onDelete: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const meta = assetMeta(a.assetType);
   const warrant = warrantyStatus(a.warrantyExpiryDate);
@@ -328,12 +342,12 @@ function AssetRowView({ a, onEdit, onDelete }: { a: AssetRow; onEdit: () => void
           {(a.serialNumber ?? a.registrationNumber ?? a.identifier) && (
             <span className="inline-flex items-center gap-1"><Hash className="h-3 w-3" />{a.serialNumber ?? a.registrationNumber ?? a.identifier}</span>
           )}
-          <span>{a._count.jobs} job{a._count.jobs === 1 ? "" : "s"}</span>
+          <span>{a._count.jobs} {lower(a._count.jobs === 1 ? labels.job : labels.jobs)}</span>
           <span>Last service: {a.lastServiceDate ? formatDate(a.lastServiceDate) : "—"}</span>
         </div>
       </div>
       <Link href={`/admin/assets/${a.id}`} className="hidden sm:inline-flex min-h-9 items-center rounded-[8px] border border-[#DBEAFE] bg-[#EFF6FF] px-3 py-2 text-xs font-semibold text-[#2563EB] hover:bg-[#DBEAFE]">
-        View Asset
+        View {labels.asset}
       </Link>
       <div className="relative">
         <button
@@ -360,15 +374,17 @@ function AssetRowView({ a, onEdit, onDelete }: { a: AssetRow; onEdit: () => void
 }
 
 // ── Main Component ─────────────────────────────────────────────────────────────
-export default function AssetsClient({ assets, knownTypes, zones, currentSearch, currentType }: {
+export default function AssetsClient({ assets, knownTypes, zones, currentSearch, currentType, initialViewMode, labels }: {
   assets: AssetRow[]; knownTypes: string[]; zones: string[];
   currentSearch?: string; currentType?: string;
+  initialViewMode: "grid" | "rows";
+  labels: AssetLabels;
 }) {
   const router = useRouter();
   const params = useSearchParams();
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<AssetRow | null>(null);
-  const [viewMode, setViewMode] = useState<"grid" | "rows">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "rows">(initialViewMode);
   const [feedback, setFeedback] = useState("");
   const [isPending, startTransition] = useTransition();
 
@@ -393,7 +409,7 @@ export default function AssetsClient({ assets, knownTypes, zones, currentSearch,
     startTransition(async () => {
       const res = await createAsset(fd);
       if (res.error) setFeedback(res.error);
-      else { setShowAdd(false); setFeedback("Asset added."); router.refresh(); }
+      else { setShowAdd(false); setFeedback(`${labels.asset} added.`); router.refresh(); }
     });
   }
 
@@ -409,7 +425,7 @@ export default function AssetsClient({ assets, knownTypes, zones, currentSearch,
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this asset? This can't be undone.")) return;
+    if (!confirm(`Delete this ${lower(labels.asset)}? This can't be undone.`)) return;
     startTransition(async () => {
       const res = await deleteAsset(id);
       if (res.error) setFeedback(res.error);
@@ -432,18 +448,18 @@ export default function AssetsClient({ assets, knownTypes, zones, currentSearch,
       {/* ── Page header ─────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="ff-page-title">Assets</h1>
+          <h1 className="ff-page-title">{labels.assets}</h1>
           <p className="ff-page-desc">{assets.length} total · {warrantyActiveCount} under warranty</p>
         </div>
         <button onClick={() => setShowAdd(true)} className="ff-btn-primary inline-flex items-center gap-2 text-sm px-4 py-2.5">
-          <Plus className="w-4 h-4" /> Add Asset
+          <Plus className="w-4 h-4" /> Add {labels.asset}
         </button>
       </div>
 
       {/* ── Summary metrics ──────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Total Assets", value: assets.length.toString(), color: "text-[#2563EB]", bg: "bg-[#EFF6FF]", icon: Package },
+          { label: `Total ${labels.assets}`, value: assets.length.toString(), color: "text-[#2563EB]", bg: "bg-[#EFF6FF]", icon: Package },
           { label: "Types", value: knownTypes.length.toString(), color: "text-[#7C3AED]", bg: "bg-[#F5F3FF]", icon: Filter },
           { label: "Under Warranty", value: warrantyActiveCount.toString(), color: "text-[#16A34A]", bg: "bg-[#F0FDF4]", icon: Shield },
           { label: "Warranty Expired", value: warrantyExpiredCount.toString(), color: warrantyExpiredCount > 0 ? "text-[#DC2626]" : "text-[#94A3B8]", bg: warrantyExpiredCount > 0 ? "bg-[#FFF1F2]" : "bg-[#F1F5F9]", icon: Shield },
@@ -465,7 +481,7 @@ export default function AssetsClient({ assets, knownTypes, zones, currentSearch,
         <div className="flex flex-wrap items-end gap-3">
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94A3B8]" />
-            <input defaultValue={currentSearch ?? ""} placeholder="Search by name, client, serial…"
+            <input defaultValue={currentSearch ?? ""} placeholder={`Search by name, ${lower(labels.client)}, serial...`}
               onKeyDown={e => { if (e.key === "Enter") updateFilter("search", e.currentTarget.value); }}
               className="ff-input pl-9 text-sm" />
           </div>
@@ -516,37 +532,37 @@ export default function AssetsClient({ assets, knownTypes, zones, currentSearch,
             <Package className="w-6 h-6 text-[#94A3B8]" />
           </div>
           <p className="text-sm font-semibold text-[#475569]">
-            {currentSearch || currentType ? "No assets match your filters" : "No assets yet"}
+            {currentSearch || currentType ? `No ${lower(labels.assets)} match your filters` : `No ${lower(labels.assets)} yet`}
           </p>
           {!currentSearch && !currentType && (
             <button onClick={() => setShowAdd(true)} className="ff-btn-primary text-sm px-4 py-2 mt-1 inline-flex items-center gap-2">
-              <Plus className="w-4 h-4" /> Add Asset
+              <Plus className="w-4 h-4" /> Add {labels.asset}
             </button>
           )}
         </div>
       ) : viewMode === "rows" ? (
         <div className="overflow-hidden rounded-[16px] border border-[#E2E8F0] bg-white shadow-card">
           {assets.map(a => (
-            <AssetRowView key={a.id} a={a} onEdit={() => setEditing(a)} onDelete={() => handleDelete(a.id)} />
+            <AssetRowView key={a.id} a={a} labels={labels} onEdit={() => setEditing(a)} onDelete={() => handleDelete(a.id)} />
           ))}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {assets.map(a => (
-            <AssetCard key={a.id} a={a} onEdit={() => setEditing(a)} onDelete={() => handleDelete(a.id)} />
+            <AssetCard key={a.id} a={a} labels={labels} onEdit={() => setEditing(a)} onDelete={() => handleDelete(a.id)} />
           ))}
         </div>
       )}
 
       {showAdd && (
-        <Modal title="Add Asset" onClose={() => setShowAdd(false)}>
-          <AssetForm zones={zones} allTypes={allTypes} isPending={isPending}
+        <Modal title={`Add ${labels.asset}`} onClose={() => setShowAdd(false)}>
+          <AssetForm zones={zones} allTypes={allTypes} labels={labels} isPending={isPending}
             onSubmit={handleCreate} onCancel={() => setShowAdd(false)} />
         </Modal>
       )}
       {editing && (
-        <Modal title="Edit Asset" onClose={() => setEditing(null)}>
-          <AssetForm zones={zones} allTypes={allTypes} isPending={isPending}
+        <Modal title={`Edit ${labels.asset}`} onClose={() => setEditing(null)}>
+          <AssetForm zones={zones} allTypes={allTypes} labels={labels} isPending={isPending}
             initial={editing} onSubmit={handleUpdate} onCancel={() => setEditing(null)} />
         </Modal>
       )}

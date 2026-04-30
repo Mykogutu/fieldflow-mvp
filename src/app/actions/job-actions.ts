@@ -118,7 +118,11 @@ export async function getJobs(filter?: {
   const workspaceId = await currentWorkspaceId();
 
   const page = filter?.page ?? 1;
-  const take = 20;
+  const pageSizeSetting = await prisma.setting.findFirst({
+    where: { workspaceId, key: "items_per_page" },
+    select: { value: true },
+  });
+  const take = clampPageSize(Number.parseInt(pageSizeSetting?.value ?? "20", 10));
   const skip = (page - 1) * take;
 
   const where: Record<string, unknown> = { workspaceId };
@@ -149,6 +153,11 @@ export async function getJobs(filter?: {
   ]);
 
   return { jobs, total, page, pages: Math.ceil(total / take) };
+}
+
+function clampPageSize(value: number) {
+  if (!Number.isFinite(value)) return 20;
+  return Math.min(100, Math.max(10, value));
 }
 
 export async function updateJobStatus(jobId: string, status: string, note?: string) {
