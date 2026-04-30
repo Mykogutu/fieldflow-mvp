@@ -61,10 +61,44 @@ export async function getWhatsAppTemplates() {
     select: { id: true },
   });
   await ensureDefaultWhatsAppTemplates(workspaceId, defaultSender?.id);
-  return prisma.whatsAppTemplate.findMany({
+  const templates = await prisma.whatsAppTemplate.findMany({
     where: { workspaceId },
     orderBy: [{ templateKey: "asc" }, { createdAt: "asc" }],
+    include: {
+      _count: { select: { messageLogs: true } },
+      messageLogs: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: {
+          status: true,
+          eventType: true,
+          toPhone: true,
+          sentAt: true,
+          failedAt: true,
+          createdAt: true,
+          errorReason: true,
+        },
+      },
+    },
   });
+
+  return templates.map((template) => ({
+    id: template.id,
+    templateKey: template.templateKey,
+    templateName: template.templateName,
+    providerTemplateSid: template.providerTemplateSid,
+    category: template.category,
+    language: template.language,
+    approvalStatus: template.approvalStatus,
+    status: template.status,
+    isEnabled: template.isEnabled,
+    body: template.body,
+    variableSchema: template.variableSchema,
+    lastSyncedAt: template.lastSyncedAt,
+    updatedAt: template.updatedAt,
+    sentCount: template._count.messageLogs,
+    lastMessage: template.messageLogs[0] ?? null,
+  }));
 }
 
 export async function toggleWhatsAppTemplate(id: string, isEnabled: boolean) {
@@ -72,6 +106,27 @@ export async function toggleWhatsAppTemplate(id: string, isEnabled: boolean) {
   const result = await prisma.whatsAppTemplate.updateMany({
     where: { id, workspaceId },
     data: { isEnabled },
+  });
+  if (result.count === 0) throw new Error("WhatsApp template not found");
+  revalidatePath("/admin/settings/whatsapp");
+}
+
+export async function updateWhatsAppTemplateConfig(input: {
+  id: string;
+  providerTemplateSid: string;
+  approvalStatus: string;
+}) {
+  const workspaceId = await currentWorkspaceId();
+  const sid = input.providerTemplateSid.trim();
+  const status = input.approvalStatus.trim().toUpperCase() || "DRAFT";
+  const result = await prisma.whatsAppTemplate.updateMany({
+    where: { id: input.id, workspaceId },
+    data: {
+      providerTemplateSid: sid || null,
+      approvalStatus: status,
+      status,
+      lastSyncedAt: sid ? new Date() : null,
+    },
   });
   if (result.count === 0) throw new Error("WhatsApp template not found");
   revalidatePath("/admin/settings/whatsapp");

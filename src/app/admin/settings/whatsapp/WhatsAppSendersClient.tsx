@@ -2,7 +2,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  createSender, deleteSender, setDefaultSender, toggleWhatsAppTemplate,
+  createSender, deleteSender, setDefaultSender, toggleWhatsAppTemplate, updateWhatsAppTemplateConfig,
 } from "@/app/actions/sender-actions";
 import type { BrandingTier, SenderStatus } from "@prisma/client";
 import {
@@ -40,8 +40,20 @@ type TemplateRow = {
   approvalStatus: string;
   status: string;
   isEnabled: boolean;
+  body: string;
+  variableSchema: unknown;
   lastSyncedAt: Date | null;
   updatedAt: Date;
+  sentCount: number;
+  lastMessage: {
+    status: string;
+    eventType: string | null;
+    toPhone: string | null;
+    sentAt: Date | null;
+    failedAt: Date | null;
+    createdAt: Date;
+    errorReason: string | null;
+  } | null;
 };
 
 // ── Tier definitions ──────────────────────────────────────────────────────────
@@ -136,6 +148,12 @@ export default function WhatsAppSendersClient({ senders, templates }: { senders:
   const [showForm, setShowForm] = useState(false);
   const [testPhone, setTestPhone] = useState("");
   const [testState, setTestState] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [templateDrafts, setTemplateDrafts] = useState(() =>
+    Object.fromEntries(templates.map(template => [template.id, {
+      providerTemplateSid: template.providerTemplateSid ?? "",
+      approvalStatus: template.approvalStatus || template.status || "DRAFT",
+    }]))
+  );
   const [form, setForm] = useState({
     phoneNumber: "", displayName: "",
     twilioAccountSid: "", twilioAuthToken: "",
@@ -171,6 +189,30 @@ export default function WhatsAppSendersClient({ senders, templates }: { senders:
   function toggleTemplate(id: string, enabled: boolean) {
     startTransition(async () => {
       await toggleWhatsAppTemplate(id, enabled);
+      router.refresh();
+    });
+  }
+
+  function updateTemplateDraft(id: string, field: "providerTemplateSid" | "approvalStatus", value: string) {
+    setTemplateDrafts(current => ({
+      ...current,
+      [id]: {
+        providerTemplateSid: current[id]?.providerTemplateSid ?? "",
+        approvalStatus: current[id]?.approvalStatus ?? "DRAFT",
+        [field]: value,
+      },
+    }));
+  }
+
+  function saveTemplateConfig(id: string) {
+    const draft = templateDrafts[id];
+    if (!draft) return;
+    startTransition(async () => {
+      await updateWhatsAppTemplateConfig({
+        id,
+        providerTemplateSid: draft.providerTemplateSid,
+        approvalStatus: draft.approvalStatus,
+      });
       router.refresh();
     });
   }
@@ -329,6 +371,8 @@ export default function WhatsAppSendersClient({ senders, templates }: { senders:
             <thead>
               <tr>
                 <th>Template</th>
+                <th>Message being sent</th>
+                <th>Send activity</th>
                 <th>Approval</th>
                 <th>Content SID</th>
                 <th>Last Synced</th>
@@ -338,6 +382,8 @@ export default function WhatsAppSendersClient({ senders, templates }: { senders:
             <tbody>
               {templates.map(template => {
                 const approval = template.approvalStatus || template.status || "DRAFT";
+                const draft = templateDrafts[template.id] ?? { providerTemplateSid: template.providerTemplateSid ?? "", approvalStatus: approval };
+                const lastActivityDate = template.lastMessage?.sentAt ?? template.lastMessage?.failedAt ?? template.lastMessage?.createdAt ?? null;
                 return (
                   <tr key={template.id}>
                     <td>
@@ -346,11 +392,57 @@ export default function WhatsAppSendersClient({ senders, templates }: { senders:
                         <p className="text-xs text-[#64748B]">{template.templateName} · {template.category} · {template.language}</p>
                       </div>
                     </td>
-                    <td><TemplateStatusBadge status={approval} /></td>
+                    <td className="min-w-[280px]">
+                      <pre className="max-h-28 overflow-auto whitespace-pre-wrap rounded-[10px] border border-[#E2E8F0] bg-[#F8FAFC] p-3 text-xs leading-relaxed text-[#334155]">
+                        {template.body}
+                      </pre>
+                    </td>
                     <td>
-                      <span className="font-mono text-xs text-[#475569]">
-                        {template.providerTemplateSid ?? "Not synced"}
-                      </span>
+                      <div className="space-y-1 text-xs text-[#64748B]">
+                        <p><span className="font-semibold text-[#0F172A]">{template.sentCount}</span> send attempt{template.sentCount === 1 ? "" : "s"}</p>
+                        {template.lastMessage ? (
+                          <>
+                            <p><span className="font-semibold">{template.lastMessage.status}</span>{template.lastMessage.eventType ? ` · ${template.lastMessage.eventType}` : ""}</p>
+                            <p>{lastActivityDate ? new Date(lastActivityDate).toLocaleString() : "No timestamp"}</p>
+                            {template.lastMessage.toPhone && <p>To {template.lastMessage.toPhone}</p>}
+                          </>
+                        ) : (
+                          <p>No sends yet</p>
+                        )}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="space-y-2">
+                        <TemplateStatusBadge status={approval} />
+                        <select
+                          value={draft.approvalStatus}
+                          onChange={event => updateTemplateDraft(template.id, "approvalStatus", event.target.value)}
+                          className="ff-input h-9 min-w-[120px] text-xs"
+                        >
+                          <option value="DRAFT">Draft</option>
+                          <option value="PENDING">Pending</option>
+                          <option value="APPROVED">Approved</option>
+                          <option value="REJECTED">Rejected</option>
+                        </select>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="flex min-w-[220px] items-center gap-2">
+                        <input
+                          value={draft.providerTemplateSid}
+                          onChange={event => updateTemplateDraft(template.id, "providerTemplateSid", event.target.value)}
+                          placeholder="HX..."
+                          className="ff-input h-9 font-mono text-xs"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => saveTemplateConfig(template.id)}
+                          disabled={isPending}
+                          className="rounded-[8px] border border-[#BFDBFE] px-3 py-2 text-xs font-semibold text-[#2563EB] hover:bg-[#EFF6FF] disabled:opacity-50"
+                        >
+                          Save
+                        </button>
+                      </div>
                     </td>
                     <td className="text-xs text-[#64748B]">
                       {template.lastSyncedAt ? new Date(template.lastSyncedAt).toLocaleString() : "Never"}

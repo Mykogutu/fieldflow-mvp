@@ -21,6 +21,7 @@ type TemplateDefinition = {
   category: string;
   language: string;
   settingKey?: string;
+  envSidKeys: readonly string[];
   body: string;
   variables: readonly string[];
   examples: Record<string, string>;
@@ -35,6 +36,7 @@ export const WHATSAPP_TEMPLATE_DEFINITIONS: Record<WhatsAppTemplateKey, Template
     category: "UTILITY",
     language: DEFAULT_LANGUAGE,
     settingKey: "whatsapp_job_assignment_notifications",
+    envSidKeys: ["TWILIO_JOB_ASSIGNED_WORKER_TEMPLATE_SID", "TWILIO_JOB_ASSIGNMENT_TEMPLATE_SID"],
     body:
       "Hello {{worker_name}}. You have been assigned a new job.\n\n" +
       "Job: {{job_type}}\n" +
@@ -57,6 +59,7 @@ export const WHATSAPP_TEMPLATE_DEFINITIONS: Record<WhatsAppTemplateKey, Template
     category: "UTILITY",
     language: DEFAULT_LANGUAGE,
     settingKey: "whatsapp_client_notifications",
+    envSidKeys: ["TWILIO_TECHNICIAN_ASSIGNED_CLIENT_TEMPLATE_SID"],
     body:
       "Hello {{client_name}}. {{company_name}} has assigned a technician to your job.\n\n" +
       "Service: {{job_type}}\n" +
@@ -80,6 +83,7 @@ export const WHATSAPP_TEMPLATE_DEFINITIONS: Record<WhatsAppTemplateKey, Template
     category: "UTILITY",
     language: DEFAULT_LANGUAGE,
     settingKey: "whatsapp_reassignment_alerts",
+    envSidKeys: ["TWILIO_JOB_REASSIGNED_TEMPLATE_SID"],
     body:
       "Hello {{worker_name}}. A job has been reassigned to you.\n\n" +
       "Job: {{job_type}}\n" +
@@ -102,6 +106,7 @@ export const WHATSAPP_TEMPLATE_DEFINITIONS: Record<WhatsAppTemplateKey, Template
     category: "UTILITY",
     language: DEFAULT_LANGUAGE,
     settingKey: "whatsapp_otp_completion_messages",
+    envSidKeys: ["TWILIO_OTP_REQUEST_TEMPLATE_SID", "TWILIO_SERVICE_COMPLETION_TEMPLATE_SID"],
     body:
       "Hello {{client_name}}. {{company_name}} has marked your job as complete.\n\n" +
       "Job: {{job_type}}\n" +
@@ -123,6 +128,7 @@ export const WHATSAPP_TEMPLATE_DEFINITIONS: Record<WhatsAppTemplateKey, Template
     category: "UTILITY",
     language: DEFAULT_LANGUAGE,
     settingKey: "whatsapp_job_assignment_notifications",
+    envSidKeys: ["TWILIO_JOB_VERIFIED_TEMPLATE_SID"],
     body:
       "Hello {{worker_name}}. Your completed job has been verified.\n\n" +
       "Job: {{job_type}}\n" +
@@ -143,6 +149,7 @@ export const WHATSAPP_TEMPLATE_DEFINITIONS: Record<WhatsAppTemplateKey, Template
     category: "UTILITY",
     language: DEFAULT_LANGUAGE,
     settingKey: "whatsapp_document_delivery",
+    envSidKeys: ["TWILIO_INVOICE_READY_TEMPLATE_SID"],
     body:
       "Hello {{client_name}}. Your invoice is ready.\n\n" +
       "Invoice: {{invoice_number}}\n" +
@@ -163,6 +170,7 @@ export const WHATSAPP_TEMPLATE_DEFINITIONS: Record<WhatsAppTemplateKey, Template
     category: "UTILITY",
     language: DEFAULT_LANGUAGE,
     settingKey: "whatsapp_quotation_sending",
+    envSidKeys: ["TWILIO_QUOTATION_READY_TEMPLATE_SID"],
     body:
       "Hello {{client_name}}. Your quotation is ready.\n\n" +
       "Quotation: {{quotation_number}}\n" +
@@ -183,6 +191,7 @@ export const WHATSAPP_TEMPLATE_DEFINITIONS: Record<WhatsAppTemplateKey, Template
     category: "UTILITY",
     language: DEFAULT_LANGUAGE,
     settingKey: "briefing_enabled",
+    envSidKeys: ["TWILIO_DAILY_BRIEFING_TEMPLATE_SID"],
     body:
       "Good morning {{worker_name}}.\n\n" +
       "You have {{job_count}} job(s) scheduled today.\n\n" +
@@ -227,6 +236,14 @@ function variableSchemaFor(definition: TemplateDefinition) {
   }));
 }
 
+function sidFromEnv(definition: TemplateDefinition) {
+  for (const key of definition.envSidKeys) {
+    const value = process.env[key]?.trim();
+    if (value) return value;
+  }
+  return null;
+}
+
 export async function ensureDefaultWhatsAppTemplates(workspaceId: string, senderId?: string | null) {
   for (const definition of Object.values(WHATSAPP_TEMPLATE_DEFINITIONS)) {
     const existing = await prisma.whatsAppTemplate.findFirst({
@@ -236,11 +253,14 @@ export async function ensureDefaultWhatsAppTemplates(workspaceId: string, sender
       },
       select: { id: true, providerTemplateSid: true, approvalStatus: true, status: true, isEnabled: true },
     });
+    const envProviderTemplateSid = sidFromEnv(definition);
+    const providerTemplateSid = existing?.providerTemplateSid ?? envProviderTemplateSid;
 
     const data = {
       workspaceId,
       templateKey: definition.key,
       templateName: definition.name,
+      providerTemplateSid,
       language: definition.language,
       category: definition.category,
       useCase: definition.key,
