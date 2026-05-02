@@ -117,7 +117,9 @@ export async function parseIntentAI(
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({
+      model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+    });
 
     const wsBlock = workspace
       ? `\nWORKSPACE CONTEXT (use this vocabulary in your reasoning — do not echo it back):

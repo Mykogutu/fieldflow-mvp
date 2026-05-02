@@ -49,8 +49,9 @@ function getModel(temperature = 0.3) {
   const apiKey = process.env.GOOGLE_API_KEY;
   if (!apiKey) throw new Error("GOOGLE_API_KEY not set");
   const genAI = new GoogleGenerativeAI(apiKey);
+  const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
   return genAI.getGenerativeModel({
-    model: "gemini-1.5-flash",
+    model: modelName,
     generationConfig: {
       temperature,
       topP: 0.8,
@@ -81,6 +82,15 @@ function getAIErrorMessage(error: unknown): string {
     normalizedMessage.includes("api key not valid for this api")
   ) {
     return "The AI service is rejecting the current credentials. Check the server-side API key, allowed APIs, and project permissions.";
+  }
+
+  if (
+    normalizedMessage.includes("not found for api version") ||
+    normalizedMessage.includes("is not supported for generatecontent") ||
+    normalizedMessage.includes("publisher model") ||
+    normalizedMessage.includes("model") && normalizedMessage.includes("not found")
+  ) {
+    return "The configured AI model is not available for this account right now. Update the server-side model setting and try again.";
   }
 
   if (normalizedMessage.includes("api key not valid") || normalizedMessage.includes("invalid api key")) {
