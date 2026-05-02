@@ -114,11 +114,12 @@ export async function parseIntentAI(
 ): Promise<AIResponse> {
   const apiKey = process.env.GOOGLE_API_KEY;
   if (!apiKey) return { intent: "UNKNOWN", data: { rawText: text }, confidence: 0 };
+  const modelName = process.env.GEMINI_MODEL || "gemini-flash-latest";
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+      model: modelName,
     });
 
     const wsBlock = workspace
@@ -157,7 +158,11 @@ Schema:
     const raw = result.response.text().replace(/```json|```/g, "").trim();
     const parsed = JSON.parse(raw);
     return parsed as AIResponse;
-  } catch {
+  } catch (error) {
+    console.error("[ai-agent] parseIntentAI error:", {
+      model: modelName,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return { intent: "UNKNOWN", data: { rawText: text }, confidence: 0 };
   }
 }

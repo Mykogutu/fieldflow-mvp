@@ -49,7 +49,7 @@ function getModel(temperature = 0.3) {
   const apiKey = process.env.GOOGLE_API_KEY;
   if (!apiKey) throw new Error("GOOGLE_API_KEY not set");
   const genAI = new GoogleGenerativeAI(apiKey);
-  const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const modelName = process.env.GEMINI_MODEL || "gemini-flash-latest";
   return genAI.getGenerativeModel({
     model: modelName,
     generationConfig: {
@@ -136,6 +136,10 @@ function describeAIError(error: unknown) {
 
   details.raw = error;
   return details;
+}
+
+function getConfiguredModelName() {
+  return process.env.GEMINI_MODEL || "gemini-flash-latest";
 }
 
 /** Extract the first JSON array or object from a raw AI response */
@@ -581,7 +585,10 @@ export async function answerCopilot(
 
     return await ai(prompt, 0.3);
   } catch (err) {
-    console.error("[ai-ops] copilot error:", describeAIError(err));
+    console.error("[ai-ops] copilot error:", {
+      model: getConfiguredModelName(),
+      ...describeAIError(err),
+    });
     return getAIErrorMessage(err);
   }
 }
@@ -654,7 +661,10 @@ Top 3 follow-up tasks based on today's outcomes`;
 
     return await ai(prompt, 0.25);
   } catch (err) {
-    console.error("[ai-ops] briefing error:", describeAIError(err));
+    console.error("[ai-ops] briefing error:", {
+      model: getConfiguredModelName(),
+      ...describeAIError(err),
+    });
     return getAIErrorMessage(err);
   }
 }
@@ -710,7 +720,10 @@ export async function suggestFollowUps(workspaceId: string): Promise<FollowUp[]>
     const parsed = JSON.parse(jsonStr);
     return Array.isArray(parsed) ? (parsed as FollowUp[]) : [];
   } catch (err) {
-    console.error("[ai-ops] followups error:", describeAIError(err));
+    console.error("[ai-ops] followups error:", {
+      model: getConfiguredModelName(),
+      ...describeAIError(err),
+    });
     return [];
   }
 }
@@ -800,7 +813,10 @@ export async function parseJobIntake(
     }
     return JSON.parse(jsonStr) as DraftJob;
   } catch (err) {
-    console.error("[ai-ops] intake error:", describeAIError(err));
+    console.error("[ai-ops] intake error:", {
+      model: getConfiguredModelName(),
+      ...describeAIError(err),
+    });
     return {
       missingFields: ["Could not parse message — please try again"],
       confidence: 0,
