@@ -348,19 +348,72 @@ export async function sendDocsToClient(
   );
 }
 
-export async function sendPostponeNotice(
+export async function sendReviewRequest(
   clientPhone: string,
-  params: { reason: string; companyName: string },
+  params: {
+    clientName: string;
+    companyName: string;
+    jobType: string;
+    jobId?: string;
+  },
   sender?: WhatsAppSender | null
 ): Promise<void> {
-  if (!(await isWhatsAppFlowEnabled("whatsapp_client_notifications", sender))) return;
+  await sendTemplate(
+    "REVIEW_REQUEST",
+    clientPhone,
+    {
+      client_name: params.clientName,
+      company_name: params.companyName,
+      job_type: params.jobType,
+    },
+    "REVIEW_REQUEST",
+    sender,
+    { jobId: params.jobId }
+  );
+}
 
-  const body =
-    `Appointment Update - ${params.companyName}\n\n` +
-    `Your appointment has been postponed.\n` +
-    `Reason: ${params.reason}\n\n` +
-    `We will contact you shortly to reschedule.`;
-  await sendWhatsApp(clientPhone, body, sender, { messageType: "CLIENT_NOTIFICATION" });
+export async function sendPostponeNotice(
+  clientPhone: string,
+  params: { reason: string; companyName: string; jobType?: string },
+  sender?: WhatsAppSender | null
+): Promise<void> {
+  await sendTemplate(
+    "POSTPONEMENT_NOTICE",
+    clientPhone,
+    {
+      company_name: params.companyName,
+      job_type: params.jobType ?? "service",
+      reason: params.reason,
+    },
+    "POSTPONEMENT_NOTICE",
+    sender
+  );
+}
+
+export async function sendArrivalConfirmationRequest(
+  clientPhone: string,
+  params: {
+    clientName: string;
+    workerName: string;
+    companyName: string;
+    location?: string;
+    jobId: string;
+  },
+  sender?: WhatsAppSender | null
+): Promise<void> {
+  await sendTemplate(
+    "ARRIVAL_CONFIRMATION_REQUEST",
+    clientPhone,
+    {
+      client_name: params.clientName,
+      worker_name: params.workerName,
+      company_name: params.companyName,
+      location: params.location ?? "Location to be confirmed",
+    },
+    "ARRIVAL_CONFIRMATION_REQUEST",
+    sender,
+    { jobId: params.jobId }
+  );
 }
 
 export async function sendWorkerReply(

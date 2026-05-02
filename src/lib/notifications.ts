@@ -1,5 +1,5 @@
 import { prisma } from "./prisma";
-import { sendDocsToClient } from "./twilio";
+import { sendDocsToClient, sendReviewRequest } from "./twilio";
 import { getWorkspaceConfig } from "./workspace-config";
 import { currentWorkspaceId } from "./workspace";
 import type { WhatsAppSender } from "./senders";
@@ -41,6 +41,17 @@ export async function deliverJobVerifiedDocs(
       amount: job.invoice ? `KES ${job.invoice.amount.toLocaleString()}` : undefined,
       jobId: job.jobNumber,
       companyName,
+    },
+    sender
+  );
+
+  await sendReviewRequest(
+    job.clientPhone,
+    {
+      clientName: job.clientName,
+      companyName,
+      jobType: job.jobType,
+      jobId: job.id,
     },
     sender
   );

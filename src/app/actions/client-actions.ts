@@ -14,6 +14,7 @@ const clientSchema = z.object({
   location: z.string().optional(),
   address: z.string().optional(),
   type: z.enum(["INDIVIDUAL", "COMPANY"]).default("INDIVIDUAL"),
+  billingMode: z.enum(["PAY_ON_COMPLETION", "MONTHLY_BILLING", "MANUAL_FOLLOW_UP"]).default("PAY_ON_COMPLETION"),
   notes: z.string().optional(),
 });
 
@@ -38,6 +39,7 @@ export async function createClient(formData: FormData) {
         location: d.location || null,
         address: d.address || null,
         type: d.type,
+        billingMode: d.billingMode,
         notes: d.notes || null,
       },
     });
@@ -75,6 +77,7 @@ export async function updateClient(formData: FormData) {
         location: d.location || null,
         address: d.address || null,
         type: d.type,
+        billingMode: d.billingMode,
         notes: d.notes || null,
       },
     });

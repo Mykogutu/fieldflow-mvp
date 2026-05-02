@@ -18,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { INDUSTRY_LIST, INDUSTRY_TEMPLATES, type IndustryKey } from "@/lib/industry-templates";
+import { createUser } from "@/app/actions/user-actions";
 
 const DOCUMENT_OPTIONS = [
   { key: "invoice", label: "Invoice" },
@@ -84,6 +85,8 @@ export default function OnboardingClient({
     : 0;
   const [step, setStep] = useState(savedStep);
   const [error, setError] = useState("");
+  const [showWorkerModal, setShowWorkerModal] = useState(false);
+  const [counts, setCounts] = useState(recordCounts);
   const [newJobType, setNewJobType] = useState("");
   const [newZone, setNewZone] = useState("");
   const [form, setForm] = useState({
@@ -375,10 +378,15 @@ export default function OnboardingClient({
                     New workspaces start empty. Open any setup page below to add real records, or finish onboarding and add them later from the dashboard.
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                    <FirstRecordCard label={`Add first ${form.worker_title.toLowerCase() || "worker"}`} href="/admin/workers" count={recordCounts.workers} countLabel={form.worker_title_plural || "Workers"} />
-                    <FirstRecordCard label={`Add first ${form.client_label.toLowerCase() || "client"}`} href="/admin/clients" count={recordCounts.clients} countLabel={form.client_label_plural || "Clients"} />
-                    <FirstRecordCard label={`Add first ${form.asset_label.toLowerCase() || "asset"}`} href="/admin/assets" count={recordCounts.assets} countLabel={form.asset_label_plural || "Assets"} />
-                    <FirstRecordCard label={`Create first ${form.job_label.toLowerCase() || "job"}`} href="/admin/jobs" count={recordCounts.jobs} countLabel={form.job_label_plural || "Jobs"} />
+                    <FirstRecordActionCard
+                      label={`Add first ${form.worker_title.toLowerCase() || "worker"}`}
+                      count={counts.workers}
+                      countLabel={form.worker_title_plural || "Workers"}
+                      onClick={() => setShowWorkerModal(true)}
+                    />
+                    <FirstRecordCard label={`Add first ${form.client_label.toLowerCase() || "client"}`} href="/admin/clients" count={counts.clients} countLabel={form.client_label_plural || "Clients"} />
+                    <FirstRecordCard label={`Add first ${form.asset_label.toLowerCase() || "asset"}`} href="/admin/assets" count={counts.assets} countLabel={form.asset_label_plural || "Assets"} />
+                    <FirstRecordCard label={`Create first ${form.job_label.toLowerCase() || "job"}`} href="/admin/jobs" count={counts.jobs} countLabel={form.job_label_plural || "Jobs"} />
                   </div>
                 </div>
               )}
@@ -390,7 +398,7 @@ export default function OnboardingClient({
                   <Review label="Job types" value={`${jobTypes.length} configured`} />
                   <Review label="Zones" value={`${zones.length} configured`} />
                   <Review label="Documents" value={`${enabledDocs.length} enabled`} />
-                  <Review label="First records" value={`${recordCounts.workers} ${form.worker_title_plural.toLowerCase()}, ${recordCounts.clients} ${form.client_label_plural.toLowerCase()}, ${recordCounts.assets} ${form.asset_label_plural.toLowerCase()}, ${recordCounts.jobs} ${form.job_label_plural.toLowerCase()}`} />
+                  <Review label="First records" value={`${counts.workers} ${form.worker_title_plural.toLowerCase()}, ${counts.clients} ${form.client_label_plural.toLowerCase()}, ${counts.assets} ${form.asset_label_plural.toLowerCase()}, ${counts.jobs} ${form.job_label_plural.toLowerCase()}`} />
                   <Review label="WhatsApp" value={form.whatsapp_setup_mode} />
                 </div>
               )}
@@ -427,6 +435,22 @@ export default function OnboardingClient({
           </section>
         </div>
       </div>
+      {showWorkerModal && (
+        <ModalShell title={`Add ${form.worker_title || "Worker"}`} onClose={() => setShowWorkerModal(false)}>
+          <WorkerQuickAddForm
+            zones={zones}
+            workerLabel={form.worker_title || "Worker"}
+            onCancel={() => setShowWorkerModal(false)}
+            onSuccess={() => {
+              setShowWorkerModal(false);
+              setCounts((current) => ({ ...current, workers: current.workers + 1 }));
+              setError("");
+              router.refresh();
+            }}
+            onError={setError}
+          />
+        </ModalShell>
+      )}
     </main>
   );
 }
@@ -532,6 +556,126 @@ function FirstRecordCard({
         {count} {count === 1 ? countLabel.replace(/s$/i, "") : countLabel} added
       </span>
     </Link>
+  );
+}
+
+function FirstRecordActionCard({
+  label,
+  count,
+  countLabel,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  countLabel: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-[14px] border border-[#E2E8F0] p-4 text-left transition-colors hover:border-[#93C5FD] hover:bg-[#EFF6FF]"
+    >
+      <span className="block text-sm font-bold text-[#0F172A]">{label}</span>
+      <span className="mt-2 block text-xs font-semibold text-[#64748B]">
+        {count} {count === 1 ? countLabel.replace(/s$/i, "") : countLabel} added
+      </span>
+    </button>
+  );
+}
+
+function ModalShell({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0F172A]/50 p-4">
+      <div className="w-full max-w-md rounded-[18px] border border-[#E2E8F0] bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-[#E2E8F0] px-5 py-4">
+          <h3 className="text-base font-black text-[#0F172A]">{title}</h3>
+          <button type="button" onClick={onClose} className="rounded-[10px] p-2 text-[#94A3B8] hover:bg-[#F8FAFC]">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="p-5">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function WorkerQuickAddForm({
+  zones,
+  workerLabel,
+  onCancel,
+  onSuccess,
+  onError,
+}: {
+  zones: string[];
+  workerLabel: string;
+  onCancel: () => void;
+  onSuccess: () => void;
+  onError: (message: string) => void;
+}) {
+  const [isPending, startTransition] = useTransition();
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    onError("");
+    startTransition(async () => {
+      const result = await createUser(formData);
+      if (result?.error) {
+        onError(result.error);
+        return;
+      }
+      onSuccess();
+    });
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <input type="hidden" name="role" value="TECHNICIAN" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-semibold text-[#475569]">Full name</span>
+          <input name="name" required className="ff-input text-sm" />
+        </label>
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-semibold text-[#475569]">WhatsApp phone</span>
+          <input name="phone" required placeholder="+254..." className="ff-input text-sm" />
+        </label>
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-semibold text-[#475569]">Email</span>
+          <input name="email" type="email" placeholder="optional" className="ff-input text-sm" />
+        </label>
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-semibold text-[#475569]">Password</span>
+          <input name="password" type="password" required minLength={6} className="ff-input text-sm" />
+        </label>
+      </div>
+      <label className="block">
+        <span className="mb-1.5 block text-xs font-semibold text-[#475569]">Base zone</span>
+        <select name="baseZone" className="ff-input text-sm">
+          <option value="">No zone</option>
+          {zones.map((zone) => (
+            <option key={zone} value={zone}>{zone}</option>
+          ))}
+        </select>
+      </label>
+      <div className="flex gap-2 pt-2">
+        <button type="button" onClick={onCancel} className="ff-btn-secondary flex-1 text-sm">
+          Cancel
+        </button>
+        <button type="submit" disabled={isPending} className="ff-btn-primary flex-1 text-sm disabled:opacity-60">
+          {isPending ? "Adding..." : `Add ${workerLabel}`}
+        </button>
+      </div>
+    </form>
   );
 }
 

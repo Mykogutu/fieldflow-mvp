@@ -59,6 +59,19 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
                   : "bg-[#F1F5F9] text-[#64748B] border border-[#E2E8F0]"}`}>
                 {client.type === "COMPANY" ? "Company" : "Individual"}
               </span>
+              <span className={`text-xs px-2.5 py-1 rounded-[6px] font-semibold ${
+                client.billingMode === "MONTHLY_BILLING"
+                  ? "bg-[#FFF7ED] text-[#C2410C] border border-[#FED7AA]"
+                  : client.billingMode === "MANUAL_FOLLOW_UP"
+                  ? "bg-[#FEF3C7] text-[#A16207] border border-[#FDE68A]"
+                  : "bg-[#F0FDF4] text-[#166534] border border-[#BBF7D0]"
+              }`}>
+                {client.billingMode === "MONTHLY_BILLING"
+                  ? "Monthly billing"
+                  : client.billingMode === "MANUAL_FOLLOW_UP"
+                  ? "Manual follow-up"
+                  : "Pay on completion"}
+              </span>
               {!client.isActive && (
                 <span className="text-xs px-2.5 py-1 rounded-[6px] bg-[#F1F5F9] text-[#94A3B8] border border-[#E2E8F0]">
                   Inactive

@@ -3,10 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { parseIntent } from "@/lib/ai-agent";
 import { pickBestWorker } from "@/lib/assignment";
 import {
+  sendArrivalConfirmationRequest,
   sendJobReassignment,
   sendJobVerifiedToWorker,
   sendOTPToClient,
   sendPostponeNotice,
+  sendWorkerReply,
 } from "@/lib/twilio";
 import { createNotification, deliverJobVerifiedDocs, getCompanyName } from "@/lib/notifications";
 import { getWorkspaceConfig } from "@/lib/workspace-config";
@@ -15,6 +17,23 @@ import { resolveSenderByNumber, type WhatsAppSender } from "@/lib/senders";
 import { generateInvoicePDF, generateJobCardPDF } from "@/lib/pdf-generator";
 import { normalizePhone, generateOTP, otpExpiresAt, generateInvoiceNumber, generateJobCardNumber, formatKES, formatDate, isWithin15Min } from "@/lib/utils";
 import { put } from "@vercel/blob";
+
+type WorkerRef = { id: string; name: string; phone: string };
+type PendingCompletionConfirmation = {
+  amount: number;
+  requestedAt: string;
+};
+type ArrivalConfirmationState = {
+  requestedAt: string;
+  status: "PENDING" | "CONFIRMED" | "DISPUTED";
+  workerName: string;
+  respondedAt?: string;
+  comment?: string;
+};
+type JobMetaState = {
+  pendingCompletionConfirmation?: PendingCompletionConfirmation;
+  arrivalConfirmation?: ArrivalConfirmationState;
+};
 
 export async function POST(req: NextRequest) {
   try {
@@ -40,12 +59,22 @@ export async function POST(req: NextRequest) {
       select: { id: true, name: true, phone: true, role: true, isActive: true },
     });
 
-    if (!worker || !worker.isActive) {
-      return twilioReply("You are not registered in the FieldFlow system.");
-    }
-
     const workspace = await getWorkspaceConfig();
     const companyName = workspace.companyName || (await getCompanyName());
+
+    if (!worker || !worker.isActive) {
+      return await handleClientMessage(workerPhone, body, companyName, workspaceId, sender);
+    }
+
+    const pendingCompletionReply = await handlePendingCompletionConfirmation(
+      worker,
+      body,
+      companyName,
+      workspaceId,
+      sender
+    );
+    if (pendingCompletionReply) return pendingCompletionReply;
+
     const parsed = await parseIntent(body, workspace);
 
     switch (parsed.intent) {
@@ -132,7 +161,7 @@ async function handleAccept(
   });
 
   return twilioReply(
-    `✅ Job accepted!\n\nClient: ${job.clientName}\nLocation: ${job.location ?? "—"}\nScheduled: ${formatDate(job.scheduledDate)}\n\nText "Done [amount]" when you complete the job.`
+    `✅ Job accepted!\n\nClient: ${job.clientName}\nLocation: ${job.location ?? "—"}\nScheduled: ${formatDate(job.scheduledDate)}\n\nPlease proceed to the location.\nWhen you arrive on site, text "ARRIVED".\nWhen the job is complete, text "Done [amount]".`
   );
 }
 
@@ -217,7 +246,9 @@ async function handleDecline(
 
 async function handleCheckIn(
   worker: { id: string; name: string; phone: string },
-  workspaceId: string
+  workspaceId: string,
+  sender?: WhatsAppSender | null,
+  companyName?: string
 ) {
   const job = await prisma.job.findFirst({
     where: { workspaceId, workers: { some: { id: worker.id } }, status: "IN_PROGRESS" },
@@ -226,11 +257,46 @@ async function handleCheckIn(
 
   if (!job) return twilioReply("No active job to check in for.");
 
+  const metadata = mergeJobMetadata(job.metadata, {
+    arrivalConfirmation: {
+      requestedAt: new Date().toISOString(),
+      status: "PENDING",
+      workerName: worker.name,
+    },
+  });
+
+  await prisma.job.update({
+    where: { id: job.id },
+    data: { metadata, lastActionAt: new Date() },
+  });
+
   await prisma.jobEvent.create({
     data: { workspaceId, jobId: job.id, type: "ARRIVED", note: `${worker.name} arrived on site` },
   });
 
-  return twilioReply(`✅ Checked in for ${job.clientName}. Timer started.\n\nText "Done [amount]" when complete.`);
+  await createNotification({
+    type: "ARRIVAL_VERIFICATION_REQUESTED",
+    title: "Arrival verification requested",
+    message: `${worker.name} checked in for ${job.clientName}. Client asked to confirm arrival.`,
+    jobId: job.id,
+    link: `/admin/jobs?id=${job.id}`,
+  });
+
+  await sendArrivalConfirmationRequest(
+    job.clientPhone,
+    {
+      clientName: job.clientName,
+      workerName: worker.name,
+      companyName: companyName ?? "FieldFlow Services",
+      location: job.location ?? job.zone ?? undefined,
+      jobId: job.id,
+    },
+    sender
+  );
+
+  return twilioReply(
+    `✅ Arrival logged for ${job.clientName}.\n\nThe client has been asked to confirm with YES or NO.\n\nText "Done [amount]" when the job is complete.`
+  );
 }
 
 async function handleCompletion(
@@ -266,26 +332,74 @@ async function handleCompletion(
     );
   }
 
+  const metadata = mergeJobMetadata(job.metadata, {
+    pendingCompletionConfirmation: {
+      amount,
+      requestedAt: new Date().toISOString(),
+    },
+  });
+
+  await prisma.job.update({
+    where: { id: job.id },
+    data: { metadata, lastActionAt: new Date() },
+  });
+
+  const expectedLocation = job.location ?? job.zone ?? "";
+  return twilioReply(
+    `Before I mark this complete, reply with the client name and location for this job.\n\nExpected client: ${job.clientName}\nExpected location: ${expectedLocation || "Use the client name only if no location is listed."}`
+  );
+}
+
+async function finalizeCompletion(
+  job: {
+    id: string;
+    jobNumber: string;
+    clientName: string;
+    clientPhone: string;
+    jobType: string;
+    description: string | null;
+    location: string | null;
+    priority: string;
+    scheduledDate: Date | null;
+    invoice: { id: string; invoiceNumber: string; items: unknown; amount: number } | null;
+    metadata: unknown;
+  },
+  worker: WorkerRef,
+  amount: number,
+  companyName: string,
+  workspaceId: string,
+  sender?: WhatsAppSender | null
+) {
+  const clientProfile = await prisma.client.findFirst({
+    where: { workspaceId, phone: job.clientPhone },
+    select: { billingMode: true },
+  });
+  const billingMode = clientProfile?.billingMode ?? "PAY_ON_COMPLETION";
   const otp = generateOTP();
   const expires = otpExpiresAt();
 
-  // Count invoices to generate invoice number (workspace-scoped sequence)
   const invoiceCount = await prisma.invoice.count({ where: { workspaceId } });
   const invoiceNumber = generateInvoiceNumber(invoiceCount + 1);
+  const metadata = clearPendingCompletion(job.metadata);
+
+  const completionTime = new Date();
+  const requiresImmediatePayment = billingMode === "PAY_ON_COMPLETION";
 
   await prisma.job.update({
     where: { id: job.id },
     data: {
-      status: "COMPLETED_PENDING_VERIFICATION",
+      status: requiresImmediatePayment ? "COMPLETED_PENDING_VERIFICATION" : "VERIFIED",
       finalAmount: amount,
-      otpCode: otp,
-      otpExpiresAt: expires,
-      completedAt: new Date(),
-      lastActionAt: new Date(),
+      otpCode: requiresImmediatePayment ? otp : null,
+      otpExpiresAt: requiresImmediatePayment ? expires : null,
+      completedAt: completionTime,
+      verifiedAt: requiresImmediatePayment ? null : completionTime,
+      lastActionAt: completionTime,
+      metadata,
     },
   });
 
-  await prisma.invoice.create({
+  const invoice = await prisma.invoice.create({
     data: {
       workspaceId,
       invoiceNumber,
@@ -295,6 +409,12 @@ async function handleCompletion(
       clientName: job.clientName,
       clientPhone: job.clientPhone,
       workerName: worker.name,
+      paymentNotes:
+        billingMode === "MONTHLY_BILLING"
+          ? "Monthly billing client"
+          : billingMode === "MANUAL_FOLLOW_UP"
+          ? "Manual payment follow-up required"
+          : null,
       items: [{ description: job.jobType, amount }],
     },
   });
@@ -303,35 +423,73 @@ async function handleCompletion(
     data: {
       workspaceId,
       jobId: job.id,
-      type: "COMPLETED",
-      note: `${worker.name} marked done. Amount: ${formatKES(amount)}`,
+      type: requiresImmediatePayment ? "COMPLETED" : "VERIFIED_BILL_LATER",
+      note: requiresImmediatePayment
+        ? `${worker.name} marked done. Amount: ${formatKES(amount)}`
+        : `${worker.name} marked done. Amount: ${formatKES(amount)}. Billing mode: ${billingMode}`,
     },
   });
 
-  await sendOTPToClient(
-    job.clientPhone,
-    {
-      clientName: job.clientName,
-      jobType: job.jobType,
-      jobId: job.jobNumber,
-      workerName: worker.name,
-      amount,
-      otpCode: otp,
-      companyName,
-    },
-    sender
-  );
+  if (requiresImmediatePayment) {
+    await sendOTPToClient(
+      job.clientPhone,
+      {
+        clientName: job.clientName,
+        jobType: job.jobType,
+        jobId: job.jobNumber,
+        workerName: worker.name,
+        amount,
+        otpCode: otp,
+        companyName,
+      },
+      sender
+    );
+
+    await createNotification({
+      type: "JOB_COMPLETED",
+      title: "Job Awaiting Verification",
+      message: `${worker.name} completed job for ${job.clientName}. Amount: ${formatKES(amount)}`,
+      jobId: job.id,
+      link: `/admin/jobs?id=${job.id}`,
+    });
+
+    return twilioReply(
+      `✅ Job marked complete!\n\nAmount: ${formatKES(amount)}\n\nOTP sent to ${job.clientName}. Once they pay and share the 6-digit code, text it to verify.`
+    );
+  }
 
   await createNotification({
-    type: "JOB_COMPLETED",
-    title: "Job Awaiting Verification",
-    message: `${worker.name} completed job for ${job.clientName}. Amount: ${formatKES(amount)}`,
+    type: "JOB_VERIFIED",
+    title: "Job verified without instant payment",
+    message: `${worker.name} completed job for ${job.clientName}. Invoice ${invoice.invoiceNumber} is pending under ${billingMode === "MONTHLY_BILLING" ? "monthly billing" : "manual follow-up"}.`,
     jobId: job.id,
     link: `/admin/jobs?id=${job.id}`,
   });
 
+  await sendJobVerifiedToWorker(
+    worker.phone,
+    {
+      workerName: worker.name,
+      clientName: job.clientName,
+      jobType: job.jobType,
+      jobId: job.jobNumber,
+    },
+    sender
+  );
+
+  try {
+    await deliverJobVerifiedDocs(job.id, companyName, sender);
+  } catch (err) {
+    console.error("[Webhook] Billing-later document delivery error:", err);
+  }
+
+  const billingText =
+    billingMode === "MONTHLY_BILLING"
+      ? "This client is on monthly billing, so no OTP is needed."
+      : "This client is set to manual payment follow-up, so no OTP is needed.";
+
   return twilioReply(
-    `✅ Job marked complete!\n\nAmount: ${formatKES(amount)}\n\nOTP sent to ${job.clientName}. Once they pay and share the 6-digit code, text it to verify.`
+    `✅ Job completed and verified.\n\nAmount: ${formatKES(amount)}\nInvoice: ${invoice.invoiceNumber} (Pending)\n\n${billingText}`
   );
 }
 
@@ -507,7 +665,7 @@ async function handlePostpone(
     },
   });
 
-  await sendPostponeNotice(job.clientPhone, { reason, companyName }, sender);
+  await sendPostponeNotice(job.clientPhone, { reason, companyName, jobType: job.jobType }, sender);
 
   await createNotification({
     type: "JOB_POSTPONED",
@@ -660,6 +818,218 @@ async function handleIssue(
   return twilioReply("⚠️ Issue reported. Admin has been alerted and will contact you shortly.");
 }
 
+async function handlePendingCompletionConfirmation(
+  worker: WorkerRef,
+  body: string,
+  companyName: string,
+  workspaceId: string,
+  sender?: WhatsAppSender | null
+) {
+  const activeJobs = await prisma.job.findMany({
+    where: {
+      workspaceId,
+      workers: { some: { id: worker.id } },
+      status: { in: ["ASSIGNED", "IN_PROGRESS"] },
+    },
+    include: { invoice: true },
+    orderBy: { updatedAt: "desc" },
+    take: 5,
+  });
+
+  const job = activeJobs.find((item) => getJobMeta(item.metadata).pendingCompletionConfirmation);
+  if (!job) return null;
+
+  const confirmation = getJobMeta(job.metadata).pendingCompletionConfirmation;
+  if (!confirmation) return null;
+
+  if (!matchesClientAndLocation(body, job.clientName, job.location ?? job.zone ?? "")) {
+    return twilioReply(
+      `That reply does not match the job I expected.\n\nReply with the client name and location for:\n${job.clientName}\n${job.location ?? job.zone ?? "No location listed"}`
+    );
+  }
+
+  return await finalizeCompletion(job, worker, confirmation.amount, companyName, workspaceId, sender);
+}
+
+async function handleClientMessage(
+  clientPhone: string,
+  body: string,
+  companyName: string,
+  workspaceId: string,
+  sender?: WhatsAppSender | null
+) {
+  const jobs = await prisma.job.findMany({
+    where: {
+      workspaceId,
+      clientPhone,
+      status: {
+        in: ["ASSIGNED", "IN_PROGRESS", "POSTPONED", "COMPLETED_PENDING_VERIFICATION", "VERIFIED"],
+      },
+    },
+    include: { workers: { select: { id: true, name: true, phone: true } } },
+    orderBy: { updatedAt: "desc" },
+    take: 10,
+  });
+
+  if (!jobs.length) {
+    return twilioReply("This number is not linked to an active FieldFlow job right now.");
+  }
+
+  const arrivalJob = jobs.find((job) => getJobMeta(job.metadata).arrivalConfirmation?.status === "PENDING");
+  if (arrivalJob) {
+    const arrivalReply = await handleClientArrivalReply(arrivalJob, body, workspaceId, sender);
+    if (arrivalReply) return arrivalReply;
+  }
+
+  const latestJob = jobs[0];
+  const postponeReason = parseClientPostpone(body);
+  if (postponeReason && ["ASSIGNED", "IN_PROGRESS"].includes(latestJob.status)) {
+    await prisma.job.update({
+      where: { id: latestJob.id },
+      data: {
+        status: "POSTPONED",
+        postponeReason,
+        postponedAt: new Date(),
+        lastActionAt: new Date(),
+      },
+    });
+
+    await prisma.jobEvent.create({
+      data: {
+        workspaceId,
+        jobId: latestJob.id,
+        type: "CLIENT_POSTPONED",
+        note: `Client requested postponement: ${postponeReason}`,
+      },
+    });
+
+    await createNotification({
+      type: "CLIENT_POSTPONED",
+      title: "Client requested postponement",
+      message: `${latestJob.clientName} asked to postpone ${latestJob.jobType}. Reason: ${postponeReason}`,
+      jobId: latestJob.id,
+      link: `/admin/jobs?id=${latestJob.id}`,
+    });
+
+    const assignedWorker = latestJob.workers[0];
+    if (assignedWorker) {
+      await sendWorkerReply(
+        assignedWorker.phone,
+        `Client ${latestJob.clientName} asked to postpone this visit. Reason: ${postponeReason}. Admin has been notified.`,
+        sender
+      );
+    }
+
+    return twilioReply(`Thanks. We have logged your postponement request and alerted ${companyName}. The team will contact you with a new schedule.`);
+  }
+
+  await prisma.jobEvent.create({
+    data: {
+      workspaceId,
+      jobId: latestJob.id,
+      type: "CLIENT_COMMENT",
+      note: `Client comment (${latestJob.status}): ${body}`,
+    },
+  });
+
+  await createNotification({
+    type: "CLIENT_COMMENT",
+    title: "Client comment received",
+    message: `${latestJob.clientName} commented on ${latestJob.jobType}: ${body}`,
+    jobId: latestJob.id,
+    link: `/admin/jobs?id=${latestJob.id}`,
+  });
+
+  return twilioReply(`Thanks. Your comment has been saved and shared with ${companyName}.`);
+}
+
+async function handleClientArrivalReply(
+  job: {
+    id: string;
+    clientName: string;
+    jobType: string;
+    location: string | null;
+    status: string;
+    metadata: unknown;
+    workers: Array<{ id: string; name: string; phone: string }>;
+  },
+  body: string,
+  workspaceId: string,
+  sender?: WhatsAppSender | null
+) {
+  const yesNo = parseYesNo(body);
+  const meta = getJobMeta(job.metadata);
+  const arrival = meta.arrivalConfirmation;
+  if (!arrival) return null;
+
+  if (!yesNo) {
+    await prisma.jobEvent.create({
+      data: {
+        workspaceId,
+        jobId: job.id,
+        type: "CLIENT_COMMENT",
+        note: `Client comment while confirming arrival: ${body}`,
+      },
+    });
+
+    await createNotification({
+      type: "CLIENT_COMMENT",
+      title: "Client comment received",
+      message: `${job.clientName} sent a comment while confirming arrival: ${body}`,
+      jobId: job.id,
+      link: `/admin/jobs?id=${job.id}`,
+    });
+
+    return twilioReply("Thanks, we saved your comment. Please also reply YES if the technician has arrived, or NO if they have not.");
+  }
+
+  const updatedMetadata = mergeJobMetadata(job.metadata, {
+    arrivalConfirmation: {
+      ...arrival,
+      status: yesNo === "YES" ? "CONFIRMED" : "DISPUTED",
+      respondedAt: new Date().toISOString(),
+      comment: body,
+    },
+  });
+
+  await prisma.job.update({
+    where: { id: job.id },
+    data: { metadata: updatedMetadata, lastActionAt: new Date() },
+  });
+
+  await prisma.jobEvent.create({
+    data: {
+      workspaceId,
+      jobId: job.id,
+      type: yesNo === "YES" ? "ARRIVAL_CONFIRMED" : "ARRIVAL_DISPUTED",
+      note: `Client replied ${yesNo}: ${body}`,
+    },
+  });
+
+  await createNotification({
+    type: yesNo === "YES" ? "ARRIVAL_CONFIRMED" : "ARRIVAL_DISPUTED",
+    title: yesNo === "YES" ? "Client confirmed arrival" : "Client denied arrival",
+    message: `${job.clientName} replied ${yesNo} for ${job.jobType}${job.location ? ` at ${job.location}` : ""}.`,
+    jobId: job.id,
+    link: `/admin/jobs?id=${job.id}`,
+  });
+
+  const primaryWorker = job.workers[0];
+  if (primaryWorker) {
+    const workerMessage =
+      yesNo === "YES"
+        ? `Client ${job.clientName} confirmed that you have arrived.`
+        : `Client ${job.clientName} says you have not arrived yet. Please contact them before continuing.`;
+    await sendWorkerReply(primaryWorker.phone, workerMessage, sender);
+  }
+
+  return twilioReply(
+    yesNo === "YES"
+      ? "Thanks, we have confirmed the technician's arrival."
+      : "Thanks, we have alerted the team that the technician has not arrived yet."
+  );
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // HELPERS
 // ──────────────────────────────────────────────────────────────────────────────
@@ -670,6 +1040,60 @@ function twilioReply(message: string) {
     status: 200,
     headers: { "Content-Type": "text/xml" },
   });
+}
+
+function getJobMeta(raw: unknown): JobMetaState {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  return raw as JobMetaState;
+}
+
+function mergeJobMetadata(raw: unknown, updates: Partial<JobMetaState>) {
+  const next: JobMetaState = { ...getJobMeta(raw), ...updates };
+  if (!next.pendingCompletionConfirmation) delete next.pendingCompletionConfirmation;
+  if (!next.arrivalConfirmation) delete next.arrivalConfirmation;
+  return next;
+}
+
+function clearPendingCompletion(raw: unknown) {
+  return mergeJobMetadata(raw, { pendingCompletionConfirmation: undefined });
+}
+
+function normalizeText(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function significantTokens(value: string) {
+  return normalizeText(value)
+    .split(" ")
+    .filter((token) => token.length >= 3 && !["mrs", "mr", "ms", "the", "and", "road", "rd"].includes(token));
+}
+
+function matchesClientAndLocation(reply: string, clientName: string, location: string) {
+  const normalizedReply = normalizeText(reply);
+  const clientTokens = significantTokens(clientName);
+  const locationTokens = significantTokens(location);
+
+  const hasClient = clientTokens.length === 0 || clientTokens.some((token) => normalizedReply.includes(token));
+  const hasLocation = locationTokens.length === 0 || locationTokens.some((token) => normalizedReply.includes(token));
+
+  return hasClient && hasLocation;
+}
+
+function parseYesNo(reply: string): "YES" | "NO" | null {
+  const normalizedReply = normalizeText(reply);
+  if (/^(yes|y|ndio|iko|arrived|amefika)\b/.test(normalizedReply)) return "YES";
+  if (/^(no|n|hapana|bado|not yet|not arrived)\b/.test(normalizedReply)) return "NO";
+  return null;
+}
+
+function parseClientPostpone(reply: string) {
+  const normalizedReply = normalizeText(reply);
+  if (!/^(postpone|reschedule|later|not available|not home|kesho|tomorrow|move visit)\b/.test(normalizedReply)) {
+    return null;
+  }
+
+  const reason = reply.replace(/^(postpone|reschedule|later|not available|not home|kesho|tomorrow|move visit)\b[:\-\s]*/i, "").trim();
+  return reason || "Client requested postponement";
 }
 
 function escapeXml(str: string) {

@@ -13,7 +13,7 @@ import { formatKES, formatDate } from "@/lib/utils";
 
 interface Client {
   id: string; name: string; phone: string; email: string | null;
-  company: string | null; location: string | null; type: string; isActive: boolean;
+  company: string | null; location: string | null; type: string; billingMode: string; isActive: boolean;
   createdAt: Date | string;
   jobCount: number;
   outstanding: number;
@@ -90,6 +90,14 @@ function ClientForm({ isPending, labels, onSubmit, onCancel, defaultValues }: {
           <option value="COMPANY">Company</option>
         </select>
       </div>
+      <div>
+        <label className="block text-xs font-semibold text-[#475569] mb-1.5">Billing preference</label>
+        <select name="billingMode" defaultValue={defaultValues?.billingMode ?? "PAY_ON_COMPLETION"} className="ff-input text-sm">
+          <option value="PAY_ON_COMPLETION">Pay on completion</option>
+          <option value="MONTHLY_BILLING">Monthly billing</option>
+          <option value="MANUAL_FOLLOW_UP">Manual follow-up</option>
+        </select>
+      </div>
       <div className="flex gap-2 pt-3">
         <button type="button" onClick={onCancel} className="ff-btn-secondary flex-1 text-sm">Cancel</button>
         <button type="submit" disabled={isPending} className="ff-btn-primary flex-1 text-sm disabled:opacity-50">
@@ -143,6 +151,21 @@ function ClientRow({ c, labels, onEdit }: { c: Client; labels: ClientLabels; onE
             : "bg-[#F1F5F9] text-[#64748B] border border-[#E2E8F0]"
         }`}>
           {c.type === "COMPANY" ? "Company" : "Individual"}
+        </span>
+      </td>
+      <td className="py-3 px-4">
+        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-[4px] ${
+          c.billingMode === "MONTHLY_BILLING"
+            ? "bg-[#FFF7ED] text-[#C2410C] border border-[#FED7AA]"
+            : c.billingMode === "MANUAL_FOLLOW_UP"
+            ? "bg-[#FEF3C7] text-[#A16207] border border-[#FDE68A]"
+            : "bg-[#F0FDF4] text-[#166534] border border-[#BBF7D0]"
+        }`}>
+          {c.billingMode === "MONTHLY_BILLING"
+            ? "Monthly"
+            : c.billingMode === "MANUAL_FOLLOW_UP"
+            ? "Manual"
+            : "On completion"}
         </span>
       </td>
       {/* Location */}
@@ -390,16 +413,21 @@ export default function ClientsClient({ clients, total, labels }: { clients: Cli
                     className="flex items-center gap-3 px-4 py-3.5 hover:bg-[#F8FAFC] transition-colors">
                     <ClientAvatar name={c.name} size="sm" />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <p className="text-sm font-semibold text-[#0F172A] truncate">{c.name}</p>
-                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-[4px] shrink-0 ${
-                          c.type === "COMPANY"
-                            ? "bg-[#EFF6FF] text-[#1D4ED8]"
-                            : "bg-[#F1F5F9] text-[#64748B]"
-                        }`}>
-                          {c.type === "COMPANY" ? "Co" : "Ind"}
-                        </span>
-                      </div>
+            <div className="flex items-center gap-2 mb-0.5">
+              <p className="text-sm font-semibold text-[#0F172A] truncate">{c.name}</p>
+              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-[4px] shrink-0 ${
+                c.type === "COMPANY"
+                  ? "bg-[#EFF6FF] text-[#1D4ED8]"
+                  : "bg-[#F1F5F9] text-[#64748B]"
+              }`}>
+                {c.type === "COMPANY" ? "Co" : "Ind"}
+              </span>
+              {c.billingMode !== "PAY_ON_COMPLETION" && (
+                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-[4px] shrink-0 bg-[#FFF7ED] text-[#C2410C]">
+                  {c.billingMode === "MONTHLY_BILLING" ? "Monthly" : "Follow-up"}
+                </span>
+              )}
+            </div>
                       <p className="text-xs text-[#64748B] truncate">{c.phone}</p>
                       <div className="flex items-center gap-3 mt-1 flex-wrap">
                         {c.location && (
@@ -445,18 +473,20 @@ export default function ClientsClient({ clients, total, labels }: { clients: Cli
             ) : (
               <table className="w-full table-fixed ff-table">
                 <colgroup>
-                  <col className="w-[22%]" />
-                  <col className="w-[11%]" />
-                  <col className="w-[14%]" />
-                  <col className="w-[6%]" />
-                  <col className="w-[15%]" />
-                  <col className="w-[12%]" />
-                  <col className="w-[20%]" />
-                </colgroup>
+                <col className="w-[22%]" />
+                <col className="w-[11%]" />
+                <col className="w-[12%]" />
+                <col className="w-[14%]" />
+                <col className="w-[6%]" />
+                <col className="w-[15%]" />
+                <col className="w-[10%]" />
+                <col className="w-[10%]" />
+              </colgroup>
                 <thead>
                   <tr>
                     <th>{labels.client}</th>
                     <th>Type</th>
+                    <th>Billing</th>
                     <th>Location</th>
                     <th>{labels.jobs}</th>
                     <th>Outstanding Balance</th>

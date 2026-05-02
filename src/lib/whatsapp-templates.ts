@@ -11,6 +11,9 @@ export const WHATSAPP_TEMPLATE_KEYS = [
   "INVOICE_READY",
   "QUOTATION_READY",
   "DAILY_BRIEFING",
+  "ARRIVAL_CONFIRMATION_REQUEST",
+  "POSTPONEMENT_NOTICE",
+  "REVIEW_REQUEST",
 ] as const;
 
 export type WhatsAppTemplateKey = (typeof WHATSAPP_TEMPLATE_KEYS)[number];
@@ -209,6 +212,62 @@ export const WHATSAPP_TEMPLATE_DEFINITIONS: Record<WhatsAppTemplateKey, Template
       first_client_name: "Mrs. Wanjiku",
       first_location: "Kilimani",
       first_scheduled_time: "9:00 AM",
+    },
+  },
+  ARRIVAL_CONFIRMATION_REQUEST: {
+    key: "ARRIVAL_CONFIRMATION_REQUEST",
+    name: "arrival_confirmation_request",
+    category: "UTILITY",
+    language: DEFAULT_LANGUAGE,
+    settingKey: "whatsapp_client_notifications",
+    envSidKeys: ["TWILIO_ARRIVAL_CONFIRMATION_REQUEST_TEMPLATE_SID"],
+    body:
+      "Hello {{client_name}}. {{worker_name}} has checked in for your visit from {{company_name}}.\n\n" +
+      "Location: {{location}}\n\n" +
+      "Reply YES if they have arrived, or NO if they have not arrived yet. You can include a short comment in the same reply.",
+    variables: ["client_name", "worker_name", "company_name", "location"],
+    examples: {
+      client_name: "Mrs. Aisha Mohamed",
+      worker_name: "James Baraka",
+      company_name: "Restore Services",
+      location: "Kilimani, Nairobi",
+    },
+  },
+  POSTPONEMENT_NOTICE: {
+    key: "POSTPONEMENT_NOTICE",
+    name: "postponement_notice_client",
+    category: "UTILITY",
+    language: DEFAULT_LANGUAGE,
+    settingKey: "whatsapp_client_notifications",
+    envSidKeys: ["TWILIO_POSTPONEMENT_NOTICE_TEMPLATE_SID"],
+    body:
+      "Appointment update from {{company_name}}.\n\n" +
+      "Your {{job_type}} visit has been postponed.\n" +
+      "Reason: {{reason}}\n\n" +
+      "Reply with any comment or question and we will follow up with a new schedule.",
+    variables: ["company_name", "job_type", "reason"],
+    examples: {
+      company_name: "Restore Services",
+      job_type: "Tank Cleaning",
+      reason: "Client requested a later visit time",
+    },
+  },
+  REVIEW_REQUEST: {
+    key: "REVIEW_REQUEST",
+    name: "review_request_client",
+    category: "UTILITY",
+    language: DEFAULT_LANGUAGE,
+    settingKey: "whatsapp_client_notifications",
+    envSidKeys: ["TWILIO_REVIEW_REQUEST_TEMPLATE_SID"],
+    body:
+      "Hello {{client_name}}. Thank you for choosing {{company_name}} for your {{job_type}}.\n\n" +
+      "We would love your feedback.\n" +
+      "Reply with a short review or comment about the service you received.",
+    variables: ["client_name", "company_name", "job_type"],
+    examples: {
+      client_name: "Mrs. Aisha Mohamed",
+      company_name: "Restore Services",
+      job_type: "Tank Cleaning",
     },
   },
 };

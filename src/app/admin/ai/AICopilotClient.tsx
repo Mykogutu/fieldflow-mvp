@@ -90,6 +90,10 @@ export default function AICopilotClient({ userName = "Admin" }: { userName?: str
   const inputRef = useRef<HTMLInputElement>(null);
   const chatThreadRef = useRef<HTMLDivElement>(null);
 
+  function focusInputWithoutScroll() {
+    inputRef.current?.focus({ preventScroll: true });
+  }
+
   useEffect(() => {
     loadInsights();
     try {
@@ -159,7 +163,7 @@ export default function AICopilotClient({ userName = "Admin" }: { userName?: str
       ]);
     } finally {
       setLoading(false);
-      setTimeout(() => inputRef.current?.focus(), 80);
+      setTimeout(focusInputWithoutScroll, 80);
     }
   }
 
@@ -167,7 +171,7 @@ export default function AICopilotClient({ userName = "Admin" }: { userName?: str
     setChatHistory([]);
     setChatActive(false);
     setInput("");
-    setTimeout(() => inputRef.current?.focus(), 80);
+    setTimeout(focusInputWithoutScroll, 80);
   }
 
   return (
@@ -199,7 +203,7 @@ export default function AICopilotClient({ userName = "Admin" }: { userName?: str
               </div>
             </div>
             {chatActive && (
-              <button onClick={clearChat}
+              <button type="button" onClick={clearChat}
                 title="New conversation"
                 className="shrink-0 inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-[8px] border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#334155] transition-colors">
                 <RotateCcw className="w-3.5 h-3.5" /> New chat
@@ -252,12 +256,13 @@ export default function AICopilotClient({ userName = "Admin" }: { userName?: str
               className="flex-1 bg-[#F8FAFC] border border-[#E2E8F0] rounded-[12px] px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30 focus:border-[#2563EB] transition-colors"
             />
             {input && (
-              <button onClick={() => setInput("")}
+              <button type="button" onClick={() => setInput("")}
                 className="w-11 h-11 rounded-[12px] bg-[#F1F5F9] hover:bg-[#E2E8F0] text-[#94A3B8] flex items-center justify-center transition-colors shrink-0">
                 <X className="w-4 h-4" />
               </button>
             )}
             <button
+              type="button"
               onClick={() => handleSend()}
               disabled={!input.trim() || loading}
               className="w-11 h-11 rounded-[12px] bg-[#2563EB] hover:bg-[#1D4ED8] text-white flex items-center justify-center transition-colors disabled:opacity-40 shrink-0">
@@ -269,13 +274,13 @@ export default function AICopilotClient({ userName = "Admin" }: { userName?: str
           {!chatActive && (
             <div className="flex items-center gap-2 flex-wrap">
               {QUICK_CHIPS.map(chip => (
-                <button key={chip} onClick={() => handleSend(chip)}
+                <button type="button" key={chip} onClick={() => handleSend(chip)}
                   className="text-xs font-medium px-3 py-1.5 rounded-full border border-[#E2E8F0] text-[#475569]
                     hover:border-[#2563EB]/40 hover:text-[#2563EB] hover:bg-[#EFF6FF]/50 transition-colors bg-white">
                   {chip}
                 </button>
               ))}
-              <button onClick={() => setShowMoreChips(v => !v)}
+              <button type="button" onClick={() => setShowMoreChips(v => !v)}
                 className="text-xs font-medium px-3 py-1.5 rounded-full border border-[#E2E8F0] text-[#94A3B8] hover:text-[#475569] hover:border-[#CBD5E1] transition-colors bg-white flex items-center gap-1">
                 More <ChevronDown className={`w-3 h-3 transition-transform ${showMoreChips ? "rotate-180" : ""}`} />
               </button>
@@ -284,7 +289,7 @@ export default function AICopilotClient({ userName = "Admin" }: { userName?: str
           {showMoreChips && !chatActive && (
             <div className="flex gap-2 flex-wrap -mt-2">
               {TRY_QUESTIONS.slice(0, 4).map(q => (
-                <button key={q.text} onClick={() => handleSend(q.text)}
+                <button type="button" key={q.text} onClick={() => handleSend(q.text)}
                   className="text-xs font-medium px-3 py-1.5 rounded-full border border-[#E2E8F0] text-[#475569] hover:border-[#2563EB]/40 hover:text-[#2563EB] hover:bg-[#EFF6FF]/50 transition-colors bg-white">
                   {q.text}
                 </button>
@@ -302,7 +307,7 @@ export default function AICopilotClient({ userName = "Admin" }: { userName?: str
                 <Sparkles className="w-4 h-4 text-[#2563EB]" />
                 <h2 className="text-sm font-bold text-[#0F172A]">AI Insights</h2>
               </div>
-              <button onClick={loadInsights} disabled={insightsLoading}
+              <button type="button" onClick={loadInsights} disabled={insightsLoading}
                 className="p-1.5 rounded-[8px] hover:bg-[#F8FAFC] text-[#94A3B8] hover:text-[#64748B] transition-colors">
                 <RefreshCw className={`w-3.5 h-3.5 ${insightsLoading ? "animate-spin" : ""}`} />
               </button>
@@ -336,7 +341,7 @@ export default function AICopilotClient({ userName = "Admin" }: { userName?: str
               }
             </div>
             <div className="px-5 py-3.5 border-t border-[#F1F5F9]">
-              <button onClick={() => handleSend("Generate full business summary")}
+              <button type="button" onClick={() => handleSend("Generate full business summary")}
                 className="w-full flex items-center justify-center gap-2 text-sm font-semibold text-[#2563EB] hover:text-[#1D4ED8] py-1.5 rounded-[10px] hover:bg-[#EFF6FF]/50 transition-colors">
                 <Sparkles className="w-3.5 h-3.5" /> Generate full business summary
               </button>
@@ -377,7 +382,7 @@ export default function AICopilotClient({ userName = "Admin" }: { userName?: str
           <h2 className="text-sm font-bold text-[#0F172A] mb-4">Try asking AI Copilot</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {TRY_QUESTIONS.map((q, i) => (
-              <button key={i} onClick={() => handleSend(q.text)}
+              <button type="button" key={i} onClick={() => handleSend(q.text)}
                 className="group flex items-start gap-3 p-3.5 rounded-[12px] border border-[#E2E8F0] hover:border-[#2563EB]/30 hover:shadow-card hover:bg-[#EFF6FF]/20 transition-all text-left">
                 <div className={`w-7 h-7 rounded-[8px] flex items-center justify-center shrink-0 ${q.bg}`}>
                   <q.icon className={`w-3.5 h-3.5 ${q.color}`} />
@@ -423,7 +428,7 @@ export default function AICopilotClient({ userName = "Admin" }: { userName?: str
           <div className="flex items-center justify-between px-4 py-3.5 border-b border-[#F1F5F9]">
             <h3 className="text-sm font-bold text-[#0F172A]">Recent Prompts</h3>
             {recentPrompts.length > 0 && (
-              <button onClick={() => { setRecentPrompts([]); try { localStorage.removeItem("ff_recent_prompts"); } catch {} }}
+              <button type="button" onClick={() => { setRecentPrompts([]); try { localStorage.removeItem("ff_recent_prompts"); } catch {} }}
                 className="text-[11px] text-[#94A3B8] hover:text-[#64748B] transition-colors">
                 Clear
               </button>
@@ -437,7 +442,7 @@ export default function AICopilotClient({ userName = "Admin" }: { userName?: str
           ) : (
             <div className="divide-y divide-[#F8FAFC]">
               {recentPrompts.map((p, i) => (
-                <button key={i} onClick={() => handleSend(p.text)}
+                <button type="button" key={i} onClick={() => handleSend(p.text)}
                   className="w-full flex items-start gap-2.5 px-4 py-3 hover:bg-[#F8FAFC] transition-colors text-left">
                   <Clock className="w-3.5 h-3.5 text-[#94A3B8] shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">

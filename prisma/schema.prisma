@@ -251,6 +251,7 @@ model Client {
   location    String?
   address     String?
   type        ClientType @default(INDIVIDUAL)
+  billingMode BillingMode @default(PAY_ON_COMPLETION)
   notes       String?
   isActive    Boolean    @default(true)
   createdAt   DateTime   @default(now())
@@ -263,6 +264,12 @@ model Client {
 enum ClientType {
   INDIVIDUAL
   COMPANY
+}
+
+enum BillingMode {
+  PAY_ON_COMPLETION
+  MONTHLY_BILLING
+  MANUAL_FOLLOW_UP
 }
 
 // MVP-STRATEGY v2.0 §10 — Partner Strategy & Product Ownership
