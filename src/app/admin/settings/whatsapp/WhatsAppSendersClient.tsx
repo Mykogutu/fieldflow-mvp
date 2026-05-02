@@ -2,7 +2,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  createSender, deleteSender, setDefaultSender, toggleWhatsAppTemplate, updateWhatsAppTemplateConfig,
+  createSender, deleteSender, setDefaultSender, toggleWhatsAppTemplate,
 } from "@/app/actions/sender-actions";
 import type { BrandingTier, SenderStatus } from "@prisma/client";
 import {
@@ -99,22 +99,6 @@ function SenderStatusBadge({ status, verified }: { status: string; verified: boo
   );
 }
 
-function TemplateStatusBadge({ status }: { status: string }) {
-  const normalized = status.toUpperCase();
-  const config: Record<string, { bg: string; text: string; label: string }> = {
-    APPROVED: { bg: "bg-[#F0FDF4]", text: "text-[#16A34A]", label: "Approved" },
-    PENDING: { bg: "bg-[#FFFBEB]", text: "text-[#D97706]", label: "Pending" },
-    DRAFT: { bg: "bg-[#F1F5F9]", text: "text-[#64748B]", label: "Draft" },
-    REJECTED: { bg: "bg-[#FFF1F2]", text: "text-[#DC2626]", label: "Rejected" },
-  };
-  const current = config[normalized] ?? { bg: "bg-[#F1F5F9]", text: "text-[#64748B]", label: status || "Draft" };
-  return (
-    <span className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full ${current.bg} ${current.text}`}>
-      {current.label}
-    </span>
-  );
-}
-
 // ── Tier badge ────────────────────────────────────────────────────────────────
 function TierBadge({ tier }: { tier: BrandingTier }) {
   const config: Record<BrandingTier, { label: string; bg: string; text: string }> = {
@@ -148,12 +132,6 @@ export default function WhatsAppSendersClient({ senders, templates }: { senders:
   const [showForm, setShowForm] = useState(false);
   const [testPhone, setTestPhone] = useState("");
   const [testState, setTestState] = useState<"idle" | "sending" | "sent" | "error">("idle");
-  const [templateDrafts, setTemplateDrafts] = useState(() =>
-    Object.fromEntries(templates.map(template => [template.id, {
-      providerTemplateSid: template.providerTemplateSid ?? "",
-      approvalStatus: template.approvalStatus || template.status || "DRAFT",
-    }]))
-  );
   const [form, setForm] = useState({
     phoneNumber: "", displayName: "",
     twilioAccountSid: "", twilioAuthToken: "",
@@ -193,32 +171,6 @@ export default function WhatsAppSendersClient({ senders, templates }: { senders:
     });
   }
 
-  function updateTemplateDraft(id: string, field: "providerTemplateSid" | "approvalStatus", value: string) {
-    setTemplateDrafts(current => ({
-      ...current,
-      [id]: {
-        providerTemplateSid: current[id]?.providerTemplateSid ?? "",
-        approvalStatus: current[id]?.approvalStatus ?? "DRAFT",
-        [field]: value,
-      },
-    }));
-  }
-
-  function saveTemplateConfig(id: string) {
-    const draft = templateDrafts[id];
-    if (!draft) return;
-    startTransition(async () => {
-      await updateWhatsAppTemplateConfig({
-        id,
-        providerTemplateSid: draft.providerTemplateSid,
-        approvalStatus: draft.approvalStatus,
-      });
-      router.refresh();
-    });
-  }
-
-  const unapprovedCount = templates.filter(t => t.isEnabled && (t.approvalStatus || t.status).toUpperCase() !== "APPROVED").length;
-
   return (
     <div className="space-y-5 max-w-4xl">
       {/* ── Page header ─────────────────────────────────────────────────── */}
@@ -230,7 +182,7 @@ export default function WhatsAppSendersClient({ senders, templates }: { senders:
         <div>
           <h1 className="ff-page-title">WhatsApp Senders</h1>
           <p className="ff-page-desc">
-            One codebase, many branded WhatsApp numbers. The webhook routes inbound messages based on the number they were sent to.
+            Manage your business WhatsApp numbers and review the messages customers receive during job updates.
           </p>
         </div>
       </div>
@@ -354,42 +306,31 @@ export default function WhatsAppSendersClient({ senders, templates }: { senders:
           <div className="flex items-start gap-2">
             <FileText className="w-4 h-4 text-[#2563EB] mt-0.5" />
             <div>
-              <h2 className="font-semibold text-sm text-[#0F172A]">WhatsApp Templates</h2>
-              <p className="text-xs text-[#64748B] mt-0.5">Twilio Content Template keys used by live FieldFlow events.</p>
+              <h2 className="font-semibold text-sm text-[#0F172A]">Customer Message Library</h2>
+              <p className="text-xs text-[#64748B] mt-0.5">Preview the automated WhatsApp messages your customers and workers receive.</p>
             </div>
           </div>
-          {unapprovedCount > 0 && (
-            <div className="flex items-center gap-2 rounded-[10px] border border-[#FDE68A] bg-[#FFFBEB] px-3 py-2 text-xs font-medium text-[#92400E]">
-              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-              {unapprovedCount} enabled template{unapprovedCount === 1 ? "" : "s"} still need Twilio approval.
-            </div>
-          )}
         </div>
 
         <div className="overflow-x-auto">
           <table className="ff-table">
             <thead>
               <tr>
-                <th>Template</th>
-                <th>Message being sent</th>
-                <th>Send activity</th>
-                <th>Approval</th>
-                <th>Content SID</th>
-                <th>Last Synced</th>
+                <th>Message Type</th>
+                <th>Message preview</th>
+                <th>Recent delivery activity</th>
                 <th className="text-right">Enabled</th>
               </tr>
             </thead>
             <tbody>
               {templates.map(template => {
-                const approval = template.approvalStatus || template.status || "DRAFT";
-                const draft = templateDrafts[template.id] ?? { providerTemplateSid: template.providerTemplateSid ?? "", approvalStatus: approval };
                 const lastActivityDate = template.lastMessage?.sentAt ?? template.lastMessage?.failedAt ?? template.lastMessage?.createdAt ?? null;
                 return (
                   <tr key={template.id}>
                     <td>
                       <div className="space-y-0.5">
-                        <p className="text-sm font-semibold text-[#0F172A]">{template.templateKey}</p>
-                        <p className="text-xs text-[#64748B]">{template.templateName} · {template.category} · {template.language}</p>
+                        <p className="text-sm font-semibold text-[#0F172A]">{template.templateName}</p>
+                        <p className="text-xs text-[#64748B]">{template.templateKey.replaceAll("_", " ")}</p>
                       </div>
                     </td>
                     <td className="min-w-[280px]">
@@ -402,50 +343,15 @@ export default function WhatsAppSendersClient({ senders, templates }: { senders:
                         <p><span className="font-semibold text-[#0F172A]">{template.sentCount}</span> send attempt{template.sentCount === 1 ? "" : "s"}</p>
                         {template.lastMessage ? (
                           <>
-                            <p><span className="font-semibold">{template.lastMessage.status}</span>{template.lastMessage.eventType ? ` · ${template.lastMessage.eventType}` : ""}</p>
+                            <p><span className="font-semibold">{template.lastMessage.status}</span>{template.lastMessage.eventType ? ` · ${template.lastMessage.eventType.replaceAll("_", " ")}` : ""}</p>
                             <p>{lastActivityDate ? new Date(lastActivityDate).toLocaleString() : "No timestamp"}</p>
                             {template.lastMessage.toPhone && <p>To {template.lastMessage.toPhone}</p>}
+                            {template.lastMessage.errorReason && <p className="text-[#DC2626]">{template.lastMessage.errorReason}</p>}
                           </>
                         ) : (
                           <p>No sends yet</p>
                         )}
                       </div>
-                    </td>
-                    <td>
-                      <div className="space-y-2">
-                        <TemplateStatusBadge status={approval} />
-                        <select
-                          value={draft.approvalStatus}
-                          onChange={event => updateTemplateDraft(template.id, "approvalStatus", event.target.value)}
-                          className="ff-input h-9 min-w-[120px] text-xs"
-                        >
-                          <option value="DRAFT">Draft</option>
-                          <option value="PENDING">Pending</option>
-                          <option value="APPROVED">Approved</option>
-                          <option value="REJECTED">Rejected</option>
-                        </select>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="flex min-w-[220px] items-center gap-2">
-                        <input
-                          value={draft.providerTemplateSid}
-                          onChange={event => updateTemplateDraft(template.id, "providerTemplateSid", event.target.value)}
-                          placeholder="HX..."
-                          className="ff-input h-9 font-mono text-xs"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => saveTemplateConfig(template.id)}
-                          disabled={isPending}
-                          className="rounded-[8px] border border-[#BFDBFE] px-3 py-2 text-xs font-semibold text-[#2563EB] hover:bg-[#EFF6FF] disabled:opacity-50"
-                        >
-                          Save
-                        </button>
-                      </div>
-                    </td>
-                    <td className="text-xs text-[#64748B]">
-                      {template.lastSyncedAt ? new Date(template.lastSyncedAt).toLocaleString() : "Never"}
                     </td>
                     <td>
                       <div className="flex justify-end">
@@ -479,8 +385,8 @@ export default function WhatsAppSendersClient({ senders, templates }: { senders:
             <Send className="w-3.5 h-3.5" />
             {testState === "sending" ? "Sending..." : "Send test"}
           </button>
-          {testState === "sent" && <p className="text-xs font-medium text-[#16A34A] pb-2">Test sent using the configured template path.</p>}
-          {testState === "error" && <p className="text-xs font-medium text-[#DC2626] pb-2">Test failed. Check sender status, template approval, and Content SID.</p>}
+          {testState === "sent" && <p className="text-xs font-medium text-[#16A34A] pb-2">Test message sent.</p>}
+          {testState === "error" && <p className="text-xs font-medium text-[#DC2626] pb-2">Test failed. Check the sender setup and try again.</p>}
         </div>
       </form>
 
@@ -495,7 +401,7 @@ export default function WhatsAppSendersClient({ senders, templates }: { senders:
               <p className="text-xs text-[#94A3B8] mt-0.5">
                 {selectedTier === "BYO_WABA"
                   ? "Embedded Signup is the production path — this manual form is for testing."
-                  : "Provide the WhatsApp gateway credentials for this number."}
+                  : "Provide the messaging account details for this number."}
               </p>
             </div>
             <button onClick={() => setShowForm(false)}
@@ -514,11 +420,11 @@ export default function WhatsAppSendersClient({ senders, templates }: { senders:
                 <input className="ff-input text-sm" placeholder="AquaTech Plumbing"
                   value={form.displayName} onChange={e => setForm({ ...form, displayName: e.target.value })} required />
               </Field>
-              <Field label="WhatsApp Account SID">
+              <Field label="Messaging Account ID">
                 <input className="ff-input text-sm" placeholder="AC…"
                   value={form.twilioAccountSid} onChange={e => setForm({ ...form, twilioAccountSid: e.target.value })} required />
               </Field>
-              <Field label="WhatsApp Auth Token">
+              <Field label="Messaging Secret">
                 <input className="ff-input text-sm" type="password" placeholder="••••••••"
                   value={form.twilioAuthToken} onChange={e => setForm({ ...form, twilioAuthToken: e.target.value })} required />
               </Field>
@@ -569,11 +475,9 @@ export default function WhatsAppSendersClient({ senders, templates }: { senders:
       <div className="flex items-start gap-3 text-xs text-[#64748B] bg-[#F8FAFC] border border-[#E2E8F0] rounded-[12px] p-4 leading-relaxed">
         <AlertTriangle className="w-4 h-4 text-[#D97706] shrink-0 mt-0.5" />
         <div>
-          <span className="font-semibold text-[#475569]">How routing works: </span>
-          When a worker sends a WhatsApp, the webhook reads the inbound <code className="font-mono bg-[#E2E8F0] px-1 rounded text-[#334155]">To</code> field,
-          looks it up in this table, and replies using that sender&apos;s credentials. Workspaces are
-          isolated by sender — no cross-tenant message leakage is possible.
-          See <code className="font-mono bg-[#E2E8F0] px-1 rounded text-[#334155]">MVP-STRATEGY.md §17</code> for the full architecture.
+          <span className="font-semibold text-[#475569]">How messaging works: </span>
+          FieldFlow uses the selected business number to send automated WhatsApp updates to customers and workers.
+          Each workspace stays isolated to its own message flow.
         </div>
       </div>
     </div>

@@ -1,3 +1,4 @@
+import "server-only";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { prisma } from "@/lib/prisma";
 import { formatKES, formatDate } from "@/lib/utils";
@@ -70,18 +71,20 @@ function getAIErrorMessage(error: unknown): string {
   const normalizedMessage = message.toLowerCase();
 
   if (normalizedMessage.includes("google_api_key not set")) {
-    return "AI is not configured yet. Add a valid Google AI API key to GOOGLE_API_KEY.";
+    return "AI is not configured yet. Add a valid server-side AI key and try again.";
   }
 
   if (
     normalizedMessage.includes("method doesn't allow unregistered callers") ||
-    normalizedMessage.includes("403 forbidden")
+    normalizedMessage.includes("403 forbidden") ||
+    normalizedMessage.includes("permission denied") ||
+    normalizedMessage.includes("api key not valid for this api")
   ) {
-    return "The Google AI key is present, but Gemini is rejecting it. Enable the Generative Language API for this key and make sure the key is allowed to call Gemini.";
+    return "The AI service is rejecting the current credentials. Check the server-side API key, allowed APIs, and project permissions.";
   }
 
   if (normalizedMessage.includes("api key not valid") || normalizedMessage.includes("invalid api key")) {
-    return "The Google AI key is invalid. Replace GOOGLE_API_KEY with a valid Gemini API key.";
+    return "The AI service credentials are invalid. Update the server-side API key and try again.";
   }
 
   if (
@@ -89,14 +92,40 @@ function getAIErrorMessage(error: unknown): string {
     normalizedMessage.includes("rate limit") ||
     normalizedMessage.includes("resource exhausted")
   ) {
-    return "The Google AI service is reachable, but this key has hit a quota or rate limit. Check the API project's quota and billing settings.";
+    return "The AI service is available, but this account has hit its usage limit. Check quota and billing settings, then try again.";
   }
 
-  if (normalizedMessage.includes("fetch") || normalizedMessage.includes("network")) {
-    return "FieldFlow could not reach Google AI just now. Check the network connection and try again.";
+  if (
+    normalizedMessage.includes("fetch") ||
+    normalizedMessage.includes("network") ||
+    normalizedMessage.includes("econnreset") ||
+    normalizedMessage.includes("etimedout") ||
+    normalizedMessage.includes("socket hang up")
+  ) {
+    return "FieldFlow could not reach the AI service just now. Check the network connection and try again.";
   }
 
-  return "AI could not generate a response right now. Check that the Google AI key is enabled for Gemini and try again.";
+  return "AI could not generate a response right now. Check the server-side AI configuration and try again.";
+}
+
+function describeAIError(error: unknown) {
+  const details: Record<string, unknown> = {};
+  if (error instanceof Error) {
+    details.name = error.name;
+    details.message = error.message;
+    const maybeStatus = error as Error & { status?: number; code?: string; cause?: unknown };
+    if (typeof maybeStatus.status !== "undefined") details.status = maybeStatus.status;
+    if (typeof maybeStatus.code !== "undefined") details.code = maybeStatus.code;
+    if (maybeStatus.cause instanceof Error) {
+      details.cause = { name: maybeStatus.cause.name, message: maybeStatus.cause.message };
+    } else if (typeof maybeStatus.cause !== "undefined") {
+      details.cause = maybeStatus.cause;
+    }
+    return details;
+  }
+
+  details.raw = error;
+  return details;
 }
 
 /** Extract the first JSON array or object from a raw AI response */
@@ -518,7 +547,7 @@ export async function answerCopilot(
   question: string,
   history: CopilotMessage[] = []
 ): Promise<string> {
-  if (!process.env.GOOGLE_API_KEY) return "AI is not configured (GOOGLE_API_KEY missing).";
+  if (!process.env.GOOGLE_API_KEY) return "AI is not configured yet.";
 
   try {
     const context = await buildWorkspaceContext(workspaceId);
@@ -542,7 +571,7 @@ export async function answerCopilot(
 
     return await ai(prompt, 0.3);
   } catch (err) {
-    console.error("[ai-ops] copilot error:", err);
+    console.error("[ai-ops] copilot error:", describeAIError(err));
     return getAIErrorMessage(err);
   }
 }
@@ -615,7 +644,7 @@ Top 3 follow-up tasks based on today's outcomes`;
 
     return await ai(prompt, 0.25);
   } catch (err) {
-    console.error("[ai-ops] briefing error:", err);
+    console.error("[ai-ops] briefing error:", describeAIError(err));
     return getAIErrorMessage(err);
   }
 }
@@ -671,7 +700,7 @@ export async function suggestFollowUps(workspaceId: string): Promise<FollowUp[]>
     const parsed = JSON.parse(jsonStr);
     return Array.isArray(parsed) ? (parsed as FollowUp[]) : [];
   } catch (err) {
-    console.error("[ai-ops] followups error:", err);
+    console.error("[ai-ops] followups error:", describeAIError(err));
     return [];
   }
 }
@@ -684,7 +713,7 @@ export async function parseJobIntake(
 ): Promise<DraftJob> {
   if (!process.env.GOOGLE_API_KEY)
     return {
-      missingFields: ["AI not configured (GOOGLE_API_KEY missing)"],
+      missingFields: ["AI is not configured yet"],
       confidence: 0,
     };
 
@@ -761,7 +790,7 @@ export async function parseJobIntake(
     }
     return JSON.parse(jsonStr) as DraftJob;
   } catch (err) {
-    console.error("[ai-ops] intake error:", err);
+    console.error("[ai-ops] intake error:", describeAIError(err));
     return {
       missingFields: ["Could not parse message — please try again"],
       confidence: 0,

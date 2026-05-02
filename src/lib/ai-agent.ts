@@ -1,3 +1,4 @@
+import "server-only";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { AIResponse } from "@/types";
 import type { WorkspaceConfig } from "./workspace-config";
