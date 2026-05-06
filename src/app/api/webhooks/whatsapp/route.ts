@@ -14,6 +14,7 @@ import {
 import { createNotification, deliverJobVerifiedDocs } from "@/lib/notifications";
 import { currentWorkspaceId } from "@/lib/workspace";
 import { resolveSenderByNumber, type WhatsAppSender } from "@/lib/senders";
+import { getTemplate } from "@/lib/industry-templates";
 import { generateInvoicePDF, generateJobCardPDF } from "@/lib/pdf-generator";
 import { normalizePhone, generateOTP, otpExpiresAt, generateInvoiceNumber, generateJobCardNumber, formatKES, formatDate, isWithin15Min } from "@/lib/utils";
 import { put } from "@vercel/blob";
@@ -36,17 +37,22 @@ type JobMetaState = {
 };
 
 async function companyNameForWorkspace(workspaceId: string) {
-  const setting = await prisma.setting.findFirst({
-    where: { workspaceId, key: "company_name" },
-    select: { value: true },
+  const settings = await prisma.setting.findMany({
+    where: { workspaceId, key: { in: ["company_name", "industry"] } },
+    select: { key: true, value: true },
   });
-  if (setting?.value) return setting.value;
+  const map = Object.fromEntries(settings.map((s) => [s.key, s.value]));
+
+  if (map.company_name?.trim()) return map.company_name;
+
+  const industryName = getTemplate(map.industry).displayName;
+  if (industryName) return industryName;
 
   const workspace = await prisma.workspace.findUnique({
     where: { id: workspaceId },
     select: { name: true },
   });
-  return workspace?.name ?? "FieldFlow Services";
+  return workspace?.name ?? "Field Services";
 }
 
 export async function POST(req: NextRequest) {
@@ -84,6 +90,18 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    if (!worker || !worker.isActive) {
+      const clientJob = await prisma.job.findFirst({
+        where: {
+          clientPhone: workerPhone,
+          status: { in: ["ASSIGNED", "IN_PROGRESS", "POSTPONED", "COMPLETED_PENDING_VERIFICATION", "VERIFIED"] },
+        },
+        orderBy: { updatedAt: "desc" },
+        select: { workspaceId: true },
+      });
+      if (clientJob) workspaceId = clientJob.workspaceId;
+    }
+
     const companyName = await companyNameForWorkspace(workspaceId);
 
     if (!worker || !worker.isActive) {
@@ -109,7 +127,7 @@ export async function POST(req: NextRequest) {
         return await handleDecline(worker, companyName, workspaceId, sender);
 
       case "CHECK_IN":
-        return await handleCheckIn(worker, workspaceId);
+        return await handleCheckIn(worker, workspaceId, sender, companyName);
 
       case "REPORT_COMPLETION":
         return await handleCompletion(worker, parsed.data.amount, parsed.data.clientName, companyName, workspaceId, sender);
@@ -326,7 +344,7 @@ async function handleCheckIn(
     {
       clientName: job.clientName,
       workerName: worker.name,
-      companyName: companyName ?? "FieldFlow Services",
+      companyName: companyName ?? "Field Services",
       location: job.location ?? job.zone ?? undefined,
       jobId: job.id,
     },

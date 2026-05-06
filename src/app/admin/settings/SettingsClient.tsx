@@ -463,9 +463,12 @@ export default function SettingsClient({
   const [tab, setTab] = useState<Tab>("general");
   const [showInvite, setShowInvite] = useState(false);
   const [inviteFeedback, setInviteFeedback] = useState<{ type: "ok" | "error"; msg: string } | null>(null);
+  const initialIndustry = ((settings.industry as IndustryKey) || "OTHER");
+  const initialIndustryName =
+    INDUSTRY_LIST.find((item) => item.key === initialIndustry)?.displayName ?? "Field Services";
 
   // ── General tab ───────────────────────────────────────────────────────────
-  const [companyName, setCompanyName]     = useState(settings.company_name ?? "FieldFlow Demo");
+  const [companyName, setCompanyName]     = useState(settings.company_name ?? initialIndustryName);
   const [businessEmail, setBusinessEmail] = useState(settings.support_email ?? "info@fieldflow.app");
   const [phone, setPhone]                 = useState(settings.company_phone ?? "+254 700 000 000");
   const [address, setAddress]             = useState(settings.business_location ?? "Nairobi, Kenya");
@@ -484,7 +487,7 @@ export default function SettingsClient({
   const [companyWebsite, setCompanyWebsite]       = useState(settings.company_website ?? "");
 
   // ── Operations tab ────────────────────────────────────────────────────────
-  const [industry, setIndustry]                   = useState<IndustryKey>((settings.industry as IndustryKey) || "OTHER");
+  const [industry, setIndustry]                   = useState<IndustryKey>(initialIndustry);
   const [workerTitle, setWorkerTitle]             = useState(settings.worker_title ?? "Technician");
   const [workerTitlePlural, setWorkerTitlePlural] = useState(settings.worker_title_plural ?? "Technicians");
   const [jobLabel, setJobLabel]                   = useState(settings.job_label ?? "Job");

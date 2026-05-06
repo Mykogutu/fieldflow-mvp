@@ -2,6 +2,7 @@ import { prisma } from "./prisma";
 import { sendDocsToClient, sendReviewRequest } from "./twilio";
 import { getWorkspaceConfig } from "./workspace-config";
 import { currentWorkspaceId } from "./workspace";
+import { getTemplate } from "./industry-templates";
 import type { WhatsAppSender } from "./senders";
 
 export async function createNotification(params: {
@@ -59,8 +60,22 @@ export async function deliverJobVerifiedDocs(
 
 export async function getCompanyName(): Promise<string> {
   const workspaceId = await currentWorkspaceId();
-  const s = await prisma.setting.findFirst({ where: { workspaceId, key: "company_name" } });
-  return s?.value ?? "FieldFlow Services";
+  const settings = await prisma.setting.findMany({
+    where: { workspaceId, key: { in: ["company_name", "industry"] } },
+    select: { key: true, value: true },
+  });
+  const map = Object.fromEntries(settings.map((s) => [s.key, s.value]));
+
+  if (map.company_name?.trim()) return map.company_name;
+
+  const industryName = getTemplate(map.industry).displayName;
+  if (industryName) return industryName;
+
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { name: true },
+  });
+  return workspace?.name ?? "Field Services";
 }
 
 /**

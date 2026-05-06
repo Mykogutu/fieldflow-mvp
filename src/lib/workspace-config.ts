@@ -38,7 +38,7 @@ export interface WorkspaceConfig {
 }
 
 const DEFAULTS: WorkspaceConfig = {
-  companyName: "FieldFlow Services",
+  companyName: "Field Services",
   companyPhone: "",
   industry: "OTHER",
   workerTitle: "Technician",
@@ -76,7 +76,7 @@ export async function getWorkspaceConfig(): Promise<WorkspaceConfig> {
   const zones = safeJson(map.zones, []);
 
   return {
-    companyName: map.company_name || DEFAULTS.companyName,
+    companyName: map.company_name || template.displayName || DEFAULTS.companyName,
     companyPhone: map.company_phone || DEFAULTS.companyPhone,
     industry,
     workerTitle: map.worker_title || template.workerTitle,
