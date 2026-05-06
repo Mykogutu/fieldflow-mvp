@@ -14,6 +14,7 @@ import {
 } from "./senders";
 import { prisma } from "./prisma";
 import { currentWorkspaceId } from "./workspace";
+import { messageChannelForWorkspace, sendSms } from "./sms";
 import { sendWhatsAppTemplate, type WhatsAppTemplateKey } from "./whatsapp-templates";
 
 type WhatsAppSendMeta = {
@@ -64,8 +65,20 @@ export async function sendWhatsApp(
   meta: WhatsAppSendMeta = {}
 ): Promise<boolean> {
   const s = await resolveSender(sender);
+  const workspaceId = s?.workspaceId ?? (await currentWorkspaceId());
+  const channel = await messageChannelForWorkspace(workspaceId);
+
+  if (channel === "sms") {
+    const smsResult = await sendSms(phone, body, s, { ...meta, messageType: meta.messageType ?? "SMS_FREEFORM" }, workspaceId);
+    return smsResult.ok;
+  }
+
   if (!s) {
     console.error("[Twilio] sendWhatsApp: no sender configured");
+    if (channel === "auto" || channel === "both") {
+      const smsResult = await sendSms(phone, body, null, { ...meta, messageType: meta.messageType ?? "SMS_FREEFORM" }, workspaceId);
+      return smsResult.ok;
+    }
     return false;
   }
   try {
@@ -83,6 +96,9 @@ export async function sendWhatsApp(
       body: outboundBody,
     });
     await logWhatsAppMessage(s, phone, "SENT", meta, message.sid);
+    if (channel === "both") {
+      await sendSms(phone, body, s, { ...meta, messageType: meta.messageType ?? "SMS_FREEFORM" }, workspaceId);
+    }
     return true;
   } catch (err) {
     console.error("[Twilio] sendWhatsApp error:", err);
@@ -94,6 +110,10 @@ export async function sendWhatsApp(
       undefined,
       err instanceof Error ? err.message : "Unknown WhatsApp send error"
     );
+    if (channel === "auto" || channel === "both") {
+      const smsResult = await sendSms(phone, body, s, { ...meta, messageType: meta.messageType ?? "SMS_FREEFORM" }, workspaceId);
+      return smsResult.ok;
+    }
     return false;
   }
 }

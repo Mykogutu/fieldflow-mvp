@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { getDefaultSender, getTwilioClient, senderFromAddress, type WhatsAppSender } from "./senders";
+import { messageChannelForWorkspace, sendSms, type MessageChannel } from "./sms";
 import { formatDate, normalizePhone } from "./utils";
 
 export const WHATSAPP_TEMPLATE_KEYS = [
@@ -475,6 +476,7 @@ export async function sendWhatsAppTemplate(input: WhatsAppTemplateSendInput) {
   const template = await getTemplateForSend(input.workspaceId, input.templateKey);
   const sender = input.sender ?? (await getActiveSender(input.workspaceId));
   const definition = WHATSAPP_TEMPLATE_DEFINITIONS[input.templateKey];
+  const channel = await messageChannelForWorkspace(input.workspaceId);
   const baseLog = {
     workspaceId: input.workspaceId,
     senderId: sender?.id ?? null,
@@ -486,29 +488,55 @@ export async function sendWhatsAppTemplate(input: WhatsAppTemplateSendInput) {
     clientId: input.clientId,
     workerId: input.workerId,
   };
+  const variables = renderTemplateVariables(input.templateKey, input.variables);
+  const namedVariables = namedVariablesOnly(input.templateKey, variables);
+  const renderedBody = renderBody(template?.body ?? definition.body, namedVariables);
+  const sendSmsCopy = (reason?: string) =>
+    sendSms(
+      toPhone,
+      renderedBody,
+      sender,
+      {
+        messageType: "SMS_TEMPLATE",
+        eventType: reason ? `${input.eventType}_SMS_FALLBACK` : input.eventType,
+        jobId: input.jobId,
+        clientId: input.clientId,
+        workerId: input.workerId,
+        templateId: template?.id ?? null,
+      },
+      input.workspaceId
+    );
 
   if (!(await isSettingEnabled(input.workspaceId, definition.settingKey))) {
     await logAttempt({ ...baseLog, status: "SKIPPED", errorReason: "WhatsApp setting is disabled for this event." });
     return { ok: false, skipped: true, error: "WhatsApp setting is disabled for this event." };
   }
 
+  if (channel === "sms") {
+    return await sendSmsCopy();
+  }
+
   if (!sender) {
     await logAttempt({ ...baseLog, status: "BLOCKED", errorReason: "No active WhatsApp sender is configured." });
+    if (canUseSmsFallback(channel)) return await sendSmsCopy("NO_WHATSAPP_SENDER");
     return { ok: false, error: "No active WhatsApp sender is configured." };
   }
 
   if (sender.status !== "ACTIVE") {
     await logAttempt({ ...baseLog, status: "BLOCKED", errorReason: `WhatsApp sender is ${sender.status}.` });
+    if (canUseSmsFallback(channel)) return await sendSmsCopy("WHATSAPP_SENDER_BLOCKED");
     return { ok: false, error: `WhatsApp sender is ${sender.status}.` };
   }
 
   if (!template) {
     await logAttempt({ ...baseLog, status: "BLOCKED", errorReason: `Template ${input.templateKey} is not configured.` });
+    if (canUseSmsFallback(channel)) return await sendSmsCopy("WHATSAPP_TEMPLATE_MISSING");
     return { ok: false, error: `Template ${input.templateKey} is not configured.` };
   }
 
   if (!template.isEnabled) {
     await logAttempt({ ...baseLog, status: "SKIPPED", errorReason: `Template ${input.templateKey} is disabled.` });
+    if (canUseSmsFallback(channel)) return await sendSmsCopy("WHATSAPP_TEMPLATE_DISABLED");
     return { ok: false, skipped: true, error: `Template ${input.templateKey} is disabled.` };
   }
 
@@ -519,6 +547,7 @@ export async function sendWhatsAppTemplate(input: WhatsAppTemplateSendInput) {
       status: "BLOCKED",
       errorReason: `Template ${input.templateKey} is not approved for production sending.`,
     });
+    if (canUseSmsFallback(channel)) return await sendSmsCopy("WHATSAPP_TEMPLATE_UNAPPROVED");
     return { ok: false, error: `Template ${input.templateKey} is not approved for production sending.` };
   }
 
@@ -528,11 +557,9 @@ export async function sendWhatsAppTemplate(input: WhatsAppTemplateSendInput) {
       status: "BLOCKED",
       errorReason: `Template ${input.templateKey} does not have a Twilio Content SID.`,
     });
+    if (canUseSmsFallback(channel)) return await sendSmsCopy("WHATSAPP_TEMPLATE_SID_MISSING");
     return { ok: false, error: `Template ${input.templateKey} does not have a Twilio Content SID.` };
   }
-
-  const variables = renderTemplateVariables(input.templateKey, input.variables);
-  const namedVariables = namedVariablesOnly(input.templateKey, variables);
 
   try {
     const client = getTwilioClient(sender);
@@ -546,15 +573,24 @@ export async function sendWhatsAppTemplate(input: WhatsAppTemplateSendInput) {
       : {
           from: senderFromAddress(sender),
           to: `whatsapp:${toPhone}`,
-          body: renderBody(template.body, namedVariables),
+          body: renderedBody,
         };
 
     const message = await client.messages.create(messageParams);
     await logAttempt({ ...baseLog, status: "SENT", providerMessageSid: message.sid });
+    if (channel === "both") {
+      const smsResult = await sendSmsCopy();
+      return { ok: true, providerMessageSid: message.sid, sms: smsResult };
+    }
     return { ok: true, providerMessageSid: message.sid };
   } catch (error) {
     const errorReason = error instanceof Error ? error.message : "Unknown WhatsApp provider error.";
     await logAttempt({ ...baseLog, status: "FAILED", errorReason });
+    if (canUseSmsFallback(channel)) return await sendSmsCopy("WHATSAPP_PROVIDER_FAILED");
     return { ok: false, error: errorReason };
   }
+}
+
+function canUseSmsFallback(channel: MessageChannel) {
+  return channel === "auto" || channel === "both";
 }
