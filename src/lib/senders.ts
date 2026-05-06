@@ -138,6 +138,7 @@ export async function getDefaultSender(
   workspaceId?: string
 ): Promise<WhatsAppSender | null> {
   const wsId = workspaceId ?? (await currentWorkspaceId());
+  const defaultPhone = envValue("TWILIO_WHATSAPP_NUMBER");
 
   const preferred = await prisma.whatsAppSender.findFirst({
     where: { workspaceId: wsId, isDefault: true, status: "ACTIVE" },
@@ -149,6 +150,13 @@ export async function getDefaultSender(
     orderBy: { createdAt: "asc" },
   });
   if (anyActive) return anyActive;
+
+  if (defaultPhone) {
+    const envDefault = await prisma.whatsAppSender.findFirst({
+      where: { phoneNumber: normalizePhone(defaultPhone), status: "ACTIVE" },
+    });
+    if (envDefault) return envDefault;
+  }
 
   return await envFallbackSender();
 }

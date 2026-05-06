@@ -132,6 +132,7 @@ export default function WhatsAppSendersClient({ senders, templates }: { senders:
   const [showForm, setShowForm] = useState(false);
   const [testPhone, setTestPhone] = useState("");
   const [testState, setTestState] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [testError, setTestError] = useState("");
   const [form, setForm] = useState({
     phoneNumber: "", displayName: "",
     twilioAccountSid: "", twilioAuthToken: "",
@@ -156,12 +157,24 @@ export default function WhatsAppSendersClient({ senders, templates }: { senders:
   async function sendTemplateTest(e: React.FormEvent) {
     e.preventDefault();
     setTestState("sending");
-    const response = await fetch("/api/whatsapp/test", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone: testPhone }),
-    });
-    setTestState(response.ok ? "sent" : "error");
+    setTestError("");
+    try {
+      const response = await fetch("/api/whatsapp/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: testPhone }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok) {
+        setTestState("sent");
+      } else {
+        setTestError(data.error ?? "Unable to send test message.");
+        setTestState("error");
+      }
+    } catch {
+      setTestError("Unable to reach the WhatsApp test service.");
+      setTestState("error");
+    }
   }
 
   function toggleTemplate(id: string, enabled: boolean) {
@@ -386,7 +399,7 @@ export default function WhatsAppSendersClient({ senders, templates }: { senders:
             {testState === "sending" ? "Sending..." : "Send test"}
           </button>
           {testState === "sent" && <p className="text-xs font-medium text-[#16A34A] pb-2">Test message sent.</p>}
-          {testState === "error" && <p className="text-xs font-medium text-[#DC2626] pb-2">Test failed. Check the sender setup and try again.</p>}
+          {testState === "error" && <p className="text-xs font-medium text-[#DC2626] pb-2">{testError || "Test failed. Check the sender setup and try again."}</p>}
         </div>
       </form>
 

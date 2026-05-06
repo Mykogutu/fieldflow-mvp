@@ -21,8 +21,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No active WhatsApp sender is configured." }, { status: 400 });
     }
 
+    const senderWorkspaceId = sender.id === "env-fallback" ? workspaceId : sender.workspaceId;
+
     const sent = await sendWhatsAppTemplate({
-      workspaceId,
+      workspaceId: senderWorkspaceId,
       templateKey: "JOB_ASSIGNED_WORKER",
       to: phone,
       sender,
