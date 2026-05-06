@@ -10,7 +10,7 @@ type Msg = { role: "user" | "assistant"; content: string };
 
 const STARTERS = [
   "What happened today?",
-  "Which jobs are pending OTP?",
+  "Which jobs are pending service code confirmation?",
   "Any unpaid invoices?",
   "Which jobs were postponed this week?",
 ];

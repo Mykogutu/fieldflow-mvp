@@ -6,7 +6,7 @@ export const WHATSAPP_TEMPLATE_KEYS = [
   "JOB_ASSIGNED_WORKER",
   "TECHNICIAN_ASSIGNED_CLIENT",
   "JOB_REASSIGNED",
-  "OTP_REQUEST",
+  "SERVICE_CODE_REQUEST",
   "JOB_VERIFIED",
   "INVOICE_READY",
   "QUOTATION_READY",
@@ -31,6 +31,17 @@ type TemplateDefinition = {
 };
 
 const DEFAULT_LANGUAGE = "en";
+const DEFAULT_TWILIO_ENV_SUFFIX = "MYRIAD";
+
+function defaultTwilioEnvSuffix() {
+  return (
+    process.env.DEFAULT_TWILIO_ENV_SUFFIX ??
+    process.env.TWILIO_DEFAULT_CLIENT ??
+    DEFAULT_TWILIO_ENV_SUFFIX
+  )
+    .trim()
+    .toUpperCase();
+}
 
 export const WHATSAPP_TEMPLATE_DEFINITIONS: Record<WhatsAppTemplateKey, TemplateDefinition> = {
   JOB_ASSIGNED_WORKER: {
@@ -46,7 +57,7 @@ export const WHATSAPP_TEMPLATE_DEFINITIONS: Record<WhatsAppTemplateKey, Template
       "Client: {{client_name}}\n" +
       "Location: {{location}}\n" +
       "Scheduled: {{scheduled_time}}\n\n" +
-      "Please confirm once received.",
+      "Reply ACCEPT to take this job or DECLINE if you are unavailable.",
     variables: ["worker_name", "job_type", "client_name", "location", "scheduled_time"],
     examples: {
       worker_name: "James",
@@ -93,7 +104,7 @@ export const WHATSAPP_TEMPLATE_DEFINITIONS: Record<WhatsAppTemplateKey, Template
       "Client: {{client_name}}\n" +
       "Location: {{location}}\n" +
       "Scheduled: {{scheduled_time}}\n\n" +
-      "Please review and proceed.",
+      "Reply ACCEPT to take this job or DECLINE if you are unavailable.",
     variables: ["worker_name", "job_type", "client_name", "location", "scheduled_time"],
     examples: {
       worker_name: "Mary",
@@ -103,26 +114,28 @@ export const WHATSAPP_TEMPLATE_DEFINITIONS: Record<WhatsAppTemplateKey, Template
       scheduled_time: "21 Apr 2026, 10:00",
     },
   },
-  OTP_REQUEST: {
-    key: "OTP_REQUEST",
-    name: "otp_completion_request",
+  SERVICE_CODE_REQUEST: {
+    key: "SERVICE_CODE_REQUEST",
+    name: "service_code_completion_request",
     category: "UTILITY",
     language: DEFAULT_LANGUAGE,
-    settingKey: "whatsapp_otp_completion_messages",
-    envSidKeys: ["TWILIO_OTP_REQUEST_TEMPLATE_SID", "TWILIO_SERVICE_COMPLETION_TEMPLATE_SID"],
+    settingKey: "whatsapp_service_code_messages",
+    envSidKeys: ["TWILIO_SERVICE_CODE_REQUEST_TEMPLATE_SID"],
     body:
       "Hello {{client_name}}. {{company_name}} has marked your job as complete.\n\n" +
       "Job: {{job_type}}\n" +
       "Reference: {{job_id}}\n" +
-      "Confirmation code: {{otp_code}}\n\n" +
-      "Please share this code only after confirming the work is complete.",
-    variables: ["client_name", "company_name", "job_type", "job_id", "otp_code"],
+      "Amount: {{amount}}\n" +
+      "Service code: {{service_code}}\n\n" +
+      "Please share this service code only after confirming the work is complete.",
+    variables: ["client_name", "company_name", "job_type", "job_id", "amount", "service_code"],
     examples: {
       client_name: "Mr. David Otieno",
       company_name: "Restore Services",
       job_type: "Tank Disinfection",
       job_id: "JC-2026-0002",
-      otp_code: "847291",
+      amount: "KES 5,000",
+      service_code: "847291",
     },
   },
   JOB_VERIFIED: {
@@ -197,13 +210,14 @@ export const WHATSAPP_TEMPLATE_DEFINITIONS: Record<WhatsAppTemplateKey, Template
     envSidKeys: ["TWILIO_DAILY_BRIEFING_TEMPLATE_SID"],
     body:
       "Good morning {{worker_name}}.\n\n" +
-      "You have {{job_count}} job(s) scheduled today.\n\n" +
+      "You have {{job_count}} job(s) today.\n\n" +
       "First job:\n" +
       "{{first_job_type}}\n" +
       "{{first_client_name}}\n" +
       "{{first_location}}\n" +
       "{{first_scheduled_time}}\n\n" +
-      "Reply Accept to confirm.",
+      "Reply ACCEPT to confirm.\n" +
+      "Text ARRIVED when you reach the client.",
     variables: ["worker_name", "job_count", "first_job_type", "first_client_name", "first_location", "first_scheduled_time"],
     examples: {
       worker_name: "James",
@@ -296,7 +310,11 @@ function variableSchemaFor(definition: TemplateDefinition) {
 }
 
 function sidFromEnv(definition: TemplateDefinition) {
+  const suffix = defaultTwilioEnvSuffix();
   for (const key of definition.envSidKeys) {
+    const suffixedValue = suffix ? process.env[`${key}_${suffix}`]?.trim() : undefined;
+    if (suffixedValue) return suffixedValue;
+
     const value = process.env[key]?.trim();
     if (value) return value;
   }

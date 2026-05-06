@@ -232,16 +232,17 @@ export async function sendOTPToClient(
   sender?: WhatsAppSender | null
 ): Promise<void> {
   await sendTemplate(
-    "OTP_REQUEST",
+    "SERVICE_CODE_REQUEST",
     clientPhone,
     {
       client_name: params.clientName,
       company_name: params.companyName,
       job_type: params.jobType,
       job_id: params.jobId,
-      otp_code: params.otpCode,
+      amount: `KES ${params.amount.toLocaleString("en-KE")}`,
+      service_code: params.otpCode,
     },
-    "OTP_REQUEST",
+    "SERVICE_CODE_REQUEST",
     sender,
     { jobId: params.jobId }
   );

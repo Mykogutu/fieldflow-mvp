@@ -312,7 +312,7 @@ export default async function DashboardPage({
     {
       label: "Awaiting Verification",
       value: data.pendingVerification,
-      sub: "Pending OTP",
+    sub: "Pending service code",
       iconBg: "bg-[#EDE9FE]",
       iconColor: "text-[#7C3AED]",
       Icon: Clock,

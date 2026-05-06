@@ -203,7 +203,7 @@ export function generateJobCardPDF(data: JobCardData): Uint8Array {
   y += 4;
 
   if (data.otpCode) {
-    // OTP verification box — the digital signature
+    // Service code verification box — the digital signature
     doc.setFillColor(220, 255, 220);
     doc.rect(10, y, 190, 22, "F");
     doc.setDrawColor(0, 160, 0);

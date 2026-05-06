@@ -21,7 +21,7 @@ export const STATUS_MAP: Record<
     border: "#BBF7D0",
   },
   COMPLETED_PENDING_VERIFICATION: {
-    label: "Awaiting OTP",
+    label: "Awaiting service code",
     color: "#7C3AED",
     bg: "#EDE9FE",
     border: "#DDD6FE",

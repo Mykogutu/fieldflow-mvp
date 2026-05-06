@@ -2,7 +2,6 @@
 
 Use these template names and bodies in Twilio Content Template Builder.
 
-Category for all templates: `Utility`
 Language for all templates: `English`
 
 ## Existing Core Templates
@@ -23,7 +22,7 @@ Client: {{3}}
 Location: {{4}}
 Scheduled: {{5}}
 
-Please confirm once received.
+Reply ACCEPT to take this job or DECLINE if you are unavailable.
 ```
 
 ### `technician_assigned_client`
@@ -62,25 +61,29 @@ Client: {{3}}
 Location: {{4}}
 Scheduled: {{5}}
 
-Please review and proceed.
+Reply ACCEPT to take this job or DECLINE if you are unavailable.
 ```
 
-### `otp_completion_request`
+### `service_code_completion_request`
 Variables:
 1. `client_name`
 2. `company_name`
 3. `job_type`
 4. `job_id`
-5. `otp_code`
+5. `amount`
+6. `service_code`
+
+Category: `Utility`
 
 ```text
 Hello {{1}}. {{2}} has marked your job as complete.
 
 Job: {{3}}
 Reference: {{4}}
-Confirmation code: {{5}}
+Amount: {{5}}
+Service code: {{6}}
 
-Please share this code only after confirming the work is complete.
+Please share this service code only after confirming the work is complete.
 ```
 
 ### `job_verified_worker`
@@ -146,7 +149,7 @@ Variables:
 ```text
 Good morning {{1}}.
 
-You have {{2}} job(s) scheduled today.
+You have {{2}} job(s) today.
 
 First job:
 {{3}}
@@ -154,7 +157,8 @@ First job:
 {{5}}
 {{6}}
 
-Reply Accept to confirm.
+Reply ACCEPT to confirm.
+Text ARRIVED when you reach the client.
 ```
 
 ## New Templates For Timestamp And Client Feedback Flow

@@ -50,7 +50,7 @@ const DOCUMENT_OPTIONS: {
   { key: "installation_report", label: "Installation Report", Icon: Clipboard, iconBg: "bg-[#EEF2FF]", iconColor: "text-[#4F46E5]", description: "Installation details for solar, tracking, equipment, and similar jobs." },
   { key: "fuel_calibration_report", label: "Fuel Calibration Report", Icon: Gauge, iconBg: "bg-[#FFFBEB]", iconColor: "text-[#D97706]", description: "Calibration readings and verification for fuel monitoring jobs." },
   { key: "device_replacement_report", label: "Device Replacement Report", Icon: RefreshCw, iconBg: "bg-[#FFF7ED]", iconColor: "text-[#EA580C]", description: "Tracks removed and installed devices during replacement work." },
-  { key: "client_confirmation_receipt", label: "Client Confirmation Receipt", Icon: CheckCircle2, iconBg: "bg-[#F0FDF4]", iconColor: "text-[#16A34A]", description: "Receipt showing OTP confirmation as the client signature." },
+  { key: "client_confirmation_receipt", label: "Client Confirmation Receipt", Icon: CheckCircle2, iconBg: "bg-[#F0FDF4]", iconColor: "text-[#16A34A]", description: "Receipt showing service code confirmation as the client signature." },
   { key: "delivery_note", label: "Delivery Note", Icon: Truck, iconBg: "bg-[#ECFEFF]", iconColor: "text-[#0891B2]", description: "Proof of delivered items, visits, or fleet service handovers." },
   { key: "compliance_certificate", label: "Compliance Certificate", Icon: ShieldCheck, iconBg: "bg-[#F1F5F9]", iconColor: "text-[#475569]", description: "Formal compliance proof for regulated service categories." },
 ];
@@ -518,7 +518,9 @@ export default function SettingsClient({
   const [reviewRequests, setReviewRequests]       = useState(settings.review_requests !== "false");
   const [quoteFollowUps, setQuoteFollowUps]       = useState(settings.quote_follow_ups === "true");
   const [whatsappJobAssignments, setWhatsappJobAssignments] = useState(settings.whatsapp_job_assignment_notifications !== "false");
-  const [whatsappOtpMessages, setWhatsappOtpMessages] = useState(settings.whatsapp_otp_completion_messages !== "false");
+  const [whatsappServiceCodeMessages, setWhatsappServiceCodeMessages] = useState(
+    (settings.whatsapp_service_code_messages ?? settings.whatsapp_otp_completion_messages) !== "false"
+  );
   const [whatsappDocumentDelivery, setWhatsappDocumentDelivery] = useState(settings.whatsapp_document_delivery !== "false");
   const [whatsappReassignmentAlerts, setWhatsappReassignmentAlerts] = useState(settings.whatsapp_reassignment_alerts !== "false");
   const [whatsappClientNotifications, setWhatsappClientNotifications] = useState(settings.whatsapp_client_notifications !== "false");
@@ -704,7 +706,7 @@ export default function SettingsClient({
           review_requests:      String(reviewRequests),
           quote_follow_ups:     String(quoteFollowUps),
           whatsapp_job_assignment_notifications: String(whatsappJobAssignments),
-          whatsapp_otp_completion_messages: String(whatsappOtpMessages),
+          whatsapp_service_code_messages: String(whatsappServiceCodeMessages),
           whatsapp_document_delivery: String(whatsappDocumentDelivery),
           whatsapp_reassignment_alerts: String(whatsappReassignmentAlerts),
           whatsapp_client_notifications: String(whatsappClientNotifications),
@@ -1123,7 +1125,7 @@ export default function SettingsClient({
                                     onChange={(e) => updateDocConfig(doc.key, { includeOtpStamp: e.target.checked })}
                                     className="rounded border-[#CBD5E1]"
                                   />
-                                  Include OTP stamp
+                    Include service code stamp
                                 </label>
                                 <label className="flex items-center gap-2 text-[11px] font-medium text-[#475569]">
                                   <input
@@ -1428,7 +1430,7 @@ export default function SettingsClient({
                     </div>
                     <div className="flex items-center justify-between gap-3 py-3">
                       <div>
-                        <p className="text-sm font-semibold text-[#0F172A]">Include OTP verification stamp</p>
+                  <p className="text-sm font-semibold text-[#0F172A]">Include service code verification stamp</p>
                         <p className="text-[11px] text-[#94A3B8] mt-0.5">Show client signature block on job cards</p>
                       </div>
                       <Toggle on={includeOtpStamp} onToggle={() => setIncludeOtpStamp(v => !v)} />
@@ -1478,7 +1480,7 @@ export default function SettingsClient({
 
                 <SectionCard title="WhatsApp Message Signature" subtitle="Appended to outgoing WhatsApp messages where applicable.">
                   <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-[12px] p-3.5">
-                    <p className="text-xs text-[#64748B] leading-relaxed font-mono whitespace-pre-line">{`Your service is complete.\nAmount: KES 8,000\nService Code: 847291\n\n— ${companyName}`}</p>
+                <p className="text-xs text-[#64748B] leading-relaxed font-mono whitespace-pre-line">{`Your service is complete.\nAmount: KES 8,000\nService Code: 847291\n\n— ${companyName}`}</p>
                   </div>
                   <div className="mt-3 flex items-center justify-between gap-3 py-2.5">
                     <div>
@@ -1539,7 +1541,7 @@ export default function SettingsClient({
 
                 <SectionCard title="Message Settings" subtitle="Configure how WhatsApp messages are sent.">
                   <ControlledToggleRow icon={Bell} label="Job assignment notifications" subtitle="Notify worker via WhatsApp when a job is assigned" on={whatsappJobAssignments} onToggle={() => setWhatsappJobAssignments(v => !v)} />
-                  <ControlledToggleRow icon={CheckCircle2} label="OTP completion messages" subtitle="Send OTP to client when worker reports done" on={whatsappOtpMessages} onToggle={() => setWhatsappOtpMessages(v => !v)} />
+              <ControlledToggleRow icon={CheckCircle2} label="Service code messages" subtitle="Send a service code to the client when the worker reports done" on={whatsappServiceCodeMessages} onToggle={() => setWhatsappServiceCodeMessages(v => !v)} />
                   <ControlledToggleRow icon={FileText} label="Document delivery" subtitle="Send PDFs to clients after job verification" on={whatsappDocumentDelivery} onToggle={() => setWhatsappDocumentDelivery(v => !v)} />
                   <ControlledToggleRow icon={RefreshCw} label="Reassignment alerts" subtitle="Notify worker when a job is reassigned to them" on={whatsappReassignmentAlerts} onToggle={() => setWhatsappReassignmentAlerts(v => !v)} />
                   <ControlledToggleRow icon={MessageCircle} label="Client notifications" subtitle="Send client appointment and postponement updates" on={whatsappClientNotifications} onToggle={() => setWhatsappClientNotifications(v => !v)} />
@@ -1553,8 +1555,8 @@ export default function SettingsClient({
                   <div className="space-y-2">
                     {[
                       { label: "Job Assignment",          status: "approved", desc: "Sent when admin assigns a job to a worker"          },
-                      { label: "Service Completion OTP",  status: "approved", desc: "Sent to client with OTP after worker reports done"  },
-                      { label: "Job Verified",            status: "approved", desc: "Sent to worker confirming OTP was accepted"         },
+                { label: "Service Completion Code", status: "approved", desc: "Sent to client with a service code after worker reports done"  },
+                { label: "Job Verified",            status: "approved", desc: "Sent to worker confirming the service code was accepted"       },
                       { label: "Client Notification",     status: "approved", desc: "General client updates"                             },
                       { label: "Quotation",               status: "pending",  desc: "Sent to client with a price quote"                  },
                     ].map(({ label, status, desc }) => (
@@ -1682,7 +1684,7 @@ export default function SettingsClient({
                       { role: "Admin", icon: Crown, color: "text-[#2563EB]", bg: "bg-[#EFF6FF]", perms: ["Full dashboard access", "Create & manage jobs", "View invoices & reports", "Manage workers & settings"] },
                       { role: "Manager", icon: Users, color: "text-[#16A34A]", bg: "bg-[#F0FDF4]", perms: ["Create and update jobs", "Manage clients and assets", "View invoices and documents", "No billing or settings access"] },
                       { role: "Viewer", icon: Eye, color: "text-[#7C3AED]", bg: "bg-[#F5F3FF]", perms: ["Read-only dashboard access", "View jobs, clients, assets, invoices, and documents", "No edits or destructive actions"] },
-                      { role: "Worker / Technician", icon: Wrench, color: "text-[#64748B]", bg: "bg-[#F1F5F9]", perms: ["WhatsApp interface only", "Accept & complete jobs", "View own job schedule", "Report completion via OTP"] },
+                { role: "Worker / Technician", icon: Wrench, color: "text-[#64748B]", bg: "bg-[#F1F5F9]", perms: ["WhatsApp interface only", "Accept & complete jobs", "View own job schedule", "Report completion via service code"] },
                     ].map(({ role, icon: Icon, color, bg, perms }) => (
                       <div key={role} className="p-3.5 rounded-[12px] border border-[#E2E8F0]">
                         <div className="flex items-center gap-2 mb-2">
@@ -1832,7 +1834,7 @@ export default function SettingsClient({
                 <SectionCard title="Export Your Data" subtitle="Download a complete copy of all your business data.">
                   <div className="space-y-2">
                     {[
-                      { icon: FileText, label: "Jobs & Job Cards",   desc: "All jobs, timelines, photos, and OTP records" },
+                { icon: FileText, label: "Jobs & Job Cards",   desc: "All jobs, timelines, photos, and service code records" },
                       { icon: CreditCard, label: "Invoices & Expenses", desc: "Full financial history in CSV and PDF" },
                       { icon: Users,    label: "Clients & Workers",  desc: "Contact list and worker profiles" },
                       { icon: Database, label: "Full Data Export",   desc: "Everything in a single ZIP archive" },

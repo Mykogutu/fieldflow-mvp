@@ -118,7 +118,7 @@ const STATUS_TABS = [
   { label: "All",          value: ""                              },
   { label: "Active",       value: "IN_PROGRESS"                  },
   { label: "Assigned",     value: "ASSIGNED"                     },
-  { label: "Awaiting OTP", value: "COMPLETED_PENDING_VERIFICATION"},
+  { label: "Awaiting service code", value: "COMPLETED_PENDING_VERIFICATION"},
   { label: "Postponed",    value: "POSTPONED"                    },
   { label: "Verified",     value: "VERIFIED"                     },
   { label: "Issues",       value: "ISSUE_REPORTED"               },
@@ -209,7 +209,7 @@ export default function JobsClient({
           {[
             { label: `Total ${labels.jobs}`,      value: total,         sub: "All time",          iconBg: "bg-[#DBEAFE]", iconColor: "text-[#2563EB]", Icon: Wrench       },
             { label: "Active",          value: activeCount,   sub: "In progress",        iconBg: "bg-[#DCFCE7]", iconColor: "text-[#16A34A]", Icon: Wrench       },
-            { label: "Awaiting OTP",    value: otpCount,      sub: "Waiting for client", iconBg: "bg-[#EDE9FE]", iconColor: "text-[#7C3AED]", Icon: Clock        },
+  { label: "Awaiting service code",    value: otpCount,      sub: "Waiting for client", iconBg: "bg-[#EDE9FE]", iconColor: "text-[#7C3AED]", Icon: Clock        },
             { label: "Needs Attention", value: attentionCount,sub: "High priority",      iconBg: "bg-[#FEE2E2]", iconColor: "text-[#DC2626]", Icon: AlertTriangle },
           ].map((m) => (
             <div key={m.label} className="ff-card p-3.5 sm:p-5 flex items-center gap-2.5 sm:gap-4">

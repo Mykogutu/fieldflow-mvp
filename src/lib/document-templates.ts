@@ -26,7 +26,7 @@ export const DOCUMENT_TEMPLATE_DEFINITIONS: Record<
   },
   JOB_CARD: {
     title: "Job Card",
-    subtitle: "Complete work record with OTP verification",
+    subtitle: "Complete work record with service code verification",
     sections: ["Client", "Job", "Worker", "Timeline", "Financial", "Client Verification"],
   },
   WARRANTY_CERTIFICATE: {
@@ -66,7 +66,7 @@ export const DOCUMENT_TEMPLATE_DEFINITIONS: Record<
   },
   CLIENT_CONFIRMATION_RECEIPT: {
     title: "Client Confirmation Receipt",
-    subtitle: "OTP-based client signature and payment acknowledgement",
+    subtitle: "Service-code-based client signature and payment acknowledgement",
     sections: ["Client", "Job", "Amount", "Service Code", "Verified At"],
   },
   DELIVERY_NOTE: {

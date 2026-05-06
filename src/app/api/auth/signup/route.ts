@@ -166,7 +166,7 @@ export async function POST(req: NextRequest) {
         { key: "briefing_enabled", value: "true", type: "boolean" },
         { key: "briefing_time", value: "06:00" },
         { key: "whatsapp_job_assignment_notifications", value: "true", type: "boolean" },
-        { key: "whatsapp_otp_completion_messages", value: "true", type: "boolean" },
+        { key: "whatsapp_service_code_messages", value: "true", type: "boolean" },
         { key: "whatsapp_document_delivery", value: "true", type: "boolean" },
         { key: "whatsapp_reassignment_alerts", value: "true", type: "boolean" },
         { key: "whatsapp_client_notifications", value: "true", type: "boolean" },

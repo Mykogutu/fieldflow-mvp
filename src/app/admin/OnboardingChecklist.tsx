@@ -26,7 +26,7 @@ const STEPS = [
   { key: "hasClients",        label: "Add your first client",   href: "/admin/clients",                 hint: "Client details and contact" },
   { key: "hasAssets",         label: "Add an asset",            href: "/admin/assets",                  hint: "Tank, vehicle, device, etc." },
   { key: "hasFirstJob",       label: "Create your first job",   href: "/admin/jobs",                    hint: "Assign a job to a worker" },
-  { key: "hasCompletedJob",   label: "Complete a job",          href: "/admin/jobs",                    hint: "Worker reports done, client OTPs" },
+  { key: "hasCompletedJob",   label: "Complete a job",          href: "/admin/jobs",                    hint: "Worker reports done, client service code" },
 ] as const;
 
 export default function OnboardingChecklist({ state }: { state: OnboardingState }) {

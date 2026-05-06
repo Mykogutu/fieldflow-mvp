@@ -28,8 +28,8 @@ const EVENT_CONFIG: Record<string, { label: string; color: string; dot: string; 
   DECLINED:           { label: "Worker declined",              color: "bg-[#FFF1F2] text-[#DC2626]",      dot: "bg-[#EF4444]",     Icon: AlertTriangle },
   CHECKED_IN:         { label: "Worker arrived on-site",       color: "bg-[#EEF2FF] text-[#4F46E5]",dot: "bg-[#6366F1]",  Icon: Navigation    },
   COMPLETED:          { label: "Worker marked job done",       color: "bg-[#F5F3FF] text-[#7C3AED]",dot: "bg-[#8B5CF6]",  Icon: CheckCircle2  },
-  OTP_SENT:           { label: "OTP sent to client",           color: "bg-[#FFFBEB] text-[#D97706]",  dot: "bg-[#F59E0B]",   Icon: Phone         },
-  OTP_VERIFIED:       { label: "Client verified OTP",          color: "bg-[#F0FDF4] text-[#16A34A]",  dot: "bg-[#22C55E]",   Icon: CheckCircle2  },
+  OTP_SENT:           { label: "Service code sent to client",  color: "bg-[#FFFBEB] text-[#D97706]",  dot: "bg-[#F59E0B]",   Icon: Phone         },
+  OTP_VERIFIED:       { label: "Client verified service code", color: "bg-[#F0FDF4] text-[#16A34A]",  dot: "bg-[#22C55E]",   Icon: CheckCircle2  },
   VERIFIED:           { label: "Job verified",                 color: "bg-[#F0FDF4] text-[#15803D]",  dot: "bg-green-600",   Icon: CheckCircle2  },
   INVOICE_GENERATED:  { label: "Invoice generated",            color: "bg-[#F8FAFC] text-[#475569]",  dot: "bg-slate-400",   Icon: FileText      },
   JOB_CARD_GENERATED: { label: "Job card generated",           color: "bg-[#F8FAFC] text-[#475569]",  dot: "bg-slate-400",   Icon: Clipboard     },
@@ -999,19 +999,19 @@ export default function JobDetailClient({ job }: { job: JobDetailData }) {
               </p>
               {isVerified ? (
                 <>
-                  <p className="text-sm font-semibold text-[#16A34A]">OTP Verified</p>
+                      <p className="text-sm font-semibold text-[#16A34A]">Service Code Verified</p>
                   {job.verifiedAt && <p className="text-[11px] text-[#64748B]">{formatDate(job.verifiedAt)}</p>}
                   <p className="text-[11px] text-[#64748B]">Verified by client</p>
                 </>
               ) : job.otpCode ? (
                 <>
-                  <p className="text-sm font-semibold text-[#D97706]">OTP Sent</p>
+                      <p className="text-sm font-semibold text-[#D97706]">Service Code Sent</p>
                   <p className="text-[11px] text-[#64748B]">Awaiting client</p>
                 </>
               ) : (
                 <>
                   <p className="text-sm font-semibold text-[#94A3B8]">Not started</p>
-                  <p className="text-[11px] text-[#94A3B8]">No OTP yet</p>
+                    <p className="text-[11px] text-[#94A3B8]">No service code yet</p>
                 </>
               )}
             </div>

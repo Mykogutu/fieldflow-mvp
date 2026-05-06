@@ -24,6 +24,22 @@ import type { WhatsAppSender, BrandingTier, SenderStatus } from "@prisma/client"
 export type { WhatsAppSender, BrandingTier, SenderStatus };
 
 const ENCRYPTION_PREFIX = "ff1:";
+const DEFAULT_TWILIO_ENV_SUFFIX = "MYRIAD";
+
+function defaultTwilioEnvSuffix() {
+  return (
+    process.env.DEFAULT_TWILIO_ENV_SUFFIX ??
+    process.env.TWILIO_DEFAULT_CLIENT ??
+    DEFAULT_TWILIO_ENV_SUFFIX
+  )
+    .trim()
+    .toUpperCase();
+}
+
+function envValue(key: string, suffix = defaultTwilioEnvSuffix()) {
+  const suffixedKey = suffix ? `${key}_${suffix}` : "";
+  return (suffixedKey ? process.env[suffixedKey] : undefined) || process.env[key];
+}
 
 function encryptionKey() {
   const secret = process.env.JWT_SECRET ?? process.env.NEXTAUTH_SECRET ?? "fieldflow-local-dev-secret";
@@ -58,9 +74,10 @@ export function decryptTwilioToken(encryptedToken: string | null | undefined, le
  * with the Prisma `WhatsAppSender` model so call sites don't have to branch.
  */
 async function envFallbackSender(): Promise<WhatsAppSender | null> {
-  const phone = process.env.TWILIO_WHATSAPP_NUMBER;
-  const sid = process.env.TWILIO_ACCOUNT_SID;
-  const token = process.env.TWILIO_AUTH_TOKEN;
+  const suffix = defaultTwilioEnvSuffix();
+  const phone = envValue("TWILIO_WHATSAPP_NUMBER", suffix);
+  const sid = envValue("TWILIO_ACCOUNT_SID", suffix);
+  const token = envValue("TWILIO_AUTH_TOKEN", suffix);
   if (!phone || !sid || !token) return null;
 
   return {
@@ -74,7 +91,7 @@ async function envFallbackSender(): Promise<WhatsAppSender | null> {
     messagingServiceSid: null,
     senderIdentifier: null,
     wabaId: null,
-    displayName: process.env.NEXT_PUBLIC_BRAND_NAME ?? "FieldFlow",
+    displayName: suffix === "MYRIAD" ? "Myriad Services" : process.env.NEXT_PUBLIC_BRAND_NAME ?? "FieldFlow",
     profilePhotoUrl: null,
     brandingTier: "SHARED" as BrandingTier,
     status: "ACTIVE" as SenderStatus,

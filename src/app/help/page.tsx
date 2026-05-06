@@ -18,9 +18,9 @@ export const metadata = {
 const helpSections = [
   {
     title: "Jobs and WhatsApp flow",
-    description: "Create jobs, assign workers, track OTP verification, and keep the WhatsApp-first workflow moving.",
+    description: "Create jobs, assign workers, track service code verification, and keep the WhatsApp-first workflow moving.",
     icon: Wrench,
-    links: ["Create a job", "Assign or reassign a worker", "Handle postponed jobs", "Verify jobs with OTP"],
+    links: ["Create a job", "Assign or reassign a worker", "Handle postponed jobs", "Verify jobs with a service code"],
   },
   {
     title: "Documents",

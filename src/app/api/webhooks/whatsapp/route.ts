@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
 
       default:
         return twilioReply(
-          "I didn't understand that. Try: ACCEPT, DECLINE, DONE [amount], POSTPONE, or your 6-digit code."
+          "I didn't understand that. Try: ACCEPT, DECLINE, DONE [amount], POSTPONE, or your 6-digit service code."
         );
     }
   } catch (err) {
@@ -161,7 +161,7 @@ async function handleAccept(
   });
 
   return twilioReply(
-    `✅ Job accepted!\n\nClient: ${job.clientName}\nLocation: ${job.location ?? "—"}\nScheduled: ${formatDate(job.scheduledDate)}\n\nPlease proceed to the location.\nWhen you arrive on site, text "ARRIVED".\nWhen the job is complete, text "Done [amount]".`
+    `Job accepted.\n\nProceed to ${job.location ?? "the client location"}.\nText ARRIVED when you reach the client.\n\nWhen done, text DONE with the amount.`
   );
 }
 
@@ -346,7 +346,7 @@ async function handleCompletion(
 
   const expectedLocation = job.location ?? job.zone ?? "";
   return twilioReply(
-    `Before I mark this complete, reply with the client name and location for this job.\n\nExpected client: ${job.clientName}\nExpected location: ${expectedLocation || "Use the client name only if no location is listed."}`
+    `To verify you are completing the right job, reply with the client name and location.\n\nExpected client: ${job.clientName}\nExpected location: ${expectedLocation || "Use the client name only if no location is listed."}`
   );
 }
 
@@ -454,7 +454,7 @@ async function finalizeCompletion(
     });
 
     return twilioReply(
-      `✅ Job marked complete!\n\nAmount: ${formatKES(amount)}\n\nOTP sent to ${job.clientName}. Once they pay and share the 6-digit code, text it to verify.`
+      `✅ Job marked complete!\n\nAmount: ${formatKES(amount)}\n\nA service code has been sent to ${job.clientName}. Once they pay and share the 6-digit service code, text it here to verify.`
     );
   }
 
@@ -485,8 +485,8 @@ async function finalizeCompletion(
 
   const billingText =
     billingMode === "MONTHLY_BILLING"
-      ? "This client is on monthly billing, so no OTP is needed."
-      : "This client is set to manual payment follow-up, so no OTP is needed.";
+      ? "This client is on monthly billing, so no service code is needed."
+      : "This client is set to manual payment follow-up, so no service code is needed.";
 
   return twilioReply(
     `✅ Job completed and verified.\n\nAmount: ${formatKES(amount)}\nInvoice: ${invoice.invoiceNumber} (Pending)\n\n${billingText}`
@@ -511,11 +511,11 @@ async function handleOTP(
   });
 
   if (!job) {
-    return twilioReply("That code doesn't match any of your pending jobs. Please check with the client.");
+    return twilioReply("That service code doesn't match any of your pending jobs. Please check with the client.");
   }
 
   if (job.otpExpiresAt && new Date() > job.otpExpiresAt) {
-    return twilioReply("That code has expired. Contact admin to generate a new one.");
+    return twilioReply("That service code has expired. Contact admin to generate a new one.");
   }
 
   const now = new Date();
@@ -541,7 +541,7 @@ async function handleOTP(
       workspaceId,
       jobId: job.id,
       type: "VERIFIED",
-      note: `OTP ${otp} verified by ${worker.name}`,
+      note: `Service code ${otp} verified by ${worker.name}`,
     },
   });
 
