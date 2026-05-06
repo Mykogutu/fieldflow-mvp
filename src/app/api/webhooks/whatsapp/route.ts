@@ -8,10 +8,10 @@ import {
   sendJobVerifiedToWorker,
   sendOTPToClient,
   sendPostponeNotice,
+  sendTechnicianAssignedToClient,
   sendWorkerReply,
 } from "@/lib/twilio";
-import { createNotification, deliverJobVerifiedDocs, getCompanyName } from "@/lib/notifications";
-import { getWorkspaceConfig } from "@/lib/workspace-config";
+import { createNotification, deliverJobVerifiedDocs } from "@/lib/notifications";
 import { currentWorkspaceId } from "@/lib/workspace";
 import { resolveSenderByNumber, type WhatsAppSender } from "@/lib/senders";
 import { generateInvoicePDF, generateJobCardPDF } from "@/lib/pdf-generator";
@@ -35,6 +35,20 @@ type JobMetaState = {
   arrivalConfirmation?: ArrivalConfirmationState;
 };
 
+async function companyNameForWorkspace(workspaceId: string) {
+  const setting = await prisma.setting.findFirst({
+    where: { workspaceId, key: "company_name" },
+    select: { value: true },
+  });
+  if (setting?.value) return setting.value;
+
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { name: true },
+  });
+  return workspace?.name ?? "FieldFlow Services";
+}
+
 export async function POST(req: NextRequest) {
   try {
     const form = await req.formData();
@@ -52,15 +66,25 @@ export async function POST(req: NextRequest) {
 
     // Resolve workspace from the sender (preferred) or fall back to the
     // process default. In single-tenant Restore, both resolve to the same id.
-    const workspaceId = sender?.workspaceId ?? (await currentWorkspaceId());
+    let workspaceId = sender?.workspaceId ?? (await currentWorkspaceId());
 
-    const worker = await prisma.user.findFirst({
+    let worker = await prisma.user.findFirst({
       where: { phone: workerPhone, workspaceId },
-      select: { id: true, name: true, phone: true, role: true, isActive: true },
+      select: { id: true, name: true, phone: true, role: true, isActive: true, workspaceId: true },
     });
 
-    const workspace = await getWorkspaceConfig();
-    const companyName = workspace.companyName || (await getCompanyName());
+    if (!worker || !worker.isActive) {
+      const workerByPhone = await prisma.user.findFirst({
+        where: { phone: workerPhone, isActive: true },
+        select: { id: true, name: true, phone: true, role: true, isActive: true, workspaceId: true },
+      });
+      if (workerByPhone) {
+        worker = workerByPhone;
+        workspaceId = workerByPhone.workspaceId;
+      }
+    }
+
+    const companyName = await companyNameForWorkspace(workspaceId);
 
     if (!worker || !worker.isActive) {
       return await handleClientMessage(workerPhone, body, companyName, workspaceId, sender);
@@ -75,11 +99,11 @@ export async function POST(req: NextRequest) {
     );
     if (pendingCompletionReply) return pendingCompletionReply;
 
-    const parsed = await parseIntent(body, workspace);
+    const parsed = await parseIntent(body);
 
     switch (parsed.intent) {
       case "ACCEPT_JOB":
-        return await handleAccept(worker, parsed.data.selectionIndex, companyName, workspaceId);
+        return await handleAccept(worker, parsed.data.selectionIndex, companyName, workspaceId, sender);
 
       case "DECLINE_JOB":
         return await handleDecline(worker, companyName, workspaceId, sender);
@@ -127,7 +151,8 @@ async function handleAccept(
   worker: { id: string; name: string; phone: string },
   idx: number | undefined,
   companyName: string,
-  workspaceId: string
+  workspaceId: string,
+  sender?: WhatsAppSender | null
 ) {
   const jobs = await prisma.job.findMany({
     where: {
@@ -159,6 +184,20 @@ async function handleAccept(
     jobId: job.id,
     link: `/admin/jobs?id=${job.id}`,
   });
+
+  await sendTechnicianAssignedToClient(
+    job.clientPhone,
+    {
+      clientName: job.clientName,
+      companyName,
+      jobType: job.jobType,
+      scheduledDate: formatDate(job.scheduledDate),
+      technicianName: worker.name,
+      technicianPhone: worker.phone,
+      jobId: job.id,
+    },
+    sender
+  );
 
   return twilioReply(
     `Job accepted.\n\nProceed to ${job.location ?? "the client location"}.\nText ARRIVED when you reach the client.\n\nWhen done, text DONE with the amount.`
