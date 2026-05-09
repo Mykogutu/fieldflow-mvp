@@ -351,9 +351,14 @@ async function handleCheckIn(
     sender
   );
 
-  return twilioReply(
-    `✅ Arrival logged for ${job.clientName}.\n\nThe client has been asked to confirm with YES or NO.\n\nText "Done [amount]" when the job is complete.`
-  );
+  const confirmationMessage =
+    `Arrival logged for ${job.clientName}.\n\n` +
+    `The client has been asked to confirm with YES or NO.\n\n` +
+    `Text "Done [amount]" when the job is complete.`;
+
+  await sendWorkerReply(worker.phone, confirmationMessage, sender);
+
+  return twilioReply(confirmationMessage);
 }
 
 async function handleCompletion(
